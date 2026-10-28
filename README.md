@@ -6,8 +6,8 @@ ensemble**, with an accompanying methods paper.
 Earlier calibrations link observers either by chains of pairwise regressions (backbone / daisy chain) or by matching each
 observer's active-day-fraction distribution to a reference survey. This project replaces both with a joint generative
 model: a latent daily population of sunspot groups with birth–death dynamics, observed by every historical observer
-through an observer-specific, drifting detection and reporting model, anchored to the RGO/Debrecen/Kislovodsk group-area
-catalogue. It uses group lifetimes, overlaps between observers, under-reported spotless days and blanket historical
+through an observer-specific, drifting detection and reporting model, anchored to a per-group reference catalogue of
+five surveys covering 1825–2026 (Schwabe, Spörer, RGO, Debrecen, Kislovodsk; ADR-009). It uses group lifetimes, overlaps between observers, under-reported spotless days and blanket historical
 statements, and gives uncertainties as posterior draws. A sunspot-only series and a proxy-informed series (¹⁴C, ¹⁰Be,
 aurorae) are produced separately.
 
@@ -63,7 +63,14 @@ environment*.yml     Conda environments: GPU (default), CPU, legacy
 
 ## Data and licensing
 
-Code: MIT (see `LICENSE`). Data in `data/raw/` come from third parties and keep their own terms: SILSO sunspot numbers
-(WDC-SILSO, Royal Observatory of Belgium, CC BY-NC 4.0), the revised group-number database (Vaquero et al. 2016, via
-SILSO), and reference group areas from the Royal Greenwich Observatory, Debrecen Heliophysical Observatory and Kislovodsk
-Mountain Astronomical Station. Cite the original sources (see [docs/04_data/data_dictionary.md](docs/04_data/data_dictionary.md)).
+Code: MIT (see `LICENSE`). Data in `data/raw/` come from third parties and keep their own terms. Cite the original
+sources — see [docs/04_data/data_dictionary.md](docs/04_data/data_dictionary.md).
+
+- **Group counts:** the v1.3 revised collection, successor to Vaquero et al. (2016) and Hoyt & Schatten (1998). Its
+  109 documented corrections draw on Hayakawa et al. (2021, 2023, 2024), Carrasco et al. (2019, 2020, 2021, 2022,
+  2025), Neuhäuser & Neuhäuser (2018), Vokhmyanin et al. (2020, 2021) and others; the per-observer attributions with
+  DOIs are in `data/raw/gn_database_v1.3/gn_v13_changelog.csv`.
+- **Reference group areas:** Schwabe and Spörer via Arlt et al.; the Royal Greenwich Observatory and Debrecen
+  Heliophysical Observatory (GPR/DPD); Kislovodsk Mountain Astronomical Station (Pulkovo); NOAA/SWPC via NOAA NCEI.
+- **Processing and cross-calibration** of those surveys: `sunspot-homogenization` (MIT, same author).
+- **Sunspot numbers** (comparison only, never calibration): WDC-SILSO, Royal Observatory of Belgium, CC BY-NC 4.0.

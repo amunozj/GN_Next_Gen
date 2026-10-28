@@ -3,8 +3,8 @@
 ## Mission
 Build a new **group sunspot number (GN) series, 1610–present, released as a posterior ensemble**, plus a methods paper
 (ADR-008). The core is a joint generative model: a latent daily population of sunspot groups (birth–death dynamics) seen
-by ~700 historical observers through observer-specific, drifting detection and reporting models, anchored to a modern
-reference survey (RGO/Debrecen/Kislovodsk group areas). Two variants: **sunspot-only** and **proxy-informed**
+by ~740 historical observers through observer-specific, drifting detection and reporting models, anchored to a modern
+reference survey (Schwabe/Spörer/RGO/Debrecen/KMAS per-group areas, 1825–2026; ADR-009). Two variants: **sunspot-only** and **proxy-informed**
 (¹⁴C/¹⁰Be/aurorae), separated by a data-lineage firewall (ADR-002). PI: Andrés Muñoz-Jaramillo. Stack: Python +
 JAX/NumPyro (ADR-001).
 
@@ -22,6 +22,7 @@ JAX/NumPyro (ADR-001).
 | `src/gn_next_gen/` | The package (starts as a stub; `paths.py` has repo-relative paths) |
 | `tests/` | pytest suite; `test_data_manifest.py` verifies raw-data checksums |
 | `data/raw/` | Frozen raw data + `MANIFEST.csv` (**immutable**) |
+| `scripts/` | Reproducible exporters/converters for the raw snapshots, and the v1.3 audit |
 | `data/interim/` | Regenerated derived data (git-ignored) |
 | `legacy/` | Read-only snapshots of ADFSSN, GRPSSN, MATLAB GN-series code, SN_Daisy (notebooks as py:percent text) |
 | `docs/` | Brief, assessment, research, legacy docs, data docs, roadmap specs, ADRs, templates, plans, results |
@@ -57,13 +58,25 @@ Out-of-band work (bug fixes, data refresh) still gets a short plan in `docs/plan
 - Lint/format: `ruff check .` and `ruff format .`.
 
 ## Data gotchas (details: `docs/04_data/`)
-- `GNobservations_JV_V1.22.csv`: 15 `%` comment lines before the header; `STATION=0` = no data; `GROUPS=-1` = missing;
-  up to 58 groups/day reported.
-- `SC_SP_RG_DB_KM_group_areas_by_day.csv` has **no header** and 17,695 leading all-NaN rows; the `_pre5898ab8` file is
-  the same data with a header. Area columns `AREA1..AREA26` (MSH); `AREA1=NaN` = no observation; `AREA1=0` = spotless.
-- `DRGO` and `SC_SP_RG` disagree on 12,469 days 1874–1976 (issue D3) — resolve before choosing the reference.
+The raw inputs were renovated in 2026-10 (`docs/plans/raw-data-renovation-plan.md`, ADR-009). Use the current
+folders; `reference_areas/` and `gn_database_v1.22/` are **superseded but retained** for the Step 2 legacy baselines.
+
+Current inputs:
+- `reference_groups_2026-10/` — the reference: five per-survey, per-group, per-day catalogues (Schwabe, Spörer, RGO,
+  Debrecen, KMAS), 1825–2026. **`area_corr` is the model-facing area**; `area_corr_dbcal*` is a prior/cross-check
+  only, never a hard pre-correction (ADR-003, D5). `day_status`: 0 no observation, 1 spotless, 2 active.
+  `group_obs_kind` is a different thing — both are called `obs_type` upstream (**D10**). `cycle`/`amp_*` and the
+  positional columns are diagnostic/QA only, never model inputs (ADR-003, ADR-004).
+- `gn_database_v1.3/` — the observation database, 1610–2010. `STATION=0` = no data, `GROUPS=-1` = missing.
+  **Do not key on `(date, station)`**: 217 keys are duplicated, 95 with conflicting counts (**D16**).
+  **Do not size state spaces from `max(GROUPS)`**: 93 and 58 are implausible outliers above a tail that stops at
+  53, and 93 is new in v1.3 (**D17**). Use a robust quantile.
+- `gn_observer_extension_2026-10/` — KMAS and SWPC daily group counts, 1954–2026, carrying the record past 2010.
+  Counts only, no areas. **KMAS is dual-use: a run may use it as reference areas OR observer counts, never both.**
+
+Still true:
 - Raw files mix CRLF and LF line endings; keep bytes unchanged (`.gitattributes`).
-- All snapshots are old (GN to 2010, SILSO to 2018, areas to 2018-06); refreshing is a Step 1 task.
+- SILSO snapshots are still old (daily to 2018-07, monthly to 2017-10) and are comparison-only anyway.
 
 ## Code conventions
 - Python ≥ 3.11, `src/` layout, type hints, NumPy-style docstrings, small pure functions.
