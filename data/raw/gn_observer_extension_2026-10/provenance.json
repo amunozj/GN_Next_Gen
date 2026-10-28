@@ -1,0 +1,65 @@
+{
+  "generated_utc": "2026-10-28T21:10:25Z",
+  "generated_by": "scripts/export_observer_extension.py",
+  "purpose": "Extend the observation record past v1.3's 2010-12-31 end with daily group counts from KMAS and SWPC, over their full span so the pre-2010 overlap calibrates them against the existing observer network.",
+  "upstream": {
+    "repo": "/d0/amunozj/git_repos/sunspot-homogenization",
+    "commit": "9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc",
+    "branch": "joint-generative-calibration",
+    "posterior": "data/processed/calibration/joint/trusted_core_debrecen_umbral.pkl",
+    "posterior_sha256": "09026bda1bd92929ac59284e2fdbfac0df6091aa781c297752f608ebcc028851",
+    "posterior_version": "joint_umbral_v5",
+    "offsets_csv": "data/processed/calibration/joint/joint_pooled_debrecen_offsets.csv",
+    "head_at_export": "9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc",
+    "license": "MIT"
+  },
+  "stations": [
+    {
+      "survey": "kmas",
+      "station": 1006,
+      "name": "KISLOVODSK MOUNTAIN ASTRONOMICAL STATION (KMAS), PULKOVO",
+      "role": "reference_or_observer_choose_one",
+      "anchor_threshold_msh": 23.41,
+      "first_day": "1954-01-01",
+      "last_day": "2026-12-31"
+    },
+    {
+      "survey": "swpc",
+      "station": 1008,
+      "name": "NOAA/SWPC SOLAR REGION SUMMARY",
+      "role": "observer_counts_only",
+      "anchor_threshold_msh": 20.68,
+      "first_day": "1996-01-01",
+      "last_day": "2026-12-31"
+    }
+  ],
+  "thresholds_msh": {
+    "kmas": [
+      0.0,
+      10.0,
+      23.41,
+      30.0,
+      60.0,
+      100.0
+    ],
+    "swpc": [
+      0.0,
+      10.0,
+      20.68,
+      30.0,
+      60.0,
+      100.0
+    ]
+  },
+  "threshold_convention": "a group counts when its area is strictly greater than the threshold",
+  "single_use_rule": "KMAS is also a reference survey in reference_groups_2026-10/. Its counts are derivable from its areas, so any run must declare KMAS's role as reference areas OR observer counts, never both. SWPC has no such constraint.",
+  "row_counts": {
+    "observer_counts": 227916
+  },
+  "contains_areas": false,
+  "data_lineage": "Sunspot-survey observations only (Kislovodsk KMAS and NOAA/SWPC Solar Region Summary), processed by sunspot-homogenization at the pinned commit and reduced here to daily group counts above a set of acuity thresholds. No isotope, aurora, proxy or SILSO sunspot-number input anywhere in this lineage (ADR-002 firewall).",
+  "sha256": {
+    "observer_counts.parquet": "02c452b2ee215fbbf23b90ceb2a54855db0a6216937542ab245fb4c638818ccc",
+    "station_assignment.csv": "1b357349c0507e4cc0e8db70e35c011a3d81bca4f5abf8d9b0b3eca3613553d5"
+  }
+}
