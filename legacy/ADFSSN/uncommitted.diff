@@ -1,0 +1,44 @@
+diff --git a/scripts/SSN_ADF.py b/scripts/SSN_ADF.py
+index 35deb69..e0038ac 100644
+--- a/scripts/SSN_ADF.py
++++ b/scripts/SSN_ADF.py
+@@ -1384,7 +1384,6 @@ class ssnADF(ssn_data):
+         ssn_data.RiseMonths = rise_count  # Number of months in rising phase
+         ssn_data.DecMonths = dec_count  # Number of months in declining phase
+ 
+-
+         # Set the simultaneous threshold to the values for the valid interval if there is only one interval
+         if np.sum(ssn_data.vldIntr) == 1:
+             ssn_data.wAv = wAvI[ssn_data.vldIntr][0]
+@@ -2268,17 +2267,17 @@ class ssnADF(ssn_data):
+         realTh = np.nan
+ 
+ 
+-        if ((np.min(ssn_data.REF_Dat['ORDINAL']) <= np.max(ssn_data.ObsDat['ORDINAL'])) and (
+-                np.max(ssn_data.REF_Dat['ORDINAL']) >= np.max(ssn_data.ObsDat['ORDINAL']))) or (
+-                (np.max(ssn_data.REF_Dat['ORDINAL']) >= np.min(ssn_data.ObsDat['ORDINAL'])) and (
+-                np.min(ssn_data.REF_Dat['ORDINAL']) <= np.min(ssn_data.ObsDat['ORDINAL']))):
++        if ((np.min(ssn_data.REF_Dat['ORDINAL']) <= np.min(ssn_data.ObsDat['ORDINAL'])) and (
++                np.max(ssn_data.REF_Dat['ORDINAL']) >= np.min(ssn_data.ObsDat['ORDINAL']))) or (
++                (np.max(ssn_data.REF_Dat['ORDINAL']) >= np.max(ssn_data.ObsDat['ORDINAL'])) and (
++                np.min(ssn_data.REF_Dat['ORDINAL']) <= np.max(ssn_data.ObsDat['ORDINAL']))):
+ 
+             # Creating variables for plotting and calculating difference
+             Grp_Comp = ssn_data.REF_Dat[['FRACYEAR', 'ORDINAL', 'YEAR', 'MONTH', 'DAY']].copy()
+ 
+             # Raw Ref Groups
+             Grp_Comp['GROUPS'] = np.nansum(
+-                np.greater(ssn_data.REF_Dat.values[:, 3:ssn_data.REF_Dat.values.shape[1] - 3], 0), axis=1)
++                np.greater(ssn_data.REF_Dat.values[:, 3:ssn_data.REF_Dat.values.shape[1] - 2], 0), axis=1)
+             Grp_Comp['GROUPS'] = Grp_Comp['GROUPS'].astype(float)
+ 
+             # Thresholded Ref Groups
+@@ -2359,7 +2358,7 @@ class ssnADF(ssn_data):
+                 # Thresholded Ref Groups
+                 tmp_Grp_Comp['REALTH'] = np.nansum(
+                     np.greater(ssn_data.REF_Dat.values[
+-                               :, 3:ssn_data.REF_Dat.values.shape[1] - 3], Thr), axis=1).astype(float)
++                               :, 3:ssn_data.REF_Dat.values.shape[1] - 2], Thr), axis=1).astype(float)
+ 
+                 # Imprinting Valid Interval NaNs
+                 nanmsk = np.isnan(Grp_Comp['MULTITH'])
