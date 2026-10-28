@@ -13,6 +13,7 @@ dependencies:
   - scipy>=1.11
   - pandas>=2.1
   - pyarrow
+  - openpyxl
   - matplotlib>=3.8
   - xarray
   - h5netcdf
