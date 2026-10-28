@@ -1,0 +1,587 @@
+version,name,year,note
+v1.12,"GALILEO, G., ROME",1612,New recount for these data
+v1.12,"MARIUS, S., NUREMBERG",1617,Continuous record from 8 Jun to 31 Dec (zero values). Removed
+v1.12,"RICCIOLI, J.B., BONONIA",1618,Almost continuous record (zero values). Removed
+v1.12,"MARIUS, S., NUREMBERG",1618,Almost continuous record (zero values). Removed
+v1.12,"SMOGULECZ, D., INGOLSTADT",1625,Added additional observations according to Usoskin et al. (2015)
+v1.12,"SCHEINER, C., ROME",1632,Continuous record from 13 March to 8 May. Not removed
+v1.12,"RICCIOLI, J.B., BONONIA",1632,Continuous record from 12 Jul from 15 Sep. Not removed.
+v1.12,"ZAHN, J., NUREMBERG",1632,"366 ""zero values"". Removed"
+v1.12,"GASSENDI, P., PARIS",1633,Continuous record from 1 Jan from 31 Mar. Removed.
+v1.12,"GASSENDI, P., PARIS",1634,Almost continuous record (zero and no-zero values). Removed
+v1.12,"ARGOLI, A., VENICE",1634,"Added according to Vaquero (2003), The Observatory"
+v1.12,"GASSENDI, P., PARIS",1635,Almost continuous record (zero and no-zero values). Removed
+v1.12,"MARCGRAF, LEIDEN",1637,Added according to Vaquero et al. (2011)
+v1.12,"HORROX, J., LIVERPOOL",1638,Corrected according to Vaquero et al. (2011)
+v1.12,"CRABTREE, W., ENGLAND",1638,Estimated values. Removed
+v1.12,"CRABTREE, W., ENGLAND",1639,Estimated values. Removed
+v1.12,"HORROX, J., LIVERPOOL",1639,Added according to Vaquero et al. (2011)
+v1.12,"STRAZYC, A., KRAKOW",1640,Added according to Vaquero and Trigo (2014)
+v1.12,"RHEITA, K., BOHEMIA",1642,Corrected according to Vaquero et al. (2011)
+v1.12,"HEVELIUS, J., DANZIG",1645,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1646,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1647,Uncertain values. Removed
+v1.12,"UNKNOWN/KRAFT,1745",1648,Continuous record (zero values) from 1 May to 21 Aug. Not removed
+v1.12,"HEVELIUS, J., DANZIG",1648,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1649,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1650,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1651,Uncertain values. Removed
+v1.12,"HEVELIUS, J., DANZIG",1652,Changed according to Vaquero and Trigo (2014) Solar Physics.
+v1.12,UNKNOWN1/MAUNDER/JBAA,1652,Continuous values (zero) from 14 Nov to 31 Dec. Not removed
+v1.12,"PICARD/KEILL, PARIS",1653,Almost continuous values (zero). Not removed
+v1.12,"PICARD/KEILL, PARIS",1654,Almost continuous values (zero). Not removed
+v1.12,UNKNOWN1/MAUNDER/JBAA,1654,"Almost continuous values (zeros and three ""1""). Not removed"
+v1.12,"PICARD/KEILL, PARIS",1655,Almost continuous values (zero). Removed
+v1.12,"RICCIOLI, J.B., BONONIA",1655,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"RICCIOLI, J.B., BONONIA",1656,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"CASSINI, G.D., PARIS",1656,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD/KEILL, PARIS",1656,Almost continuous values (zero). Removed
+v1.12,"RICCIOLI, J.B., BONONIA",1657,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD/KEILL, PARIS",1657,Almost continuous values (zero). Removed
+v1.12,"MARALDI, F., BONONIA",1658,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD/KEILL, PARIS",1658,Continuous record. Removed
+v1.12,"MARALDI, F., BONONIA",1659,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD/KEILL, PARIS",1659,Continuous record. Removed
+v1.12,"MOUTON, G., LYON",1659,Derived records. Not removed
+v1.12,"PICARD, J., PARIS",1660,Almost continuous values. Not removed
+v1.12,"MARALDI, F., BONONIA",1660,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MOUTON, G., LYON",1660,Derived records. Not removed
+v1.12,"RICCIOLI, J.B., BONONIA",1661,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD, J., PARIS",1661,Almost continuous values (zero). Removed
+v1.12,"PICARD, J., PARIS",1662,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1662,Continuous values (zero). Removed
+v1.12,"WEIGEL, E., JENA",1662,Continuous values (zero). Removed
+v1.12,"MARALDI, F., BONONIA",1663,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MEZZAVACCA, C., BONONIA",1663,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1663,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD, J., PARIS",1663,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1663,Continuous values (zero). Removed
+v1.12,"WEIGEL, E., JENA",1663,Continuous values (zero). Removed
+v1.12,"PICARD, J., PARIS",1664,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1664,Continuous values (zero). Removed
+v1.12,"WEIGEL, E., JENA",1664,Continuous values (zero). Removed
+v1.12,"MEZZAVACCA, C., BONONIA",1665,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"PICARD, J., PARIS",1665,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1665,Continuous values (zero). Removed
+v1.12,"MARALDI, F., BONONIA",1666,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1666,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"WEICKMANN, C., GERMANY",1666,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1666,Continuous values (zero). Removed
+v1.12,"MARALDI, F., BONONIA",1667,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1667,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MEZZAVACCA, C., BONONIA",1667,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"WEICKMANN, C., GERMANY",1667,Continuous values (zero). Removed
+v1.12,"FOGEL, M., HAMBURG",1667,Continuous values (zero). Removed
+v1.12,"FABRIUS, A., BONONIA",1668,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1668,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FOGEL, M., HAMBURG",1668,Continuous values (zero). Removed
+v1.12,"FABRIUS, A., BONONIA",1669,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MARALDI, F., BONONIA",1669,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1669,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FOGEL, M., HAMBURG",1669,Continuous values (zero). Removed
+v1.12,"MARALDI, F., BONONIA",1670,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FABRIUS, A., BONONIA",1670,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MENGOLI, P., BONONIA",1670,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MEZZAVACCA, C., BONONIA",1670,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FOGEL, M., HAMBURG",1670,Continuous values (zero). Removed
+v1.12,"MONTANARI, G., BONONIA",1671,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FOGEL, M., HAMBURG",1671,Almost continouos zero values except the late year. Not remove
+v1.12,"MONTANARI, G., BONONIA",1672,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MARALDI, F., BONONIA",1672,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"BION, N., PARIS",1672,Added according to Table 2 of Vaquero (2007)
+v1.12,"MONTANARI, G., BONONIA",1673,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FABRIUS, A., BONONIA",1673,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MANZIUS, D., BONONIA",1673,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"CALCINA, J.C., BONONIA",1674,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"GULIELMINI, J.F., BONONIA",1675,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"FABRIUS, A., BONONIA",1675,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"SIVERUS, H., HAMBURG",1675,Continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1676,Continuous values (zero) from 1 Jan to 19 Jun. Removed
+v1.12,"GULIELMINI, J.F., BONONIA",1676,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"GULIELMINI, J.F., BONONIA",1677,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"SIVERUS, H., HAMBURG",1677,Almost continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1678,"Almost continuous values (zeros and two ""1""). Not removed"
+v1.12,"GULIELMINI, J.F., BONONIA",1678,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"GULIELMINI, J.F., BONONIA",1679,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"SIVERUS, H., HAMBURG",1679,Almost continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1680,"Almost continuous values (zeros and three ""1""). Not removed"
+v1.12,"SIVERUS, H., HAMBURG",1681,Almost continuous values (zeros and ones). Not removed
+v1.12,"SIVERUS, H., HAMBURG",1682,Continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1683,Continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1684,Almost continuous values (zeros). Removed
+v1.12,"KIRCH, G., BERLIN",1684,Value removed (31-Jun)
+v1.12,"SIVERUS, H., HAMBURG",1685,Continuous values (zero). Removed
+v1.12,"SIVERUS, H., HAMBURG",1686,Almost continuous values (zeros). Removed
+v1.12,"SIVERUS, H., HAMBURG",1687,Almost continuous values (zeros). Removed
+v1.12,"SIVERUS, H., HAMBURG",1688,Almost continuous values (zeros). Removed
+v1.12,"SIVERUS, H., HAMBURG",1689,Almost continuous values (zeros) and 7 active days. Removed
+v1.12,"DECHALES, M., LUGDUNI",1689,Almost continuous values (zeros). Removed
+v1.12,"CASSINI, G.D., PARIS",1689,Almost continuous values (zeros). Removed
+v1.12,"MARALDI, M., BONONIA",1689,Almost continuous values (zeros). Removed
+v1.12,"GULIELMINI, J.F., BONONIA",1690,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"SIVERUS, H., HAMBURG",1690,Continuous values (zero). Removed
+v1.12,"GULIELMINI, J.F., BONONIA",1691,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"UCCELLI, I., BONONIA",1695,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"MEZZAVACCA, C., BONONIA",1695,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1695,Continuous values from 30 May (zero and one). Not removed
+v1.12,"GULIELMINI, J.F., BONONIA",1696,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"UCCELLI, I., BONONIA",1696,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"STANCARIUS, V.F., BONONIA",1696,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1696,Continuous values (zero). Removed
+v1.12,"STANCARIUS, V.F., BONONIA",1697,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1697,Continuous values (zero). Removed
+v1.12,"STANCARIUS, V.F., BONONIA",1698,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1698,Continuous values (zero). Removed
+v1.12,"STANCARIUS, V.F., BONONIA",1699,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1699,Continuous values (zero). Removed
+v1.12,"STANCARIUS, V.F., BONONIA",1700,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"AGERHOLM, C., COPENHAGEN",1700,Continuous values (zero) from 1 Jan to 31 Oct. Removed
+v1.12,"STANCARIUS, V.F., BONONIA",1701,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"STANCARIUS, V.F., BONONIA",1702,Removed. Meridian line in San Petronio. Table 3 of Vaquero (2007)
+v1.12,"WIEDENBURG, J.B., HELMSTADT",1708,Almost continuous values for Feb-Aug. Not removed
+v1.12,"BECKER, P., ROSTOCK",1708,Added 3 records
+v1.12,"ANONYMOUS, BERLIN",1708,Added 1 records
+v1.12,"BECKER, P., ROSTOCK",1709,Added 1 record
+v1.12,UNKNOWN3/MAUNDER/JBAA,1709,"Continuous ""zero"" values from 18 Feb to 18 Aug. Removed"
+v1.12,"WURZELBAUR, J.P., NUREMBERG",1710,"Continuous ""zero"" values from 29 Oct to 31 Dec. Removed"
+v1.12,"DERHAM, W., UPMINSTER",1710,Almost continuous values (0 and 1) from 14 Oct. Not removed
+v1.12,"WURZELBAUR, J.P., NUREMBERG",1711,Continuous zero values. Removed
+v1.12,"DERHAM, W., UPMINSTER",1711,Continuous zero values. Removed
+v1.12,"WURZELBAUR, J.P., NUREMBERG",1712,Continuous zero values. Removed
+v1.12,"DERHAM, W., UPMINSTER",1712,Continuous zero values. Removed
+v1.12,"WURZELBAUR, J.P., NUREMBERG",1713,"Continuous ""zero"" and ""one"" values to 26 May . Not removed"
+v1.12,"DERHAM, W., UPMINSTER",1713,Almost continouos zero values. Removed
+v1.12,"DERHAM, W., UPMINSTER",1714,Continuous zero values from 1 Jan to 9 Sep. Removed
+v1.12,"MARALDI, M., BONONIA",1716,"Four months of continuous zero values. Not removed. Please, revise. There are others values."
+v1.12,"HALLERSTEIN, A., PEKING",1718,Removed. See Vaquero et al. (2007) The Observatory.
+v1.12,"HALLERSTEIN, A., PEKING",1723,Removed. See Vaquero et al. (2007) The Observatory.
+v1.12,"WEIDLER, J.F., WITTENBERG",1728,"Added three sunspot observations (31 July, 12 and 15 August)"
+v1.12,"HALLERSTEIN, A., PEKING",1730,Changed according to Vaquero et al. (2007) The Observatory.
+v1.12,"HALLERSTEIN, A., PEKING",1731,Removed. See Vaquero et al. (2007) The Observatory.
+v1.12,"ADELBURNER, M., NUREMBERG",1733,Continuous zero values. Removed
+v1.12,"HUXHAM, J., ENGLAND",1736,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"WEIDLER, J.F., WITTENBERG",1736,"Changed according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"BEVIS, J., LONDON",1736,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"GRANDJEAN DE FOUCHY, BRETAGNE",1736,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"CASSINI DE THURY, PARIS",1737,"From 1 May to 1 Mar. Vaquero, Gallego and Trigo (2007) ASR "
+v1.12,"ANONYMOUS, BONONIA",1737,"From 1 May to 1 Mar. Vaquero, Gallego and Trigo (2007) ASR "
+v1.12,"GRAHAM, G., LONDON",1737,"From 1 May to 1 Mar. Vaquero, Gallego and Trigo (2007) ASR "
+v1.12,"CLERK, J., EDINBURG",1737,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"MACLAURIN, C., EDINBURG",1737,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"MASON, C., CAMBRIDGE",1737,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,GARIPUY,1737,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"CASSINI DE THURY, PARIS",1738,"Changed according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"ANONYMOUS, TOULOUSE",1738,"Added according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"HUXHAM, J., ENGLAND",1739,"Removed according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"WEIDLER, J.F., WITTENBERG",1739,"Changed according to Vaquero, Gallego and Trigo (2007) ASR"
+v1.12,"WINTHROP, J., CAMBRIDGE, MA",1741,Changed according to Vaquero and Trigo (2014) Solar Physics.
+v1.12,"HALLERSTEIN, A., PEKING",1746,Removed. See Vaquero et al. (2007) The Observatory.
+v1.12,"WARGENTHIN, P., UPPSALA",1747,Added according to R. Artl (personal communication)
+v1.12,"STAUDACH, J.C., NUREMBERG (LEIF RECOUNT)",1749-1799,Recount for these data
+v1.12,"HALLERSTEIN, A., PEKING",1751,Added according to Vaquero et al. (2007) The Observatory.
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1767,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1768,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1769,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,HORREBOW - VERSION 2,1770,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1770,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1771,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,HORREBOW - VERSION 2,1772,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1772,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,HORREBOW - VERSION 2,1773,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1773,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,HORREBOW - VERSION 2,1774,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1774,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1775,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"HORREBOW/WOLF, COPENHAGEN",1776,"Removed. We used the data from Horrebow, C., Copenhagen"
+v1.12,"ALZATE, J.A., MEXICO",1784,Added according to Vaquero (2004) Solar Physics
+v1.12,"FLAUGERGUES, H., VIVIERS",1788,Corrected according to drawings in Richard's notes
+v1.12,"BODE, J.E., BERLIN",1791,Corrected according to drawings in Richard's notes
+v1.12,"HUBER, D., BASEL",1793,Corrected according to drawings in Richard's notes
+v1.12,"HAHN, F., BERLIN",1793,Added according to Richard's notes. SUNSPOTS OBSERVED on 7th and about 15th Febraury but its number is not specific
+v1.12,"BODE, J.E., BERLIN",1794,Added according to Richard's notes
+v1.12,"FLAUGERGUES, H., AUBENAS",1794,Corrected according to Richard's notes. Sunspots observed without a specific number on 31th January
+v1.12,"FLAUGERGUES, H., AUBENAS",1795,Corrected according to Richard's notes
+v1.12,"ENDE, F.A., CELLE",1795,Not added but sunspots were observed on 5th November
+v1.12,"SCHRÖTER, GOTTINGEN",1795,Added according to Richard's notes
+v1.12,"FLAUGERGUES, H., VIVIERS",1796,Corrected and added according to Richard's notes and MÉMOIRES DE L'INSTITUT NATIONAL DES SCIENCES ET ARTS
+v1.12,"FLAUGERGUES, H., C. DE T.",1796,Removed. Continuous zero values.
+v1.12,"FLAUGERGUES, H., VIVIERS",1797,Corrected and added according to Richard's notes and MÉMOIRES DE L'INSTITUT NATIONAL DES SCIENCES ET ARTS.
+v1.12,"FLAUGERGUES, H., C. DE T.",1797,Removed. Continuous zero values and inconsistency with other Flaugergues.
+v1.12,"FLAUGERGUES, H. (C.DE T.)",1800,Removed. Continuous zero values.
+v1.12,"FLAUGERGUES, H. (C.DE T.)",1807,Removed. Continuous zero values.
+v1.12,"FRITSCH, J.H., GERMANY",1808,Removed. Continuous zero values.
+v1.12,"FRITSCH, J.H., GERMANY",1809,Removed. Continuous zero values.
+v1.12,"ENDE, F.A., CELLE",1810,Removed. Continuous zero values.
+v1.12,"GRUITHUISEN, B., MUNICH",1811,Removed. Continuous zero values.
+v1.12,"ENDE, F.A., CELLE",1811,Removed. Continuous zero values.
+v1.12,"FRITSCH, J.H., GERMANY",1811,Not removed. Continuous zero values.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1813,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1813,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1814,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1814,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1815,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1815,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1816,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1816,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1817,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1817,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1818,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1818,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1819,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1819,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1819,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1820,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1820,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1821,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1821,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1821,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1822,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1822,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1822,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1823,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1823,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1823,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1824,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1824,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1824,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"STARK, AUGSBURG, ZERO DAYS",1825,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"STARK, J.M., AUGSBURG",1825,Removed. Hoyt and Schatten noted problems (see bibliography). These records must be revised.
+v1.12,"PASTORFF/WOLF, DROSSEN",1825,Removed. We used the data from original manuscript revised by Hoyt and Schatten.
+v1.12,"SCHWABE, H., DESSAU",1825-1867,Recount for these data
+v1.12,"PASTORFF/WOLF, DROSSEN",1826,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1827,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1828,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1829,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1830,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1831,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1832,Removed.
+v1.12,"PASTORFF/WOLF, DROSSEN",1833,Removed.
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1858,Added 71 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1859,Added 71 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1860,Added 89 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1861,Added 232 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1862,Added 248 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1863,Added 248 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1864,Added 138 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1865,Added 29 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1866,Added 17 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1867,Added 86 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1868,Added 81 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1869,Added 150 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1870,Added 235 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1871,Added 264 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1872,Added 290 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1873,Added 290 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1874,Added 291 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1875,Added 279 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1876,Added 269 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1877,Added 286 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1878,Added 283 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1879,Added 288 records
+v1.12,"SPOERER, G., ANCLAM",1879,Value removed (31-Sep)
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1880,Added 286 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1881,Added 292 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1882,Added 289 records
+v1.12,"SPOERER, G., ANCLAM",1882,Value removed (31-Jun)
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1883,Added 298 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1884,Added 295 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1885,Added 290 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1886,Added 301 records
+v1.12,ROYAL GREENWICH OBSERVATORY,1886,"Values removed (29,30,31-Feb; 31-Apr; 31-Jun; 31-Sep; 31-Nov)"
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1887,Added 303 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1888,Added 285 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1889,Added 265 records
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1890,Added 287 records
+v1.12,"HADDEN, D.E., ALTA, IOWA",1890,Corrected and incorporated according to Carrasco et al. (2013)
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1891,Added 311 records
+v1.12,"HADDEN, D.E., ALTA, IOWA",1891,Incorporated according to Carrasco et al. (2013)
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1892,Added 284 records
+v1.12,"HADDEN, D.E., ALTA, IOWA",1892,Incorporated according to Carrasco et al. (2013)
+v1.12,"WOLF, R., ZURICH (SMALL TELESCOPE)",1893,Added 264 records
+v1.12,"HADDEN, D.E., ALTA, IOWA",1893,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1894,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1895,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1896,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1897,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1898,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1899,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1900,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1901,Incorporated according to Carrasco et al. (2013)
+v1.12,"HADDEN, D.E., ALTA, IOWA",1902,Incorporated according to Carrasco et al. (2013)
+v1.12,"VALENCIA OBS., VALENCIA",1920,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1923,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1924,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1925,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1926,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1927,Added according to Carrasco et al. (2014)
+v1.12,"VALENCIA OBS., VALENCIA",1928,Added according to Carrasco et al. (2014)
+v1.12,"LUFT, H.",1924,232 records incorporated
+v1.12,"LUFT, H.",1925,157 records incorporated
+v1.12,"LUFT, H.",1926,2 records incorporated
+v1.12,"LUFT, H.",1927,56 records incorporated
+v1.12,"LUFT, H.",1928,104 records incorporated
+v1.12,"LUFT, H.",1929,86 records incorporated
+v1.12,"LUFT, H.",1930,188 records incorporated
+v1.12,"LUFT, H.",1931,205 records incorporated
+v1.12,"N.A.O., JAPAN, K=0.65",1931,Value removed (31-Nov)
+v1.12,"LUFT, H.",1932,191 records incorporated
+v1.12,"LUFT, H.",1933,126 records incorporated
+v1.12,"LUFT, H.",1937,1 record incorporated
+v1.12,"LUFT, H.",1939,200 records incorporated
+v1.12,"LUFT, H.",1940,248 records incorporated
+v1.12,"LUFT, H.",1941,93 records incorporated
+v1.12,"MT. WILSON, FULL DISK",1941,Value removed (31-Nov)
+v1.12,"LUFT, H.",1942,1 record incorporated
+v1.12,"LUFT, H.",1943,143 records incorporated
+v1.12,"LUFT, H.",1944,113 records incorporated
+v1.12,"LUFT, H.",1945,125 records incorporated
+v1.12,"LUFT, H.",1946,112 records incorporated
+v1.12,"LUFT, H.",1947,212 records incorporated
+v1.12,"CRAGG, T., LOS ANGELES",1947,194 records incorporated
+v1.12,"LUFT, H.",1948,213 records incorporated
+v1.12,"CRAGG, T., LOS ANGELES",1948,306 records incorporated
+v1.12,5 NEW STATIONS,1949,
+v1.12,11 NEW STATIONS,1950,
+v1.12,3 NEW STATIONS,1951,
+v1.12,2 NEW STATIONS,1952,
+v1.12,2 NEW STATIONS,1953,
+v1.12,4 NEW STATIONS,1954,
+v1.12,12 NEW STATIONS,1955,
+v1.12,11 NEW STATIONS,1956,
+v1.12,14 NEW STATIONS,1957,
+v1.12,14 NEW STATIONS,1958,
+v1.12,9 NEW STATIONS,1959,
+v1.12,3 NEW STATIONS,1960,
+v1.12,11 NEW STATIONS,1961,
+v1.12,11 NEW STATIONS,1962,
+v1.12,11 NEW STATIONS,1963,
+v1.12,2 NEW STATIONS,1964,
+v1.12,3 NEW STATIONS,1965,
+v1.12,3 NEW STATIONS,1966,
+v1.12,20 NEW STATIONS,1967,
+v1.12,20 NEW STATIONS,1968,
+v1.12,23 NEW STATIONS,1969,
+v1.12,23 NEW STATIONS,1970,
+v1.12,23 NEW STATIONS,1971,
+v1.12,22 NEW STATIONS,1972,
+v1.12,22 NEW STATIONS,1973,
+v1.12,23 NEW STATIONS,1974,
+v1.12,24 NEW STATIONS,1975,
+v1.12,24 NEW STATIONS,1976,
+v1.12,26 NEW STATIONS,1977,
+v1.12,26 NEW STATIONS,1978,
+v1.12,26 NEW STATIONS,1979,
+v1.12,3 NEW STATIONS,1980,
+v1.12,53 NEW STATIONS,1981,
+v1.12,57 NEW STATIONS,1982,
+v1.12,69 NEW STATIONS,1983,
+v1.12,70 NEW STATIONS,1984,
+v1.12,83 NEW STATIONS,1985,
+v1.12,96 NEW STATIONS,1986,
+v1.12,97 NEW STATIONS,1987,
+v1.12,95 NEW STATIONS,1988,
+v1.12,99 NEW STATIONS,1989,
+v1.12,99 NEW STATIONS,1990,
+v1.12,106 NEW STATIONS,1991,
+v1.12,106 NEW STATIONS,1992,
+v1.12,105 NEW STATIONS,1993,
+v1.12,109 NEW STATIONS,1994,
+v1.12,107 NEW STATIONS,1995,
+v1.12,101 NEW STATIONS,1996,
+v1.12,100 NEW STATIONS,1997,
+v1.12,98 NEW STATIONS,1998,
+v1.12,91 NEW STATIONS,1999,
+v1.12,84 NEW STATIONS,2000,
+v1.12,81 NEW STATIONS,2001,
+v1.12,79 NEW STATIONS,2002,
+v1.12,84 NEW STATIONS,2003,
+v1.12,79 NEW STATIONS,2004,
+v1.12,84 NEW STATIONS,2005,
+v1.12,83 NEW STATIONS,2006,
+v1.12,86 NEW STATIONS,2007,
+v1.12,87 NEW STATIONS,2008,
+v1.12,85 NEW STATIONS,2009,
+v1.12,90 NEW STATIONS,2010,
+v1.2,"FABRICIUS, J., DORNUM, GERMANY",1611,Corrected dates (from Julian to Gregorian calendar) according to Neuhäuser and Neuhäuser (2016)
+v1.2,"SAXONIUS, P., NUREMBERG",1616,Added according to Neuhäuser and Neuhäuser (2016)
+v1.2,"TARDE, J., FARLAT",1616,Removed from 3 to 14 March according to Neuhäuser and Neuhäuser (2016)
+v1.2,"MALAPERT, C., BELGIUM",1620,Added according to Neuhäuser and Neuhäuser (2016)
+v1.2,"HEVELIUS, J., DANZIG",1642,"Recount according to Carrasco et al. (2019, doi: 10.3847/1538-4357/ab4ade)"
+v1.2,"HEVELIUS, J., DANZIG",1643,"Recount according to Carrasco et al. (2019, doi: 10.3847/1538-4357/ab4ade)"
+v1.2,"HEVELIUS, J., DANZIG",1644,"Recount according to Carrasco et al. (2019, doi: 10.3847/1538-4357/ab4ade)"
+v1.2,"LINEMANNS, A., REGIOMONTUS",1644,"Recount according to Carrasco et al. (2019, doi: 10.3847/1538-4357/ab4ade)"
+v1.2,"HEVELIUS, J., DANZIG",1645,"Added according to Carrasco et al. (2019, doi: 10.3847/1538-4357/ab4ade)"
+v1.2,"PICARD/KEILL, PARIS",1653,Removed. Keill did not specified that Picard observed zero sunspot in these dates
+v1.2,"PICARD/KEILL, PARIS",1654,Removed. Keill did not specified that Picard observed zero sunspot in these dates
+v1.2,"PICARD, J., PARIS",1666,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1667,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1668,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1669,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1670,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1671,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1672,Almost continuous record (zero values). Removed
+v1.2,"PICARD, J., PARIS",1673,Almost continuous record (zero values). Removed
+v1.2,"PICARD, J., PARIS",1674,Almost continuous record (zero values). Removed
+v1.2,"PICARD, J., PARIS",1674,"Added according to: Le Monnier, P. C., 1761, Histoire celeste ou recueil de toutes les observations astronomiques faites par ordre du Roy"
+v1.2,"PICARD, J., PARIS",1675,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1676,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1676,"Added according to: Le Monnier, P. C., 1761, Histoire celeste ou recueil de toutes les observations astronomiques faites par ordre du Roy"
+v1.2,"PICARD, J., PARIS",1677,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1678,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1679,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1680,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1681,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"PICARD, J., PARIS",1682,Removed. These solar observations were not focused to the sunspot observations
+v1.2,"MARALDI, M., BONONIA",1704,Removed from 12 January to 15 January after consulting Maraldi's annotations
+v1.2,"GODIN, L., PARIS",1726,"Corrected (changed 10 sunspot groups by 2) according to Wolf (1860, ref. 151, page 35)"
+v1.2,"MANFREDI, E., BONONIA",1727,"New sunspot records added to 14 and 15 September according to: Manfredi, Philosophical Transactions (1683-1775) Vol. 35 (1727 - 1728), pp. 477-479"
+v1.2,"CARBONE, J.B., ROME",1727,"Corrected (changed 8 sunspot groups by 5) according to: Carbone (Philosophical Transactions (1683-1775) Vol. 35 (1727 - 1728), pp. 471-476)"
+v1.2,"WEIDLER, J.F., WITTENBERG",1728,Removed according to Carrasco et al. (2015)
+v1.2,"WEIDLER, J.F., WITTENBERG",1729,Removed according to Carrasco et al. (2015)
+v1.2,"BEYER, J., HAMBURG",1729,"Added according to Hayakawa et al. (2018, doi: 10.1051/0004-6361/201832735)"
+v1.2,"BEYER, J., HAMBURG",1730,"Recount according to Hayakawa et al. (2018, doi: 10.1051/0004-6361/201832735)"
+v1.2,"ADELBURNER, M., NUREMBERG",1730,"Removed according to Hayakawa et al. (2018, doi: 10.1051/0004-6361/201832735)."
+v1.2,"DE ZÚÑIGA Y ONTIVEROS, F., MEXICO CITY",1777,Added according to Domínguez-Castro et al. (2017)
+v1.2,"ZENBEI, I., FUSHIMI ",1793,Added according to Hayakawa et al. (2017)
+v1.2,"ARMAGH OBSERVATORY, NORTHERN IRELAND",1795,Added according to Arlt (2009)
+v1.2,"ARMAGH OBSERVATORY, NORTHERN IRELAND",1797,The two sunspot records made by Hamilton have been reassigned to Armagh Observatory
+v1.2,"HALLASCHKA, F.I.C., PRAGUE",1814,"Added to Carrasco et al. (2018, doi: 10.1007/s11207-018-1322-5)"
+v1.2,"HALLASCHKA, F.I.C., PRAGUE",1816,"Added to Carrasco et al. (2018, doi: 10.1007/s11207-018-1322-5)"
+v1.2,"FISHER, J., MAINE",1816,Added according to Denig and McVaugh (2017)
+v1.2,"FISHER, J., MAINE",1817,Added according to Denig and McVaugh (2017)
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1826,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1827,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1828,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1830,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1831,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1832,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1833,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1834,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"STARK, AUGSBURG, ZERO DAYS",1835,"Removed. These observations are integrated in the observer 255 (STARK, J.M., AUGSBURG)"
+v1.2,"WINKLER, JENA",1892,"Corrected according to Wolf (1893, ref. 668)"
+v1.2,"KONKOLY, OGYALLA",1892,"Added according to Wolf (1893, ref. 646)"
+v1.2,"LUFT, H.",1924-1988,Luft (observer #464) and Luft2 (observer #610) have been integrated in Luft (#464)
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1929,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1930,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1931,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1932,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1933,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1934,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1935,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1936,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1937,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1938,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1939,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1940,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.2,"COIMBRA OBSERVATORY, PORTUGAL",1941,"Added according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1373-7)"
+v1.21,-,-,Some observation days without sunspot records accidentally removed in version 1.2 were incorporated.
+v1.21,-,-,"Removal of 29 February 1700, 1800, and 1900."
+v1.3,"HARRIOT, T., OXFORD",1610-1613,"Corrected according to Vokhmyanin et al. (2020, doi: 10.1007/s11207-020-01604-4)"
+v1.3,"SCHEINER, C., ROME",1611,"Values for the period 21 October - 8 December 1611 corrected according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"SCHEINER, C., ROME",1611-1613,"New observations and corrections from December 1611 to August 1613 according to Carrasco et al. (2020, doi: 10.1093/mnras/staa1633)"
+v1.3,"GALILEO, G., ROME",1612,"New observations and correction of the group number on 26 Apr 1612 according to Carrasco et al. (2020, doi: 10.1093/mnras/staa1633)"
+v1.3,"CIGOLI, L.C., ROME",1612,"Corrected and added according to Vokhmyanin et al. (2021, doi: 10.1007/s11207-020-01752-7)"
+v1.3,"COLOGNA, S., MONREALE",1612,"Corrected according to Vokhmyanin et al. (2021, doi: 10.1007/s11207-020-01752-7)"
+v1.3,"COLONNA, F., NAPLES",1613-1614,"Corrected according to Vokhmyanin et al. (2021, doi: 10.1007/s11207-020-01752-7)"
+v1.3,"TARDE, J., FARLAT",1615-1617,"Corrected according to Carrasco et al. (2021, doi: 0.1007/s11207-021-01905-2)"
+v1.3,"CYSAT, J., INGOLSTADT",1618,"Incorporated according to Carrasco et al. (2019, doi:10.1093/mnras/stz1867)"
+v1.3,"MALAPERT, C., DOUAI",-,"The name of the observation place (Belgium) was changed to ""Douai"" according to Carrasco et al. (2019, doi:10.1093/mnras/stz1867)"
+v1.3,"PEROVIUS, S., KALISZ",1618,"Incorporated according to Carrasco et al. (2019, doi:10.1093/mnras/stz1867)"
+v1.3,"MALAPERT, C., BELGIUM",1618-1626,"Corrected according to Carrasco et al. (2019, doi:10.1093/mnras/stz1867). Note that Carrasco et al. (2019) indicated that the number of groups by Malapert included in this database are a lower limit of the real number of groups observed by him"
+v1.3,"SCHEINER, C., ROME",1618-1632,"Incorporation of new observations and corrections of observations included in the previous version of the database according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"WELY, G., COIMBRA",1620-1621,"Incorporated according to Carrasco et al. (2019, doi:10.1093/mnras/stz1867)"
+v1.3,"SMOGULECZ, D., INGOLSTADT",1621-1625,"Corrected according to Carrasco et al. (2021, doi: 0.1007/s11207-021-01905-2)"
+v1.3,"HORTENSIUS, M., LUGD. BATAV.",1621-1626,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abdd34)"
+v1.3,"SCHICKARD, W., TUBINGA",1621-1629,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abdd34)"
+v1.3,"MALAPERT, C., DOUAI",1624,"Values for the period 21 November - 30 December 1624 incorporated according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"CYSAT, J., INGOLSTADT",1624-1629,"Incorporated according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"SCHÖNBERGER, G., GERMANY",1621-1625,"Incorporated according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"GRÜNBERGER, C., ROME",1625,"Incorporated according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,ANONYMOUS,1625,"Incorporated according to Carrasco et al. (2022, doi: 10.3847/1538-4357/ac52ee)"
+v1.3,"MOGLING, D., DARMSTADT",1626-1629,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abdd34)"
+v1.3,"GASSENDI, P., PARIS",1631-1645,"Corrected according to Carrasco et al. (2021, doi: 10.1007/s11207-021-01809-1)"
+v1.3,"ARRAGATO, RÉGUSSE (FRANCE)",1634-1639,"Added according to Carrasco et al. (2021, doi: 10.1007/s11207-021-01809-1)"
+v1.3,"SCHEINER, C., ROME",1640,"These values were not removed. However, note that Carrasco et al. (2022) indicated that they did not find any information on sunspot records made by Scheiner in that year"
+v1.3,"HEVELIUS, J., GDANSK",1645-1675,"Corrected according to Carrasco et al. (2015, doi: 10.1007/s11207-015-0767-z) and Hayakawa et al. (2024, 10.1093/mnras/stad3922)"
+v1.3,"BOSE, J.A., LEIPZIG",1655,"Corrected according to Hayakawa et al. (2024, doi: 10.1093/mnras/stad3922)"
+v1.3,"MOUTON, G.",1659-1661,Removed continuous zeros because Hoyt and Schatten (1998) indicated that they were extracted from solar transit observations
+v1.3,"PICARD, J., PARIS",1661,"Added according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"KIRCHER, A., ROME",1667,"Removed according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"HACKI, M.A., POLAND",1671,"Added according to Carrasco et al. (2025, submitted)"
+v1.3,"PICARD, J., PARIS",1671,"Corrected accordig to Carrasco et al. (2025, submitted)"
+v1.3,"STETINI, LEIPZIG",1671,"Name of the observer ""STETINI, LEIPZIG"" changed to ""ANONYMOUS, STETTIN, GERMANY"" according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"HOOK, R., LONDON",1671,"Dates corrected from Julian to Gregorian calendar according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"FOGEL, M., HAMBURG",1671,"Corrected according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"SIVERUS, H., HAMBURG",1671,"Corrected according to Hayakawa et al. (2021, doi: 10.1093/mnras/staa2965)"
+v1.3,"PETITUS, P., PARIS",1671-1677,"Removed according to Hayakawa et al. (2024, doi: 10.1093/mnras/stad3922)"
+v1.3,"FLAMSTEED, J., CAMBRIDGE",1672-1703,"Added according to Carrasco and Vaquero (2016, doi: 10.1007/s11207-015-0839-0)"
+v1.3,"HEVELIUS, J., DANZIG",July 1675-1679,"""Zeros"" were removed because no specific mention to sunspots was found in solar altitude measurements in Hevelius (1685, Annus Climatericus) and no mention on sunspots also in Hevelius (1690, Produmus)"
+v1.3,"GALLET, J., AVIGNON",1677,"Incorporated according to Carrasco et al. (2021, doi: 10.1093/pasj/psab035)"
+v1.3,"IHLE, J.A., BERLIN",1680-1703,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"KIRCH, G., BERLIN",1680-1708,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"EIMMART, G.C., NUREMBERG",1681-1684,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949). The authors note that the sunspot observations with number of groups equal to zero assigned to G.D. Eimmart for the period 21 March to 11 November 1681 should be used with caution"
+v1.3,"SCHULTZ, D.G., NUREMBERG",1684,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"WURZELBAUR, J.P., NUREMBERG",1700-1709,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481). Note that the number of groups assigned to Wurzelbaur for the period 6-11 November 1700 is 1, but the authors indicated that it can be 1 or 2"
+v1.3,"EIMMART, M-C., NUREMBERG",1703,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,"HOFFMANN, J.H., BERLIN",1703,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,"DERHAM, W., UPMINSTER",1703-1715,Dates corrected from Julian to Gregorian calendar
+v1.3,"DERHAM, W., UPMINSTER",1704,"Corrected according to Carrasco et al. (2019, doi: 10.1093/mnrasl/slz027). Note that Carrasco et al. (2019) indicated that the number of groups assigned to Derham should be used with caution"
+v1.3,"MÜLLER, J.H., NUREMBERG",1705-1709,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,ANONYMOUS,1706,"Added according to Carrasco et al. (2019, doi: 10.1093/mnrasl/slz027)"
+v1.3,"KIRCH, M.M., BERLIN",1706,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"KIRCH, C., BERLIN",1706,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"STURM, L.C., BERLIN",1707,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"HERTEL, C.T., BERLIN",1707,"Corrected according to Neuhäuser et al. (2018, doi: 10.1002/asna.201813481)"
+v1.3,"WIDEBURG, J.B., HELMSTADT",-,"Name corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,"WIDEBURG, J.B., HELMSTADT",1708-1709,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,"WOLF, C., MAGDEBURG",1709,"Erratum corrected in the number of groups (in previous version of Vaquero et al., 2016: 1 group, now: 2 groups) "
+v1.3,"MÜLLER, J.H., ALTORF",1716-1718,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
+v1.3,"MÜLLER, J.C., BRANDEIS, CZECH REPUBLIC",-,"The name of the observation place (Prague) was corrected to ""Brandeis"""
+v1.3,"MÜLLER, J.C., BRANDEIS, CZECH REPUBLIC",1719-1720,"Corrected according to Hayakawa et al. (2021, doi: 10.1007/s11207-021-01880-8)"
+v1.3,MOLYNEUX,1722,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"BRADLEY, J., GREENWICH",1726-1739,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"BLANCHINI, F., VERONA",1727,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"CASSINI DE THURY, PARIS",1727,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,VAN COESFELT,1728-1729,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"WASSE, J., NORTHAMPTONSHIRE",1730,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"LEIPZIG, SOURCE: ADELBULNER",1733,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,SIMONELI,1735,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"HALLERSTEIN, A., PEKING",1735,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"DUCLOS, SOURCE: MHSBA",1736,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,MARTIN,1737,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"MUSANO, M., VENICE",1739,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"WINTHROP, J., CAMBRIDGE, MA",1739-1742,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"WARGENTIN, P., UPPSALA",1747,"Added and corrected according to Arlt (2018, doi: 10.1002/asna.201913544)"
+v1.3,"CASSINI/MARALDI, SOURCE: HARS",1748,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"ZANOTTI, E., BONONIA",1748,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"BERAUD, L., PARIS",1748,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"SCHMETTAU, S., PARIS",1748,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"WARGENTIN, P., UPPSALA",1748,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"SANSAI ZUSETSU, JAPAN",1749-1750,"Added according to Hayakawa et al. (2018, doi: 10.1093/pasj/psy066). Note that we chose the observation with the highest number of groups corresponding to observations made on 2 Dec 1749"
+v1.3,"ORIANI, B., MILAN",1778,"Corrected according to Nogales et al. (2020, doi: 10.1007/s11207-020-01638-8)"
+v1.3,"ORIANI, B., MILAN",1779,"Incorporated according to Nogales et al. (2020, doi: 10.1007/s11207-020-01638-8)"
+v1.3,"LINDENER, B.A., GLATZ",1800-1827,"Corrected according to Hayakawa et al. (2023, doi: 10.1051/swsc/2023023)"
+v1.3,"DERFFLINGER, T., KREMSMUNSTER",1802-1824,"Corrected according to Hayakawa et al. (2020, doi: 10.3847/1538-4357/ab65c9). Note that, when several observations are avialable in the same dates, it was taken the highest number of groups recorded in the two documentary sources consulted in that work"
+v1.3,"PRANTNER, S.M.J., WILTEN",1804-1844,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abee1b)"
+v1.3,"HALLASCHKA, F.I.C., PRAGUE",1816,"Corrected according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1322-5)"
+v1.3,"TEVEL, C., MIDDELBURG",1816-1836,"Corrected according to Carrasco (2022, doi: 10.3847/1538-4357/ac24a5)"
+v1.3,"COLLA, A., PARMA",1830-1843,"Added according to Carrasco et al. (2020, doi: 10.1007/s11207-020-01678-0)"
+v1.3,"KUNITOMO, OMI",1835-1836,"Corrected according to Fujiyama et al. (2019, doi: 10.1007/s11207-019-1429-3). Note that, when several observations are avialable in the same dates, it was taken the highest number of groups recorded in the three documentary sources consulted in that work"
+v1.3,"BOND, W.C., HARVARD",1847-1849,"Corrected according to Carrasco et al. (2020, doi: 10.1007/s11207-020-01696-y)"
+v1.3,"WOLF, R., ZURICH  (83/1320 mm Fraunhofer refractor; Friedli recount)",1849-1893,"Added according to Friedli (2016, doi: 10.1007/s11207-016-0907-0)"
+v1.3,"WOLF, R., ZURICH  (40/700 mm Parisian refractor; Friedli recount)",1849-1876,"Added according to Friedli (2016, doi: 10.1007/s11207-016-0907-0)"
+v1.3,"CARRINGTON, LONDON",1853-1861,"Corrected according to Teague (2020, http://www.sidc.be/silso/carrington) "
+v1.3,"SECCHI, ROME",1853-1878,"Corrected according to Ermolli (2023, doi: 10.3847/1538-4365/ad0886)"
+v1.3,"AGUILAR, MADRID",1876-1882,"Removed. These observations were actually made by Vicente Ventosa according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
+v1.3,"VENTOSA, V., MADRID OBSERVATORY",1876-1896,"Added according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
+v1.3,"MERINO, MADRID",1883-1896,"Removed. These observations were actually made by Vicente Ventosa according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
+v1.3,"VALDERRAMA, J., MADRID",1886,"Added according to Vaquero et al. (2017, doi: 10.1007/s11207-017-1059-6)"
+v1.3,"HADDEN, D.E., ALTA, IOWA",1894,Correcting erratum. There were two observations on 15 October 1894 but actually one of them was made in the previous day (14 October 1894)
+v1.3,"AGUILAR, MADRID OBSERVATORY",1914-1920,"Added according to Lefèvre et al. (2016, doi: 10.1007/s11207-016-0905-2)"
+v1.3,"MISAWA, K., JAPAN",1921-1934,"Added according to Hayakawa et al. (2023, doi: 10.1093/mnras/stad2791)"
+v1.3,"CARRASCO, R., MADRID OBSERVATORY",1931-1933,"Added according to Aparicio et al. (2022, doi: 10.1007/s11207-022-01992-9)"
+v1.3,"KOYAMA, H., TOKYO",1945-1947,"Added according to Hayakawa et al. (2020, doi: 10.1093/mnras/stz3345)"
+v1.3,"SACRAMENTO PEAK OBSERVATORY, NEW MEXICO",1947-2004,"Incorpoated according to Carrasco et al. (2021, doi: 10.1007/s11207-020-01746-5)"
+v1.3,"STRACH, E., LIVERPOOL",1969-2008,"Incorporated according to Carrasco et al. (2019, doi: 10.1029/2018SW002147)"
+v1.3,"CRAGG, T., LOS ANGELES",-,Erratum of this name was corrected
+v1.3,"TAKUMA, JAPAN",1972-2013,"Added according to Hayakawa et al. (2023, doi: 10.1002/gdj3.158)"
