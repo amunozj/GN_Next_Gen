@@ -1,0 +1,29 @@
+# CPU-only variant of environment.yml (any OS, including native Windows and macOS).
+# Create from the repository root:
+#   conda env create -f environment-cpu.yml && conda activate gn-next-gen-cpu
+name: gn-next-gen-cpu
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - numpy>=1.26
+  - scipy>=1.11
+  - pandas>=2.1
+  - pyarrow
+  - matplotlib>=3.8
+  - xarray
+  - h5netcdf
+  - arviz
+  - networkx
+  - pyyaml
+  - pytest>=7
+  - ruff
+  - jupyterlab
+  - jupytext
+  - ipykernel
+  - pip:
+      - "jax>=0.4.30"
+      - "numpyro>=0.15"
+      - "optax>=0.2"
+      - "-e ."

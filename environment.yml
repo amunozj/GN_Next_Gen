@@ -1,0 +1,31 @@
+# Default development environment: GPU (NVIDIA, CUDA 12) via JAX's pip wheels.
+# JAX GPU wheels are Linux-only: on Windows use WSL2, or use environment-cpu.yml.
+# Create from the repository root (the editable install below is relative to it):
+#   conda env create -f environment.yml && conda activate gn-next-gen
+# Versions are lower bounds; pin exact versions in a lock file once Step 1 settles the stack.
+name: gn-next-gen
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - numpy>=1.26
+  - scipy>=1.11
+  - pandas>=2.1
+  - pyarrow
+  - matplotlib>=3.8
+  - xarray
+  - h5netcdf
+  - arviz
+  - networkx
+  - pyyaml
+  - pytest>=7
+  - ruff
+  - jupyterlab
+  - jupytext
+  - ipykernel
+  - pip:
+      - "jax[cuda12]>=0.4.30"
+      - "numpyro>=0.15"
+      - "optax>=0.2"
+      - "-e ."
