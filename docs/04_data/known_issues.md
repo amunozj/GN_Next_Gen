@@ -1,0 +1,15 @@
+# Known data issues (to resolve in Step 1)
+
+Each item has an ID so plans and code comments can refer to it.
+
+| ID | Issue | Evidence | Suggested handling |
+|---|---|---|---|
+| D1 | `SC_SP_RG_DB_KM_group_areas_by_day.csv` has **no header row** (lost in ADFSSN commit `5898ab8`, 2020-10-02). Legacy code reads it with `header=0`, so the first data row becomes the header | `git show 5898ab8~1:…` starts `YEAR,MONTH,DAY,AREA1..AREA26`; current file starts `1825,11,5,NaN,…` | Loader supplies `names=["YEAR","MONTH","DAY"]+[f"AREA{i}" for i in 1..26]`. Never edit `data/raw` |
+| D2 | The 2020 version only **prepends 17,695 all-NaN rows** (1825-11-05 → 1874-04-16); everything after is byte-identical to the previous version. No Schwabe/Spörer areas exist despite the `SC_SP` prefix | `cmp` of rows 17,696+ vs old rows 2+; 0 non-NaN cells in the prefix | Treat the reference as starting 1874-04-17; use the `_pre5898ab8` file or drop the prefix |
+| D3 | `DRGO_group_areas_by_day.csv` (1874–1976) and the SC_SP_RG file **differ on 12,469 of 37,514 days**: the SC_SP_RG version drops some groups present in DRGO (often small ones) and has 994 all-zero days where DRGO lists groups. Likely the filtering from ADFSSN commit `a95f3f1` ("ensure proper calibration between Debrecen and RGO") | Row-by-row comparison; examples 1874-04-17 (DRGO 208 MSH vs all zeros), 1912-05-13 (DRGO has an 11 MSH group the other lacks) | Characterize the rule (area cut? group type? Debrecen-vs-RGO harmonization) before choosing the reference; document the choice in an ADR. This affects the reference-epoch anchor and the lowest thresholds |
+| D4 | Area semantics not documented in-repo (whole-spot vs umbral; foreshortening-corrected or projected) | — | Confirm from Debrecen/RGO documentation; record in the data dictionary |
+| D5 | Reference inhomogeneity: early RGO (pre-1915 counts were removed by the MATLAB code), RGO → Debrecen → Kislovodsk transitions | `legacy/GN_Series_matlab/A1_*.m` drops RGO < 1915; ADFSSN notebooks drop the first two minima | Model reference segments as observers with their own detection parameters, anchored to one epoch (ADR-003) |
+| D6 | All snapshots are **old**: GN database ends 2010-12-31, SILSO daily 2018-07-31, monthly 2017-10, reference areas 2018-06-19 | `MANIFEST.csv` | See [refresh_todo.md](refresh_todo.md) |
+| D7 | GN V1.22 includes problematic Maunder-Minimum spotless days and generic statements read as daily observations | Carrasco et al. 2021; Hayakawa et al. 2021, 2024; Neuhäuser et al. 2018 (see assessment §2) | Use corrected database versions where available; model blanket statements explicitly (Step 4) |
+| D8 | Mixed line endings (CRLF for 5 files, LF for the two SC_SP_RG files) | `MANIFEST.csv` `eol` column | Parsers must accept both; `.gitattributes` keeps bytes unchanged so checksums hold |
+| D9 | Legacy code slices area columns inconsistently (drops AREA26 in some places) | `docs/03_legacy/adfssn.md` | Loaders should always use all `AREA*` columns by name |

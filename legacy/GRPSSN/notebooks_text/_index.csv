@@ -1,0 +1,7 @@
+﻿"Source","Export","Sha256","Cells","Status","DuplicateOf"
+"ADF_SSN_01_Uniform_vs_Masked_Removal.ipynb","ADF_SSN_01_Uniform_vs_Masked_Removal.py","86593a80aa78cfa290aca08cab13d16646c365dd65dd646dfbeea8f882e05928","37","tracked, clean",""
+"ADF_SSN_02_Optimizing_ADF_time_threshold.ipynb","ADF_SSN_02_Optimizing_ADF_time_threshold.py","84b236f3ccceea3223a8a3c728ca7d3a09d4db4b75b4953072aa8c178b55514a","30","tracked, clean",""
+"ADF_SSN_03_Optimizing_ADF_time_threshold-Min_Max.ipynb","ADF_SSN_03_Optimizing_ADF_time_threshold-Min_Max.py","6db80607654e0d502ee1865225432a8a2064cbac487eef38f466247eec4d8a80","59","tracked, clean",""
+"ADF_SSN_04_filling_missing_data.ipynb","ADF_SSN_04_filling_missing_data.py","0fecc91fa31b198af94c6abdf659cfbf1260576d995a6e83095527d8d9542770","67","tracked, clean",""
+"ADF_SSN_05_Metrics_Comparison.ipynb","ADF_SSN_05_Metrics_Comparison.py","d65adcd08fea836ded522264efe2a971fd24fddf8ba817bf8418d67b1b273dbe","29","tracked, clean",""
+"ADF_SSN_06_Using_Only_Group_Distribution.ipynb","ADF_SSN_06_Using_Only_Group_Distribution.py","e4fc4bd51324a3d92afbc3b0d859690218ddc5fd4520695bdf45256e41f3c3af","70","tracked, modified (uncommitted)",""

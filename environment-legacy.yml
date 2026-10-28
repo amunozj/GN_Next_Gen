@@ -1,0 +1,20 @@
+# Environment for running the legacy Python code in legacy/ (baselines only; see legacy/README.md).
+# The legacy code uses APIs removed in later releases (np.int, DataFrame.append, scipy.signal.gaussian,
+# scipy's NumPy aliases such as sp.in1d), so versions are pinned to that era.
+# Untested on the target machine: adjust pins if the solver fails.
+#   conda env create -f environment-legacy.yml && conda activate gn-legacy
+name: gn-legacy
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - numpy=1.21
+  - pandas=1.3
+  - scipy=1.7
+  - matplotlib=3.4
+  - astropy=4.3
+  - pyemd
+  - seaborn
+  - networkx
+  - jupyterlab
+  - jupytext

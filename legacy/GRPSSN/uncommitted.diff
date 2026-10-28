@@ -1,0 +1,102 @@
+diff --git a/scripts/Main_SSN_GRP_all_Observers.py b/scripts/Main_SSN_GRP_all_Observers.py
+index 9472d30..2df3619 100644
+--- a/scripts/Main_SSN_GRP_all_Observers.py
++++ b/scripts/Main_SSN_GRP_all_Observers.py
+@@ -25,7 +25,7 @@ args, leftovers = parser.parse_known_args()
+ #################
+ 
+ # Observer ID range and who to skip
+-SSN_GRP_Config.OBS_START_ID = 636
++SSN_GRP_Config.OBS_START_ID = 387
+ SSN_GRP_Config.OBS_END_ID = 710
+ SSN_GRP_Config.SKIP_OBS = [574, 579, 635]
+ 
+@@ -174,7 +174,8 @@ def run_obs(CalObsID):
+         # Calculating the Earth's Mover Distance using sliding windows for different intervals
+         obs_ref_overlap = ssn_grp.GRPscanningWindowDis(noOvrlpSw=True,  # Switch that forces the code to ignore the true overlapping phase in calibration if present
+                                                        emdSw=True,   # Switch that activates the EMD metric (True), vs the L2 norm (False)
+-                                                       onlyActiveSw=False, # Switch that ignores (True) or includes zeros (False)
++                                                       LowLim=2,  # Lowest number of groups used in the distribution
++                                                       density=True,  # Switch that defines if distances are calculated using PDF (True) or histogram (False)
+                                                        Dis_Pow=1,    # Power index used to define the distance matrix for EMD calculation
+                                                        NGrpsBins=26, # Number of used bins to calculate the group distribution
+                                                        nBest1=100,   # Number of best matches to keep based on optimal distance
+diff --git a/scripts/SSN_GRP.py b/scripts/SSN_GRP.py
+index aea9a69..4a7cf20 100644
+--- a/scripts/SSN_GRP.py
++++ b/scripts/SSN_GRP.py
+@@ -699,8 +699,9 @@ class ssnGRP(ssn_data):
+ 
+     def GRPscanningWindowDis(self,
+                              noOvrlpSw=True,
+-                             onlyActiveSw=True,
++                             LowLim=0,
+                              emdSw=True,
++                             density=True,
+                              Dis_Pow=2,
+                              NGrpsBins=26,
+                              nBest1=100,
+@@ -715,8 +716,9 @@ class ssnGRP(ssn_data):
+ 
+         :input
+         :param noOvrlpSw: Switch that forces the code to ignore the true overlapping phase in calibration if present
+-        :param onlyActiveSw: Switch that ignores (True) or includes zeros (False)
++        :param LowLim: Lowest number of groups used in the distribution
+         :param emdSw: Switch that activates the EMD metric (True), vs the L2 norm (False)
++        :param density: Switch that defines if distances are calculated using PDF (True) or histogram (False)
+         :param Dis_Pow: Power index used to define the distance matrix for EMD calculation
+         :param NGrpsBins: Number of used bins to calculate the group distribution
+         :param nBest1: Number of best matches to keep based on optimal distance
+@@ -734,11 +736,11 @@ class ssnGRP(ssn_data):
+         ssn_data.vldIntr[np.isnan(ssn_data.vldIntr)] = 0
+ 
+         # Setting the bin edges for EMD calculation
+-        EMDbinsG = (np.arange(onlyActiveSw, NGrpsBins + 2) - 0.5)
++        EMDbinsG = (np.arange(LowLim, NGrpsBins + 2) - 0.5)
+ 
+         # Distance matrix for EMD calculations
+-        x = np.arange(0, NGrpsBins + 2 - onlyActiveSw)
+-        y = np.arange(0, NGrpsBins + 2 - onlyActiveSw)
++        x = np.arange(0, EMDbinsG.shape[0]-1)
++        y = np.arange(0, EMDbinsG.shape[0]-1)
+         xx, yy = np.meshgrid(x, y)
+         DisG = np.absolute(np.power(xx - yy, Dis_Pow))
+ 
+@@ -846,12 +848,12 @@ class ssnGRP(ssn_data):
+                                 TgrpsREF[np.isnan(TgrpsOb)] = np.nan
+ 
+                                 # Retaining only non-nans and/or non-zeros
+-                                if onlyActiveSw:
+-                                    TgrpsOb = TgrpsOb[TgrpsOb > 0]
+-                                    TgrpsREF = TgrpsREF[TgrpsREF > 0]
+-                                else:
++                                if LowLim==0:
+                                     TgrpsOb = TgrpsOb[np.isfinite(TgrpsOb)]
+                                     TgrpsREF = TgrpsREF[np.isfinite(TgrpsREF)]
++                                else:
++                                    TgrpsOb = TgrpsOb[TgrpsOb >= LowLim]
++                                    TgrpsREF = TgrpsREF[TgrpsREF >= LowLim]
+ 
+                                 # Number of observations
+                                 grpNObs[TIdx, SIdx] = np.sum(TgrpsOb>0)
+@@ -859,9 +861,9 @@ class ssnGRP(ssn_data):
+ 
+                                 # Calculating Earth Mover's Distance for group numbers
+                                 DisObs, bins = np.histogram(TgrpsOb, bins=EMDbinsG,
+-                                                            density=True)
++                                                            density=density)
+                                 DisREF, bins = np.histogram(TgrpsREF, bins=EMDbinsG,
+-                                                            density=True)
++                                                            density=density)
+ 
+                                 # Storing Distance
+                                 if emdSw:
+@@ -1086,7 +1088,7 @@ class ssnGRP(ssn_data):
+ 
+         # Storing variables in object-----------------------------------------------------------------------------------
+         ssn_data.noOvrlpSw = noOvrlpSw   # Switch that forces the code to ignore the true overlapping phase in calibration if present
+-        ssn_data.onlyActiveSw = onlyActiveSw  # Switch that ignores (True) or includes zeros (False)
++        ssn_data.LowLim = LowLim  # Lowest number of groups used in the distribution
+         ssn_data.emdSw = emdSw  # Switch that activates the EMD metric (True), vs the L2 norm (False)
+ 
+         ssn_data.NGrpsBins = NGrpsBins  # Number of used bins to calculate the group distribution
