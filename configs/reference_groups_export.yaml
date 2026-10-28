@@ -1,0 +1,38 @@
+# Frozen snapshot of the reference survey, exported from sunspot-homogenization.
+# See docs/06_decisions/ADR-009-reference-survey-and-anchored-epochs.md.
+
+upstream:
+  repo: /d0/amunozj/git_repos/sunspot-homogenization
+  # Commit the snapshot is pinned to.  Recorded in provenance.json and in
+  # MANIFEST.csv; the export refuses to run against a different commit unless
+  # --allow-commit-mismatch is passed.
+  commit: 9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc
+  branch: joint-generative-calibration
+  # Cross-calibration posterior the area_corr_dbcal* columns come from.
+  posterior: data/processed/calibration/joint/trusted_core_debrecen_umbral.pkl
+  posterior_sha256: 09026bda1bd92929ac59284e2fdbfac0df6091aa781c297752f608ebcc028851
+  posterior_version: joint_umbral_v5
+  offsets_csv: data/processed/calibration/joint/joint_pooled_debrecen_offsets.csv
+  # Where the per-survey group CSVs produced by run_survey were written.
+  group_output_dir: /tmp/claude-8132/-d0-amunozj-git-repos-GN-Next-Gen/61040f17-5df2-4ca3-b351-2f0dd667a8ed/scratchpad/upstream_out/groups
+
+# Core five.  SOON is excluded entirely; SWPC contributes observer counts only
+# (workstream C), never areas.  See known issues D13.
+surveys: [schwabe, sporer, rgo, debrecen, kmas]
+
+# ADR-009 anchors: whole cycles, each entirely covered by one survey, disjoint
+# between the two anchors.  Verified against survey_cycle_coverage.csv.
+anchors:
+  primary:
+    survey: debrecen
+    cycles: [21, 22, 23]
+  secondary:
+    survey: rgo
+    cycles: [15, 16, 17, 18, 19]
+  # Complete in RGO but excluded by default on D5 grounds (pre-1915 RGO).
+  secondary_extension_cycles: [12, 13, 14]
+
+output:
+  dir: data/raw/reference_groups_2026-10
+  compression: zstd
+  compression_level: 9

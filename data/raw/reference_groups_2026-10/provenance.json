@@ -1,0 +1,89 @@
+{
+  "generated_utc": "2026-10-28T21:08:00Z",
+  "generated_by": "scripts/export_reference_groups.py",
+  "upstream": {
+    "repo": "/d0/amunozj/git_repos/sunspot-homogenization",
+    "commit": "9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc",
+    "branch": "joint-generative-calibration",
+    "posterior": "data/processed/calibration/joint/trusted_core_debrecen_umbral.pkl",
+    "posterior_sha256": "09026bda1bd92929ac59284e2fdbfac0df6091aa781c297752f608ebcc028851",
+    "posterior_version": "joint_umbral_v5",
+    "offsets_csv": "data/processed/calibration/joint/joint_pooled_debrecen_offsets.csv",
+    "head_at_export": "9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc",
+    "license": "MIT"
+  },
+  "surveys": [
+    "schwabe",
+    "sporer",
+    "rgo",
+    "debrecen",
+    "kmas"
+  ],
+  "excluded_surveys": {
+    "soon": "excluded from the reference on area-scale grounds (D13)",
+    "swpc": "excluded from the reference; contributes observer counts only (D13)"
+  },
+  "anchors": {
+    "primary": {
+      "survey": "debrecen",
+      "cycles": [
+        21,
+        22,
+        23
+      ]
+    },
+    "secondary": {
+      "survey": "rgo",
+      "cycles": [
+        15,
+        16,
+        17,
+        18,
+        19
+      ]
+    },
+    "secondary_extension_cycles": [
+      12,
+      13,
+      14
+    ]
+  },
+  "coverage_by_survey": {
+    "schwabe": [
+      "1825-01-01",
+      "1867-12-31"
+    ],
+    "sporer": [
+      "1861-01-01",
+      "1894-12-31"
+    ],
+    "rgo": [
+      "1874-01-01",
+      "1976-12-31"
+    ],
+    "debrecen": [
+      "1974-01-01",
+      "2018-12-31"
+    ],
+    "kmas": [
+      "1954-01-01",
+      "2026-12-31"
+    ]
+  },
+  "row_counts": {
+    "group_day_observations": 375800,
+    "group_single_entry": 71642,
+    "day_status": 108842
+  },
+  "model_facing_area_column": "area_corr",
+  "calibrated_area_column": "area_corr_dbcal",
+  "calibrated_area_use": "prior and cross-check only; never applied as a hard pre-correction, so the upstream calibration is not applied twice (ADR-003, D5)",
+  "data_lineage": "Sunspot-survey observations only (Schwabe, Spoerer, RGO/Greenwich, Debrecen DPD, Kislovodsk KMAS), processed by sunspot-homogenization at the pinned commit. No isotope, aurora, proxy or SILSO sunspot-number input anywhere in this lineage (ADR-002 firewall). The cycle/cycle_parity and amp_* columns are derived from the surveys' own group positions and smoothed areas, not from SILSO, and are diagnostic only: they are never calibration inputs, so cycle phase stays latent (ADR-003).",
+  "sha256": {
+    "day_status.parquet": "8d86ecad60230a6d26d560e661a6f276adcb0a58a7370f525c072dc2f647703d",
+    "group_day_observations.parquet": "0690cf17495377ab91b697d59e21d07dd8bbe696eb5724be38a89a8ac81f2601",
+    "group_single_entry.parquet": "4cc366a431265763de67c8ae6a5bb043d92a4683787b98e18dc25d9444ec4b08",
+    "survey_calibration.csv": "9770ba42d7b7a77fc675b4b9791dcdac3058108ad59aac9220c8387fb84385e7",
+    "survey_cycle_coverage.csv": "a56bbd1da90583d7d92255eac2c7f07701d45e62831c7867dbed1f74c4366409"
+  }
+}
