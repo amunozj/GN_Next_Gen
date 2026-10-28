@@ -1,0 +1,11 @@
+# Normalize line endings for code and docs.
+* text=auto
+
+# Data files are stored byte-exact so SHA-256 checksums in data/raw/MANIFEST.csv
+# match on every machine (no CRLF/LF conversion).
+data/** -text
+legacy/**/runcsvs/** -text
+legacy/**/*.csv -text
+legacy/**/*.txt -text
+legacy/**/*.mat binary
+legacy/**/*.xlsx binary
