@@ -49,7 +49,7 @@ conda activate gn-legacy
 ```
 
 Then copy (do not move) a legacy folder to a scratch location outside the repo, place the needed `data/raw` files under
-`input_data/` next to it, and run from there. Note `scripts/SSN_ADF.py:97` reads the reference file with `header=0`, which
+`input_data/` next to it, and run from there. Note `legacy/ADFSSN/scripts/SSN_ADF.py:97` reads the reference file with `header=0`, which
 fails on the headerless current file; supply the `_pre5898ab8` file (renamed) or add the header in the scratch copy. The
 MATLAB code needs MATLAB with the Curve Fitting and Statistics toolboxes plus File Exchange `kShortestPath`,
 `export_fig` and `jbfill`, and the V1-12 database (not included).
