@@ -28,7 +28,9 @@ therefore largely done; what remains of it is the SILSO SN refresh and the publi
    `(date, station)`, and a **config-level validator for the KMAS single-use rule** (ADR-009).
 2. **Data-issue resolutions.** D1–D7 and D9 already have a status in `docs/04_data/known_issues.md`, and ADR-009 has
    chosen the reference and the anchored epochs. What remains for Step 1: **D16** (duplicate-key rule), **D17**
-   (robust K, below), **D11** (Spörer's area unit, if it can be settled), and a status for D10–D21 at the end.
+   (robust K, below), **D22** (exclude the colliding KMAS groups from lifetime work), **D11** (Spörer's area
+   unit, if it can be settled), a config-level validator for the KMAS single-use rule, and a status for
+   D10–D22 at the end.
 3. **Data refresh** per `refresh_todo.md`: new raw folders + `MANIFEST.csv` rows (URL, date, version, SHA-256,
    license). At minimum the latest SILSO GN database and the Debrecen catalogue to present; record what was unavailable.
 4. **Check A — dynamics:** fit immigration-death models (survival φ, births λ(t) smooth) with 1 and 2 area classes to the
@@ -36,7 +38,9 @@ therefore largely done; what remains of it is the SILSO SN refresh and the publi
    observed: daily autocorrelation (lags 1–30 days), zero fraction and count distribution as functions of activity,
    run lengths of spotless and active days. **Lifetimes are now available directly** — `group_single_entry.parquet`
    carries `obs_duration` for every group in all five surveys — so compare lifetime distributions directly rather
-   than inferring them.
+   than inferring them. **But exclude the 289 KMAS groups flagged by D22 first**: KMAS reuses a `group_id` for
+   physically distinct groups on 414 group-days, which inflates their apparent lifetime (median 11 days against
+   5 for clean KMAS groups). RGO and Debrecen are clean and are the safer basis for the lifetime comparison.
 5. **Check B — stationarity:** compare the area distribution of groups conditional on activity level across epochs
    (RGO early/late, Debrecen, Kislovodsk) and across cycles; test the two-population (small/large group) structure.
 6. **Results doc** `docs/results/step-1-*.md` with a go/no-go and concrete settings for Step 4: number of area classes,
@@ -49,7 +53,7 @@ therefore largely done; what remains of it is the SILSO SN refresh and the publi
 - Loader tests: row counts and coverage match `MANIFEST.csv`; sentinels handled; leap-day handling verified; `pytest`
   fast suite < ~1 min. (The "area columns always all 26" criterion is retired: the reference is long-format now, and
   the snapshot's own invariants are covered by `tests/test_reference_groups_snapshot.py`.)
-- Every known issue D1–D21 has a status (resolved / documented / deferred with reason).
+- Every known issue D1–D22 has a status (resolved / documented / deferred with reason).
 - Check A: pre-registered discrepancy measures (e.g. ACF RMSE, zero-fraction error per activity bin) with pass
   thresholds; decision on 1 vs 2 classes justified by them.
 - Check B: a stated test and result; if non-stationary, the consequence for the detection layer is written down.

@@ -213,15 +213,22 @@ reader or merge issue rather than a historical one. Worth raising upstream.
 | Extension ties to workstream A | at T = 0, KMAS counts equal `day_status.n_groups` exactly |
 | No SWPC areas under `data/raw` | asserted by the exporter and by test |
 | Firewall (ADR-002) | both `provenance.json` files carry an explicit lineage statement; no isotope, aurora, proxy or SILSO input |
-| `ruff check` / `ruff format` | **not run** — see *Deviations* |
+| `ruff check .` | **all checks passed** (14 findings fixed 2026-10-29; see below) |
+| `ruff format --check .` | **65 files already formatted**; `legacy/` untouched |
 
 ## Deviations from the plan
 
-1. **`ruff` could not be run.** It is not installed in any conda environment on this machine, and
-   the project's own `gn-next-gen` env does not exist here (so `pytest` ran in `ssn` instead, with
-   `PYTHONPATH=src`). In its place: every Python file parses, no file exceeds the project's
-   100-character limit, no tabs, and every module has a docstring. **Lint and format remain
-   unverified** and should be run once the project env exists.
+1. **`ruff` was initially unavailable; now resolved (2026-10-29).** It was not installed in any
+   conda env on this machine, and the project's own `gn-next-gen` env does not exist here, so
+   `pytest` ran in `ssn` with `PYTHONPATH=src` and lint was replaced by hand checks. The PI has
+   since installed `ruff` into `ssn`, and it was run properly: **14 findings, all in code added by
+   this branch** — one unused import (`F401`), two `datetime.timezone.utc` → `datetime.UTC`
+   (`UP017`), one unsorted import block (`I001`), and nine `zip()` calls without `strict=`
+   (`B905`). The `B905` cases were fixed with `strict=True` rather than ruff's suggested
+   `strict=False`: each zips columns of a single DataFrame, so lengths are equal by construction
+   and a mismatch should raise rather than truncate silently. `ruff format` then reformatted the
+   nine new files; no pre-existing file changed and `legacy/` was untouched. Both now pass clean.
+   `pytest` still runs in `ssn`, because the project env still does not exist here.
 2. **The upstream pipeline could not run as the plan assumed.** `sunspot_pipeline/processing/cycles.py`
    imports `cuml` (GPU) unconditionally, and `cuml` cannot import in the `ssn` env: it pulls in
    `cudf` → `numba`, and the only `numba` visible is a user-site build requiring NumPy ≤ 2.3 where
@@ -255,6 +262,20 @@ reader or merge issue rather than a historical one. Worth raising upstream.
 2. Size the state-space truncation K from a robust quantile, not `max(GROUPS)` (**D17**).
 3. A config-level validator for the **KMAS single-use rule**; it is documentation-only today.
 4. Exclude the 289 colliding KMAS groups from lifetime work, or use RGO and Debrecen (**D22**).
-5. Run `ruff check .` and `ruff format --check .` once the `gn-next-gen` env exists.
+5. ~~Run `ruff check .` and `ruff format --check .`~~ **done 2026-10-29**, both clean.
 6. Still outstanding in `refresh_todo.md`: the SILSO SN refresh and the published GN comparison
    series. Both are comparison-only, so neither blocks Step 1's modelling work.
+
+All four remaining follow-ups are named in `CLAUDE.md`'s data-gotchas section and in the Step 1
+spec, so a session that reads either will meet them before it can trip on them.
+
+## Reported upstream
+
+`sunspot-homogenization` now carries `docs/findings-2026-10-gn-next-gen.md` and
+`validation/repro_gn_next_gen_findings.py`, with a pointer from its `CLAUDE.md`. Five findings, all
+still reproducing: the unconditional `cuml` import (which blocks every survey, not just GPU work),
+**D22**, the unapplied `max_disk_angle`, the `obs_type` ambiguity, and an invalid build backend.
+The repro script runs against that repo alone and exits with the number still reproducing, so it
+doubles as a regression gate. Its `CLAUDE.md` implementation-status and repository-layout sections
+were also corrected: both predated SOON, SWPC and the `experiments/` tree and claimed the readers
+were still stubs.

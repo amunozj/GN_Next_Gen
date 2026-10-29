@@ -67,6 +67,9 @@ Current inputs:
   only, never a hard pre-correction (ADR-003, D5). `day_status`: 0 no observation, 1 spotless, 2 active.
   `group_obs_kind` is a different thing — both are called `obs_type` upstream (**D10**). `cycle`/`amp_*` and the
   positional columns are diagnostic/QA only, never model inputs (ADR-003, ADR-004).
+  **The row is the unit of observation, not `(group_id, date_ord)`**: KMAS reuses a `group_id` for distinct
+  groups on 414 group-days (289 ids, 1.3%). Counts are unaffected, but those groups' lifetimes are inflated —
+  exclude them from lifetime work or use RGO/Debrecen, which are clean (**D22**).
 - `gn_database_v1.3/` — the observation database, 1610–2010. `STATION=0` = no data, `GROUPS=-1` = missing.
   **Do not key on `(date, station)`**: 217 keys are duplicated, 95 with conflicting counts (**D16**).
   **Do not size state spaces from `max(GROUPS)`**: 93 and 58 are implausible outliers above a tail that stops at
