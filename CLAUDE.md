@@ -13,7 +13,7 @@ JAX/NumPyro (ADR-001).
 2. `docs/01_assessment/assessment.md` — why this approach; state of the field; the three approaches; identifiability traps.
 3. The spec of the step you are working on: `docs/05_roadmap/step-N-*.md` and its **Required reading** list.
 4. `docs/06_decisions/README.md` — accepted decisions (do not relitigate; propose a new ADR instead).
-5. As needed: `docs/04_data/` (data dictionary, known issues D1–D9), `docs/03_legacy/` (what old code did, known bugs,
+5. As needed: `docs/04_data/` (data dictionary, known issues **D1–D22**), `docs/03_legacy/` (what old code did, known bugs,
    reuse map), `docs/02_research/` (cross-domain methods; mind the evidence labels), `docs/glossary.md`.
 
 ## Repository map

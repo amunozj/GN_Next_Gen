@@ -3,8 +3,13 @@
 | Doc | Content |
 |---|---|
 | [data_dictionary.md](data_dictionary.md) | Every file in `data/raw/`: columns, units, sentinels, coverage, sources, licensing |
-| [known_issues.md](known_issues.md) | Issues D1–D9 to resolve in Step 1 (missing header, NaN prefix, DRGO vs SC_SP_RG differences, stale snapshots, …) |
-| [refresh_todo.md](refresh_todo.md) | Current public data to acquire side by side in Step 1 |
+| [known_issues.md](known_issues.md) | Issues **D1–D22**, each with a status. D1–D9 are the original set (most now resolved or moot after the 2026-10 renovation); D10–D22 came with the current inputs. **Four are still open and bite in Step 1: D16, D17, D22 and the KMAS single-use rule** |
+| [refresh_todo.md](refresh_todo.md) | What has been acquired and what is still outstanding (SILSO SN, published GN comparison series) |
+
+The raw inputs were renovated in 2026-10: see [`../plans/raw-data-renovation-plan.md`](../plans/raw-data-renovation-plan.md),
+[`../results/raw-data-renovation.md`](../results/raw-data-renovation.md) and
+[ADR-009](../06_decisions/ADR-009-reference-survey-and-anchored-epochs.md). `reference_areas/` and
+`gn_database_v1.22/` are superseded but retained for the Step 2 legacy baselines.
 
 Rules (also in `CLAUDE.md` and ADR-006):
 - `data/raw/` is immutable. New raw data go into new subfolders with a `MANIFEST.csv` row; `tests/test_data_manifest.py`

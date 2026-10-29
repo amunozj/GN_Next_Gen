@@ -36,6 +36,24 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 
 Status values: Not started → Planned (plan approved) → In progress → Implemented → Verified (or Not needed, for Step 5).
 
+### Out-of-band work already landed
+
+| Work | Plan | Status | Results |
+|---|---|---|---|
+| Raw-data renovation (2026-10) | [raw-data-renovation-plan.md](../plans/raw-data-renovation-plan.md) | Done (2026-10-29) | [raw-data-renovation.md](../results/raw-data-renovation.md) |
+
+**Step 1 starts from renovated data, not from the clean-slate snapshot.** The reference survey is now
+five per-survey, per-group catalogues covering 1825–2026 with group lifetimes
+(`data/raw/reference_groups_2026-10/`), the observation database is v1.3 (1610–2010), and
+`gn_observer_extension_2026-10/` carries daily counts to 2026. [ADR-009](../06_decisions/ADR-009-reference-survey-and-anchored-epochs.md)
+settles the reference and the two anchored epochs that ADR-003 had deferred to Step 1, so the spec's
+first two open questions are already answered.
+
+Four issues are open and bite in Step 1 — **D16** (do not key on `(date, station)`), **D17** (size K
+from a robust quantile, not `max(GROUPS)`), **D22** (exclude the colliding KMAS groups from lifetime
+work) and the **KMAS single-use rule** (documentation-only today). All four are in `CLAUDE.md`'s
+data-gotchas section and in the Step 1 spec.
+
 ## Conventions for all steps
 
 - Read `CLAUDE.md` first; each spec lists its **Required reading**.
@@ -57,7 +75,10 @@ as first-class output: reference-equivalent scale, era-wide drift (prior sensiti
 reference, per-year prior→posterior contraction.
 
 Running list of paper items (add as steps produce them):
-- [ ] Data provenance table and known-issue resolutions (Step 1)
+- [x] Data provenance table and known-issue resolutions — mostly delivered by the 2026-10 renovation
+      ([results](../results/raw-data-renovation.md), ADR-009, `data/raw/MANIFEST.csv`, D1–D22 statuses).
+      Still to add in Step 1: resolutions for D16, D17, D22 and the KMAS single-use rule
+- [ ] Anchor-sensitivity comparison: the series under both ADR-009 anchorings (Steps 3–4)
 - [ ] Birth-death + thinning validation against reference statistics (Step 1)
 - [ ] Benchmark design figure and baseline scores (Step 2)
 - [ ] Overlap-graph diagnostics through time (Step 3)

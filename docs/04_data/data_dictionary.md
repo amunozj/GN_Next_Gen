@@ -34,7 +34,7 @@ on Hoyt & Schatten 1998), as distributed by SILSO and converted to CSV with ORDI
 - Maximum reported value is 58 groups in a day (relevant to truncating the latent count state space).
 - February 29 was removed by hand for 1700, 1800 and 1900 (not leap years in the Gregorian calendar; verified absent).
 
-## `gn_database_v1.22/GNobservers_JV_V1.22.csv`
+## `gn_database_v1.22/GNobservers_JV_V1.22.csv` — SUPERSEDED by `gn_database_v1.3/`
 
 | Column | Meaning |
 |---|---|

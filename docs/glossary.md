@@ -5,7 +5,10 @@
 | GN | Group (sunspot) number: number of sunspot groups on the visible disk; the series this project reconstructs |
 | SN / ISN | (International) sunspot number, SILSO V2.0; a composite of spots and groups. Not used for calibration (ADR-003) |
 | Observer / station | One record in the GN database; `STATION` code; currently one observer per station |
-| Reference survey | RGO (1874–1976), Debrecen DPD, Kislovodsk (KMAS): daily lists of individual group areas |
+| Reference survey | Five per-survey catalogues of individual group areas, one row per group observation: Schwabe (1825–1867), Spörer (1861–1894), RGO (1874–1976), Debrecen DPD (1974–2018), Kislovodsk KMAS (1954–2026). `data/raw/reference_groups_2026-10/`; ADR-009 |
+| Anchored epoch | The reference segment whose detection parameters are held fixed, so GN is counted in its units (ADR-003). Two co-equal anchors: **Debrecen cycles 21–23** (primary) and **RGO cycles 15–19** (secondary), each whole cycles covered by one survey, disjoint in cycle number (ADR-009) |
+| `day_status` | Per (survey, day) in the reference: 0 = no observation, 1 = observed spotless, 2 = observed active. Replaces the legacy `AREA1` NaN/0 convention |
+| `group_obs_kind` | Per group in the reference: 0 = placeholder row, 1 = single-observation group, 2 = multi-observation group. Distinct from `day_status`; both are called `obs_type` upstream (D10) |
 | MSH | Millionths of the solar hemisphere (area unit) |
 | Acuity threshold | Smallest group area (MSH) an observer would see; "soft" when detection probability rises smoothly with area |
 | Splitting / merging | Observer conventions that report more / fewer groups than the reference for the same spots |

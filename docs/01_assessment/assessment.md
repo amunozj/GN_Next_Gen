@@ -5,6 +5,16 @@ GRPSSN and MATLAB GN-series codebases (now in `legacy/`), a heliophysics literat
 six-track cross-domain search ([../02_research/](../02_research/README.md)). The original problem statement is
 [../00_brief/modernization.md](../00_brief/modernization.md).
 
+> **Dated document — the reasoning stands, the data facts have moved on.** This was written against the
+> clean-slate data snapshot. The raw inputs were renovated in 2026-10: the reference survey is now five
+> per-survey, per-group catalogues covering **1825–2026** with group lifetimes (not RGO/Debrecen/Kislovodsk
+> day-by-area matrices from 1874), the observation database is **v1.3** (740 stations with data, not V1.22's
+> 715), and the anchored epoch question this document leaves open is settled by
+> [ADR-009](../06_decisions/ADR-009-reference-survey-and-anchored-epochs.md) with two co-equal anchors.
+> For current data facts use `CLAUDE.md`, [../04_data/](../04_data/README.md) and
+> [../results/raw-data-renovation.md](../results/raw-data-renovation.md); read this for *why* the approach
+> was chosen.
+
 ## 1. Problem in one paragraph
 
 About 700 historical observers (1610–present; 743 stations in the Vaquero et al. 2016 database V1.22) report daily
