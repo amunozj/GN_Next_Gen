@@ -53,21 +53,52 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from gn_next_gen.paths import CONFIGS, REPO_ROOT  # noqa: E402
 
 GROUP_DAY_COLUMNS = [
-    "survey", "group_id", "group_id_orig", "date_ord", "date_frac",
-    "year", "month", "day",
-    "area_obs", "area_obs_unc", "area_corr", "area_corr_unc",
-    "area_umbra_obs", "area_umbra_obs_unc", "area_umbra_corr", "area_umbra_corr_unc",
-    "area_corr_dbcal", "area_corr_dbcal_unc",
-    "area_corr_dbcal_unc_corr", "area_corr_dbcal_unc_indep", "area_corr_dbcal_above_thr",
-    "cycle", "cycle_parity",
-    "amp_whole_sm91", "amp_hemi_sm91", "amp_whole_dbcal_sm91", "amp_hemi_dbcal_sm91",
+    "survey",
+    "group_id",
+    "group_id_orig",
+    "date_ord",
+    "date_frac",
+    "year",
+    "month",
+    "day",
+    "area_obs",
+    "area_obs_unc",
+    "area_corr",
+    "area_corr_unc",
+    "area_umbra_obs",
+    "area_umbra_obs_unc",
+    "area_umbra_corr",
+    "area_umbra_corr_unc",
+    "area_corr_dbcal",
+    "area_corr_dbcal_unc",
+    "area_corr_dbcal_unc_corr",
+    "area_corr_dbcal_unc_indep",
+    "area_corr_dbcal_above_thr",
+    "cycle",
+    "cycle_parity",
+    "amp_whole_sm91",
+    "amp_hemi_sm91",
+    "amp_whole_dbcal_sm91",
+    "amp_hemi_dbcal_sm91",
     # QA / provenance metadata only.  ADR-004 bars positions as model inputs.
-    "hemisphere", "dist_center", "latitude", "longitude",
+    "hemisphere",
+    "dist_center",
+    "latitude",
+    "longitude",
 ]
 SINGLE_EXTRA = ["group_obs_kind", "obs_duration"]
 DAY_STATUS_COLUMNS = [
-    "survey", "date_ord", "date_frac", "year", "month", "day",
-    "day_status", "n_groups", "area_total", "area_north", "area_south",
+    "survey",
+    "date_ord",
+    "date_frac",
+    "year",
+    "month",
+    "day",
+    "day_status",
+    "n_groups",
+    "area_total",
+    "area_north",
+    "area_south",
 ]
 
 LINEAGE = (
@@ -93,7 +124,8 @@ def write_parquet(df: pd.DataFrame, path: Path, cfg: dict) -> None:
     table = pa.Table.from_pandas(df, preserve_index=False)
     table = table.replace_schema_metadata(None)
     pq.write_table(
-        table, path,
+        table,
+        path,
         compression=cfg["output"]["compression"],
         compression_level=cfg["output"]["compression_level"],
     )
@@ -151,16 +183,25 @@ def cycle_coverage(group_day: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
     agg["cycle"] = agg["cycle"].astype(int)
-    present = {(s, c) for s, c in zip(agg["survey"], agg["cycle"])}
+    present = {(s, c) for s, c in zip(agg["survey"], agg["cycle"], strict=True)}
     agg["complete"] = [
         ((s, c - 1) in present) and ((s, c + 1) in present)
-        for s, c in zip(agg["survey"], agg["cycle"])
+        for s, c in zip(agg["survey"], agg["cycle"], strict=True)
     ]
     agg["first_day"] = [str(dt.date.fromordinal(int(o))) for o in agg["first_ord"]]
     agg["last_day"] = [str(dt.date.fromordinal(int(o))) for o in agg["last_ord"]]
     return agg[
-        ["survey", "cycle", "n_groups", "n_observations",
-         "first_day", "last_day", "first_ord", "last_ord", "complete"]
+        [
+            "survey",
+            "cycle",
+            "n_groups",
+            "n_observations",
+            "first_day",
+            "last_day",
+            "first_ord",
+            "last_ord",
+            "complete",
+        ]
     ].sort_values(["survey", "cycle"], ignore_index=True)
 
 
@@ -175,7 +216,9 @@ def main() -> None:
     up = Path(cfg["upstream"]["repo"])
     head = subprocess.run(
         ["git", "-C", str(up), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     pinned = cfg["upstream"]["commit"]
     if head != pinned:
@@ -245,7 +288,7 @@ def main() -> None:
 
     spans = {s: _span(s) for s in surveys}
     provenance = {
-        "generated_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "generated_by": "scripts/export_reference_groups.py",
         "upstream": {
             **{k: v for k, v in cfg["upstream"].items() if k != "group_output_dir"},

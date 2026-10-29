@@ -70,6 +70,7 @@ def provenance():
 
 # --- schema and scope -------------------------------------------------------
 
+
 def test_survey_set_is_exactly_the_core_five(group_day, single, day_status):
     for df in (group_day, single, day_status):
         assert set(df["survey"]) == CORE_FIVE
@@ -109,6 +110,7 @@ def test_firewall_lineage_statement(provenance):
 
 # --- granularity and cross-table consistency --------------------------------
 
+
 def test_group_day_grain_is_one_row_per_group_observation(group_day):
     """One row per group observation. `group_id` is the key for four surveys of five.
 
@@ -139,9 +141,7 @@ def test_d22_collisions_are_distinct_groups_not_repeat_measurements(group_day):
     kmas = group_day[group_day["survey"] == "kmas"]
     dup = kmas.duplicated(["group_id", "date_ord"], keep=False)
     spread = kmas[dup].groupby(["group_id", "date_ord"])[["latitude", "longitude"]].nunique()
-    assert (spread.max(axis=1) > 1).any(), (
-        "at least some collisions must be at distinct positions"
-    )
+    assert (spread.max(axis=1) > 1).any(), "at least some collisions must be at distinct positions"
 
 
 def test_day_status_is_one_row_per_survey_day(day_status):
@@ -157,9 +157,7 @@ def test_day_status_calendar_is_contiguous_per_survey(day_status):
 
 def test_day_status_agrees_with_the_group_rows(group_day, day_status):
     """status 1 means spotless, 2 means active, 0 means no observation."""
-    counted = (
-        group_day.groupby(["survey", "date_ord"]).size().rename("observed").reset_index()
-    )
+    counted = group_day.groupby(["survey", "date_ord"]).size().rename("observed").reset_index()
     merged = day_status.merge(counted, on=["survey", "date_ord"], how="left")
     merged["observed"] = merged["observed"].fillna(0).astype(int)
 
@@ -173,8 +171,8 @@ def test_day_status_agrees_with_the_group_rows(group_day, day_status):
 
 def test_single_entry_is_consistent_with_the_group_days(group_day, single):
     assert not single.duplicated(["survey", "group_id"]).any()
-    gd = set(zip(group_day["survey"], group_day["group_id"]))
-    sg = set(zip(single["survey"], single["group_id"]))
+    gd = set(zip(group_day["survey"], group_day["group_id"], strict=True))
+    sg = set(zip(single["survey"], single["group_id"], strict=True))
     assert sg == gd, "every group must appear in both tables"
 
     # The canonical day must lie within the group's observed span.
@@ -209,7 +207,8 @@ def test_d22_inflates_lifetimes_only_for_the_colliding_kmas_groups(group_day, si
 
 def test_obs_duration_is_consistent_with_the_observed_span(single, group_day):
     span = (
-        group_day.groupby(["survey", "group_id"])["date_ord"].agg(lambda s: s.max() - s.min())
+        group_day.groupby(["survey", "group_id"])["date_ord"]
+        .agg(lambda s: s.max() - s.min())
         .rename("span")
     )
     joined = single.set_index(["survey", "group_id"]).join(span)
@@ -220,6 +219,7 @@ def test_obs_duration_is_consistent_with_the_observed_span(single, group_day):
 
 
 # --- values -----------------------------------------------------------------
+
 
 def test_areas_are_positive_and_physically_plausible(group_day):
     for col in ("area_obs", "area_corr"):
@@ -264,6 +264,7 @@ def test_survey_calibration_table(provenance):
 
 # --- ADR-009's anchors ------------------------------------------------------
 
+
 def test_cycle_completeness_matches_adr_009(coverage):
     got = {
         survey: set(part.loc[part["complete"], "cycle"])
@@ -301,8 +302,15 @@ def test_clipped_cycles_are_flagged_incomplete(coverage):
     """A cycle at the edge of a survey's coverage is clipped, however contiguous it looks."""
     flags = coverage.set_index(["survey", "cycle"])["complete"]
     for survey, cycle in (
-        ("schwabe", 7), ("schwabe", 10), ("sporer", 8), ("sporer", 11),
-        ("rgo", 11), ("rgo", 20), ("debrecen", 20), ("debrecen", 24),
-        ("kmas", 19), ("kmas", 25),
+        ("schwabe", 7),
+        ("schwabe", 10),
+        ("sporer", 8),
+        ("sporer", 11),
+        ("rgo", 11),
+        ("rgo", 20),
+        ("debrecen", 20),
+        ("debrecen", 24),
+        ("kmas", 19),
+        ("kmas", 25),
     ):
         assert not bool(flags.loc[(survey, cycle)]), f"{survey} cycle {cycle}"

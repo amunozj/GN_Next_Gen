@@ -94,13 +94,10 @@ def main() -> None:
         print(f"  {sheet}: {n:,} data rows ({blank_tail[sheet]:,} trailing blank rows)")
 
     ws = wb["Observers"]
-    observers = [
-        [c.value for c in r[:5]] for r in ws.iter_rows(min_row=2, max_col=5)
-    ]
+    observers = [[c.value for c in r[:5]] for r in ws.iter_rows(min_row=2, max_col=5)]
     observers = [r for r in observers if r[0] is not None]
     placeholders = [
-        r for r in observers
-        if not isinstance(r[1], int) or not isinstance(r[2], int) or not r[3]
+        r for r in observers if not isinstance(r[1], int) or not isinstance(r[2], int) or not r[3]
     ]
     wb.close()
 
@@ -176,12 +173,12 @@ def main() -> None:
     print(f"invalid calendar dates                      {len(bad_dates)}")
     print(f"Feb 29 of 1700/1800/1900 present            {len(feb29)} (expected 0)")
     print(f"GROUPS < 0 while STATION > 0                {sentinel_violations['neg_with_station']}")
-    print("STATION == 0 rows whose GROUPS is not -1   ",
-          sentinel_violations["neg_without_minus1"])
-    print("stations with data missing from Observers   ",
-          len(stations_with_data - listed_stations))
-    print("max station code in data / listed           ",
-          f"{max(stations_with_data)} / {max(listed_stations)}")
+    print("STATION == 0 rows whose GROUPS is not -1   ", sentinel_violations["neg_without_minus1"])
+    print("stations with data missing from Observers   ", len(stations_with_data - listed_stations))
+    print(
+        "max station code in data / listed           ",
+        f"{max(stations_with_data)} / {max(listed_stations)}",
+    )
 
     if args.json:
         args.json.write_text(

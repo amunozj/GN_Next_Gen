@@ -53,10 +53,25 @@ def _workbook(path: Path) -> None:
     third.append([2010, 12, 31, 445, 1, 2])
 
     diff = wb.create_sheet("Differences with HS98")
-    diff.append(["v1.12"] + [None] * 7 + ["v1.2"] + [None] * 7
-                + ["v1.21"] + [None] * 7 + ["v1.3"] + [None] * 2)
-    diff.append(["NAME", "YEAR", "NOTES"] + [None] * 5 + ["NAME", "YEAR", "NOTES"] + [None] * 5
-                + ["NAME", "YEAR", "NOTES"] + [None] * 5 + ["NAME", "YEAR", "NOTES"])
+    diff.append(
+        ["v1.12"]
+        + [None] * 7
+        + ["v1.2"]
+        + [None] * 7
+        + ["v1.21"]
+        + [None] * 7
+        + ["v1.3"]
+        + [None] * 2
+    )
+    diff.append(
+        ["NAME", "YEAR", "NOTES"]
+        + [None] * 5
+        + ["NAME", "YEAR", "NOTES"]
+        + [None] * 5
+        + ["NAME", "YEAR", "NOTES"]
+        + [None] * 5
+        + ["NAME", "YEAR", "NOTES"]
+    )
     row = [None] * 27
     row[0:3] = ["OLD, A.", 1612, "old note"]
     row[8:11] = ["MID, B.", 1616, "mid note"]
@@ -67,8 +82,19 @@ def _workbook(path: Path) -> None:
     diff.append(row2)
 
     obsv = wb.create_sheet("Observers")
-    obsv.append(["STATION", "INITIAL", "FINAL", "TOT.OBS", "OBSERVER",
-                 None, None, None, "All new changes are indicated in green"])
+    obsv.append(
+        [
+            "STATION",
+            "INITIAL",
+            "FINAL",
+            "TOT.OBS",
+            "OBSERVER",
+            None,
+            None,
+            None,
+            "All new changes are indicated in green",
+        ]
+    )
     obsv.append([1, 1610, 1613, 214, "HARRIOT, T., OXFORD"])
     obsv.append([2, "NA", "NA", 0, "MARIUS, S., NUREMBERG"])
     obsv.append([3, 1947, 1988, 900, "CHANGED, X."])
@@ -87,9 +113,7 @@ def book(tmp_path_factory):
 def test_observations_concatenate_and_derive(conv, book):
     obs = conv.read_observations(book)
     assert len(obs) == 4, "the trailing blank row must be dropped"
-    assert obs.groupby("SHEET").size().to_dict() == {
-        "1610-1946": 2, "1947-1988": 1, "1989-2010": 1
-    }
+    assert obs.groupby("SHEET").size().to_dict() == {"1610-1946": 2, "1947-1988": 1, "1989-2010": 1}
     first = obs.iloc[0]
     assert int(first["ORDINAL"]) == dt.date(1610, 1, 1).toordinal() == 587_676
     assert first["FRACYEAR"] == pytest.approx(1610.0)
@@ -97,7 +121,15 @@ def test_observations_concatenate_and_derive(conv, book):
     last = obs[obs["YEAR"] == 2010].iloc[0]
     assert last["FRACYEAR"] == pytest.approx(2010 + 364 / 365)
     assert list(obs.columns) == [
-        "YEAR", "MONTH", "DAY", "ORDINAL", "STATION", "OBSER", "GROUPS", "FRACYEAR", "SHEET",
+        "YEAR",
+        "MONTH",
+        "DAY",
+        "ORDINAL",
+        "STATION",
+        "OBSER",
+        "GROUPS",
+        "FRACYEAR",
+        "SHEET",
     ]
 
 
@@ -108,9 +140,7 @@ def test_observers_na_sentinel_and_fill(conv, book):
     assert df.loc[df["STATION"] == 2, "TOT_OBS"].iloc[0] == 0
     assert df.loc[df["STATION"] == 1, "INITIAL"].iloc[0] == 1610
     # Only the filled row is flagged -- the information is in formatting only (D20).
-    assert df.set_index("STATION")["changed_in_v13"].to_dict() == {
-        1: False, 2: False, 3: True
-    }
+    assert df.set_index("STATION")["changed_in_v13"].to_dict() == {1: False, 2: False, 3: True}
 
 
 def test_changelog_unstacks_four_blocks(conv, book):

@@ -42,7 +42,7 @@ def provenance():
 
 def test_only_kmas_and_swpc(counts, stations):
     assert set(counts["survey"]) == set(STATIONS)
-    assert dict(zip(stations["survey"], stations["station"])) == STATIONS
+    assert dict(zip(stations["survey"], stations["station"], strict=True)) == STATIONS
 
 
 def test_station_codes_cannot_collide_with_v13(counts):
@@ -75,7 +75,7 @@ def test_one_row_per_survey_day_threshold(counts):
 
 
 def test_thresholds_include_the_sweep_grid_and_each_anchor(counts, stations):
-    anchors = dict(zip(stations["survey"], stations["anchor_threshold_msh"]))
+    anchors = dict(zip(stations["survey"], stations["anchor_threshold_msh"], strict=True))
     for survey, part in counts.groupby("survey"):
         thresholds = set(part["threshold_msh"].unique())
         assert {0.0, 10.0, 30.0, 60.0, 100.0} <= thresholds
@@ -85,9 +85,7 @@ def test_thresholds_include_the_sweep_grid_and_each_anchor(counts, stations):
 def test_counts_are_monotone_non_increasing_in_threshold(counts):
     """The strongest single check that the thresholding is right."""
     for col in ("groups_native", "groups_dbcal"):
-        wide = counts.pivot_table(
-            index=["survey", "date_ord"], columns="threshold_msh", values=col
-        )
+        wide = counts.pivot_table(index=["survey", "date_ord"], columns="threshold_msh", values=col)
         ordered = wide[sorted(wide.columns)].to_numpy(dtype="float64")
         diffs = ordered[:, 1:] - ordered[:, :-1]
         import numpy as np
@@ -122,7 +120,7 @@ def test_zero_threshold_counts_match_the_reference_day_status(counts):
 
 
 def test_roles_record_the_single_use_rule(counts, stations, provenance):
-    roles = dict(zip(stations["survey"], stations["role"]))
+    roles = dict(zip(stations["survey"], stations["role"], strict=True))
     assert roles["kmas"] == "reference_or_observer_choose_one"
     assert roles["swpc"] == "observer_counts_only"
     assert set(counts.loc[counts["survey"] == "kmas", "role"]) == {roles["kmas"]}

@@ -49,10 +49,23 @@ def test_source_workbook_present():
 
 def test_schema(obs, observers):
     assert list(obs.columns) == [
-        "YEAR", "MONTH", "DAY", "ORDINAL", "STATION", "OBSER", "GROUPS", "FRACYEAR", "SHEET",
+        "YEAR",
+        "MONTH",
+        "DAY",
+        "ORDINAL",
+        "STATION",
+        "OBSER",
+        "GROUPS",
+        "FRACYEAR",
+        "SHEET",
     ]
     assert list(observers.columns) == [
-        "STATION", "INITIAL", "FINAL", "TOT_OBS", "OBSERVER", "changed_in_v13",
+        "STATION",
+        "INITIAL",
+        "FINAL",
+        "TOT_OBS",
+        "OBSERVER",
+        "changed_in_v13",
     ]
 
 
@@ -87,7 +100,7 @@ def test_coverage_and_no_invalid_dates(obs):
     rebuilt = [dt.date.fromordinal(int(o)) for o in sample["ORDINAL"]]
     assert all(
         (d.year, d.month, d.day) == (y, m, dd)
-        for d, y, m, dd in zip(rebuilt, sample["YEAR"], sample["MONTH"], sample["DAY"])
+        for d, y, m, dd in zip(rebuilt, sample["YEAR"], sample["MONTH"], sample["DAY"], strict=True)
     )
 
 
@@ -118,6 +131,7 @@ def test_every_station_with_data_is_listed(obs, observers):
 
 # --- characterization of the known issues ----------------------------------
 
+
 def test_d16_duplicate_date_station_keys(obs):
     """217 duplicate keys, 122 of them with identical GROUPS -- see D16.
 
@@ -143,8 +157,10 @@ def test_d17_extreme_group_counts(obs):
     """
     extreme = obs[(obs["STATION"] > 0) & (obs["GROUPS"] > 53)]
     assert len(extreme) == 2
-    got = {(int(r.YEAR), int(r.MONTH), int(r.DAY), int(r.STATION), int(r.GROUPS))
-           for r in extreme.itertuples()}
+    got = {
+        (int(r.YEAR), int(r.MONTH), int(r.DAY), int(r.STATION), int(r.GROUPS))
+        for r in extreme.itertuples()
+    }
     assert got == {(1982, 9, 26, 768, 93), (1992, 3, 18, 712, 58)}
     assert int(obs.loc[obs["STATION"] > 0, "GROUPS"].quantile(0.9999)) < 40
 

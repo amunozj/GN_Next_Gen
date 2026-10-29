@@ -88,12 +88,22 @@ def read_observations(xlsx: Path) -> pd.DataFrame:
     for col in OBS_COLUMNS:
         obs[col] = obs[col].astype("int64")
     obs["ORDINAL"] = [
-        _ordinal(y, m, d) for y, m, d in zip(obs["YEAR"], obs["MONTH"], obs["DAY"])
+        _ordinal(y, m, d) for y, m, d in zip(obs["YEAR"], obs["MONTH"], obs["DAY"], strict=True)
     ]
-    obs["FRACYEAR"] = [_fracyear(y, o) for y, o in zip(obs["YEAR"], obs["ORDINAL"])]
-    return obs[[
-        "YEAR", "MONTH", "DAY", "ORDINAL", "STATION", "OBSER", "GROUPS", "FRACYEAR", "SHEET",
-    ]]
+    obs["FRACYEAR"] = [_fracyear(y, o) for y, o in zip(obs["YEAR"], obs["ORDINAL"], strict=True)]
+    return obs[
+        [
+            "YEAR",
+            "MONTH",
+            "DAY",
+            "ORDINAL",
+            "STATION",
+            "OBSER",
+            "GROUPS",
+            "FRACYEAR",
+            "SHEET",
+        ]
+    ]
 
 
 def read_observers(xlsx: Path) -> pd.DataFrame:

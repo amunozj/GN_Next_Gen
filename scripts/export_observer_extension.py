@@ -45,7 +45,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from gn_next_gen.paths import CONFIGS, GN_OBSERVER_EXTENSION, REPO_ROOT  # noqa: E402
+from gn_next_gen.paths import CONFIGS, GN_OBSERVER_EXTENSION  # noqa: E402
 
 # v1.3 uses station codes 1-775; these are upstream's own survey tags, so they
 # cannot collide and are self-documenting.
@@ -55,14 +55,14 @@ STATIONS = {
         name="KISLOVODSK MOUNTAIN ASTRONOMICAL STATION (KMAS), PULKOVO",
         role="reference_or_observer_choose_one",
         note="Also a reference survey in reference_groups_2026-10/. Single-use rule: a run "
-             "may use KMAS as reference areas OR as observer counts, never both.",
+        "may use KMAS as reference areas OR as observer counts, never both.",
     ),
     "swpc": dict(
         station=1008,
         name="NOAA/SWPC SOLAR REGION SUMMARY",
         role="observer_counts_only",
         note="Not in the reference (D13: its areas sit ~43% below Debrecen). That is an "
-             "area-scale issue and does not affect counts, so its counts are unconstrained.",
+        "area-scale issue and does not affect counts, so its counts are unconstrained.",
     ),
 }
 
@@ -91,7 +91,8 @@ def write_parquet(df: pd.DataFrame, path: Path, cfg: dict) -> None:
     table = pa.Table.from_pandas(df, preserve_index=False)
     table = table.replace_schema_metadata(None)
     pq.write_table(
-        table, path,
+        table,
+        path,
         compression=cfg["output"]["compression"],
         compression_level=cfg["output"]["compression_level"],
     )
@@ -104,9 +105,7 @@ def _find(group_dir: Path, survey: str, stage: str) -> Path:
     return hits[0]
 
 
-def survey_counts(
-    group_dir: Path, survey: str, thresholds: tuple[float, ...]
-) -> pd.DataFrame:
+def survey_counts(group_dir: Path, survey: str, thresholds: tuple[float, ...]) -> pd.DataFrame:
     """Daily group counts above each threshold, on both area scales."""
     groups = pd.read_csv(
         _find(group_dir, survey, "12_final_all"),
@@ -123,12 +122,13 @@ def survey_counts(
     frames = []
     for thr in thresholds:
         native = (
-            groups.loc[groups["area_corr"] > thr]
-            .groupby("date_ord").size().rename("groups_native")
+            groups.loc[groups["area_corr"] > thr].groupby("date_ord").size().rename("groups_native")
         )
         dbcal = (
             groups.loc[groups["area_corr_dbcal"] > thr]
-            .groupby("date_ord").size().rename("groups_dbcal")
+            .groupby("date_ord")
+            .size()
+            .rename("groups_dbcal")
         )
         d = days.join(native, on="date_ord").join(dbcal, on="date_ord")
         # A day the survey observed has a real count, zero included; a day it did
@@ -146,11 +146,25 @@ def survey_counts(
         frames.append(d)
 
     out = pd.concat(frames, ignore_index=True)
-    return out[[
-        "survey", "station", "date_ord", "date_frac", "year", "month", "day",
-        "threshold_msh", "groups_native", "groups_dbcal", "groups_v13_convention",
-        "day_status", "n_groups", "extends_v13", "role",
-    ]].sort_values(["survey", "threshold_msh", "date_ord"], ignore_index=True)
+    return out[
+        [
+            "survey",
+            "station",
+            "date_ord",
+            "date_frac",
+            "year",
+            "month",
+            "day",
+            "threshold_msh",
+            "groups_native",
+            "groups_dbcal",
+            "groups_v13_convention",
+            "day_status",
+            "n_groups",
+            "extends_v13",
+            "role",
+        ]
+    ].sort_values(["survey", "threshold_msh", "date_ord"], ignore_index=True)
 
 
 def main() -> None:
@@ -164,7 +178,9 @@ def main() -> None:
     up = Path(cfg["upstream"]["repo"])
     head = subprocess.run(
         ["git", "-C", str(up), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     if head != cfg["upstream"]["commit"]:
         msg = f"upstream HEAD {head} != pinned {cfg['upstream']['commit']}"
@@ -183,26 +199,32 @@ def main() -> None:
         thresholds = tuple(sorted(set(BASE_THRESHOLDS) | {anchor}))
         df = survey_counts(group_dir, survey, thresholds)
         obs_days = int((df["day_status"] > 0).sum() / len(thresholds))
-        print(f"  {survey}: {len(df):,} rows, {len(thresholds)} thresholds "
-              f"(anchor {anchor} MSH), {obs_days:,} observed days")
+        print(
+            f"  {survey}: {len(df):,} rows, {len(thresholds)} thresholds "
+            f"(anchor {anchor} MSH), {obs_days:,} observed days"
+        )
         frames.append(df)
 
     counts = pd.concat(frames, ignore_index=True)
-    stations = pd.DataFrame([
-        dict(
-            survey=s,
-            station=m["station"],
-            name=m["name"],
-            role=m["role"],
-            anchor_threshold_msh=anchors[s],
-            first_day=str(dt.date.fromordinal(
-                int(counts.loc[counts["survey"] == s, "date_ord"].min()))),
-            last_day=str(dt.date.fromordinal(
-                int(counts.loc[counts["survey"] == s, "date_ord"].max()))),
-            note=m["note"],
-        )
-        for s, m in STATIONS.items()
-    ])
+    stations = pd.DataFrame(
+        [
+            dict(
+                survey=s,
+                station=m["station"],
+                name=m["name"],
+                role=m["role"],
+                anchor_threshold_msh=anchors[s],
+                first_day=str(
+                    dt.date.fromordinal(int(counts.loc[counts["survey"] == s, "date_ord"].min()))
+                ),
+                last_day=str(
+                    dt.date.fromordinal(int(counts.loc[counts["survey"] == s, "date_ord"].max()))
+                ),
+                note=m["note"],
+            )
+            for s, m in STATIONS.items()
+        ]
+    )
 
     # SWPC areas must not leak: assert no area column survived.
     leaked = [c for c in counts.columns if "area" in c.lower()]
@@ -236,7 +258,7 @@ def main() -> None:
     digests = emit(out)
 
     provenance = {
-        "generated_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "generated_by": "scripts/export_observer_extension.py",
         "purpose": (
             "Extend the observation record past v1.3's 2010-12-31 end with daily group counts "
@@ -271,8 +293,10 @@ def main() -> None:
     print("\nstations:")
     print(stations.drop(columns=["note"]).to_string(index=False))
     post = counts[counts["extends_v13"]]
-    print(f"\nrows extending past 2010-12-31: {len(post):,} "
-          f"({post['date_ord'].min()} -> {post['date_ord'].max()})")
+    print(
+        f"\nrows extending past 2010-12-31: {len(post):,} "
+        f"({post['date_ord'].min()} -> {post['date_ord'].max()})"
+    )
 
 
 if __name__ == "__main__":

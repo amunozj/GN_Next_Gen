@@ -13,10 +13,8 @@ import json
 import re
 import subprocess
 import sys
+
 import pytest
-
-from gn_next_gen.paths import DOCS, REPO_ROOT, SCRIPTS
-
 from test_gn_database_v13 import (  # noqa: I001  (sibling test module, shared constants)
     CHANGELOG_COUNTS,
     OBSERVERS_LISTED,
@@ -24,6 +22,8 @@ from test_gn_database_v13 import (  # noqa: I001  (sibling test module, shared c
     STATIONS_WITH_DATA,
     TOTAL_ROWS,
 )
+
+from gn_next_gen.paths import DOCS, REPO_ROOT, SCRIPTS
 
 REPORT = DOCS / "results" / "gn-v13-feedback-report.md"
 AUDIT = SCRIPTS / "audit_gn_database_v13.py"
@@ -85,7 +85,7 @@ def test_report_names_the_reproduction_command(report):
 
 def test_report_asks_rather_than_asserts_on_the_ambiguous_finding(report):
     """The duplicate keys may be deliberate, so the report must not call them an error."""
-    section = report[report.index("## 1."): report.index("## 2.")]
+    section = report[report.index("## 1.") : report.index("## 2.")]
     assert "question" in section.lower()
     assert "not guessed" in section.lower() or "not** guessed" in section.lower()
 
@@ -102,7 +102,9 @@ def test_audit_script_reproduces_the_pinned_numbers(tmp_path):
     out = tmp_path / "audit.json"
     proc = subprocess.run(
         [sys.executable, str(AUDIT), "--json", str(out)],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
     got = json.loads(out.read_text())
