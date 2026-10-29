@@ -31,7 +31,8 @@ on Hoyt & Schatten 1998), as distributed by SILSO and converted to CSV with ORDI
 
 - One row per (day, station) observation; days with no observation at all appear as a `STATION = 0`, `GROUPS = −1` row.
   1,047,761 rows have `STATION > 0`; 715 distinct stations have data. Coverage 1610-01-01 to 2010-12-31.
-- Maximum reported value is 58 groups in a day (relevant to truncating the latent count state space).
+- Maximum reported value is 58 groups in a day (v1.3's is 93). **Do not size the latent state-space
+  truncation K from either**: both are implausible outliers above a tail that stops at 53 — see D17.
 - February 29 was removed by hand for 1700, 1800 and 1900 (not leap years in the Gregorian calendar; verified absent).
 
 ## `gn_database_v1.22/GNobservers_JV_V1.22.csv` — SUPERSEDED by `gn_database_v1.3/`

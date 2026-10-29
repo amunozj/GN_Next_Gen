@@ -4,7 +4,7 @@
 |---|---|
 | GN | Group (sunspot) number: number of sunspot groups on the visible disk; the series this project reconstructs |
 | SN / ISN | (International) sunspot number, SILSO V2.0; a composite of spots and groups. Not used for calibration (ADR-003) |
-| Observer / station | One record in the GN database; `STATION` code; currently one observer per station |
+| Observer / station | An observing record in the GN database, keyed by `STATION` (1–775 in v1.3; 740 carry data). One observer per station, but **not one record per station-day**: 217 `(date, station)` keys are duplicated in v1.3, 95 with conflicting counts (D16) |
 | Reference survey | Five per-survey catalogues of individual group areas, one row per group observation: Schwabe (1825–1867), Spörer (1861–1894), RGO (1874–1976), Debrecen DPD (1974–2018), Kislovodsk KMAS (1954–2026). `data/raw/reference_groups_2026-10/`; ADR-009 |
 | Anchored epoch | The reference segment whose detection parameters are held fixed, so GN is counted in its units (ADR-003). Two co-equal anchors: **Debrecen cycles 21–23** (primary) and **RGO cycles 15–19** (secondary), each whole cycles covered by one survey, disjoint in cycle number (ADR-009) |
 | `day_status` | Per (survey, day) in the reference: 0 = no observation, 1 = observed spotless, 2 = observed active. Replaces the legacy `AREA1` NaN/0 convention |

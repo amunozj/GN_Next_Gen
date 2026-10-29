@@ -20,7 +20,10 @@ Annual ¹⁴C (Brehm et al. 2021) and other ¹⁴C records; ¹⁰Be records; aur
 parameters. Add `MANIFEST.csv` rows.
 
 ## Acceptance criteria (quantify in the plan)
-Reproducible variants; firewall verified by a lineage check (test); contraction maps produced; leave-one-out results
+Reproducible variants; firewall verified by a lineage check (test) — the raw snapshots already
+carry explicit lineage statements in their `provenance.json` (`data_lineage`, naming what is
+excluded: no isotope, aurora, proxy or SILSO input), so the test should extend that pattern to
+run lineage rather than invent one; contraction maps produced; leave-one-out results
 reported; Maunder-Minimum level and cyclicity compared between variants with uncertainties.
 
 ## Precedents

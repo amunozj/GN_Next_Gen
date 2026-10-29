@@ -12,14 +12,19 @@ a direct comparison with backbone methods.
 
 ## Design (decided at assessment level; detail in the plan)
 - Observer parameters θ_o(t) = soft acuity threshold, splitting rate, (optionally) detection noise, with a random-walk or
-  spline prior over each career; anchored reference epoch fixed (ADR-003).
+  spline prior over each career; anchored reference epoch fixed (ADR-003, **as amended by ADR-009:
+  two co-equal anchors**, Debrecen cycles 21–23 and RGO cycles 15–19, each fitted and reported).
 - Pairwise terms for overlapping observers: P(y_b | y_a, Δt, θ_a, θ_b), derived from thresholded reference areas, with a
   **lifetime-based decorrelation in Δt** (from Step 1) instead of a hard ±2-day window.
 - Observers with no overlap connect through a fingerprint likelihood (occupancy form P(active | N) = 1 − (1 − r)^N, or
   the daily count distribution) evaluated against reference windows — no EMD/NBEST grid search.
 - Composite-likelihood correction for double counting (e.g. sandwich/curvature adjustment), checked on the benchmark.
-- Graph diagnostics: effective resistance from each observer and each year to the reference epoch, bridge observers,
-  path-consistency tests, connected components.
+- Graph diagnostics: effective resistance from each observer and each year to the reference epoch —
+  **computed to each of the two ADR-009 anchors separately**, plus the resistance **between the two
+  anchors**, which is the number that says whether the two anchorings are tied together or floating
+  independently. That path runs through KMAS: cycle 20 is the only cycle RGO and Debrecen would have
+  split, and it is complete in KMAS alone, so KMAS is the bridge and its own resistance matters most.
+  Also bridge observers, path-consistency tests, connected components.
 - Series: combine calibrated observers with a simple continuous smoother, propagating parameter draws into an ensemble.
 
 ## Deliverables

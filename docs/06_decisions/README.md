@@ -7,7 +7,7 @@ Decisions are numbered and never rewritten; supersede them with a new ADR (templ
 |---|---|
 | [001](ADR-001-stack-jax-numpyro-conda.md) | Python + JAX/NumPyro; conda envs, GPU default (WSL2/Linux), CPU variant |
 | [002](ADR-002-two-variants-and-firewall.md) | Sunspot-only and proxy-informed variants; data-lineage firewall |
-| [003](ADR-003-reference-equivalent-target.md) | Estimand = reference-equivalent count, one anchored reference epoch; no SILSO in calibration |
+| [003](ADR-003-reference-equivalent-target.md) | Estimand = reference-equivalent count; no SILSO in calibration. **Anchor amended by 009: two epochs, not one** |
 | [004](ADR-004-data-scope.md) | Counts + partial metadata + occasional blanket statements; no drawings/positions |
 | [005](ADR-005-legacy-as-text-snapshot.md) | Legacy code as read-only text snapshot in `legacy/` |
 | [006](ADR-006-data-immutability-and-storage.md) | `data/raw` immutable, plain git, checksum manifest |

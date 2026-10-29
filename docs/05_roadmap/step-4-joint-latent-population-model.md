@@ -8,13 +8,19 @@ The core model and the **sunspot-only GN series v0**: a posterior ensemble of da
 - **Activity layer:** log λ(t) as a non-centred, quasi-periodic state-space Gaussian process with jittered period and a
   prior that allows grand minima (from sunspot-era data/physics only — firewall, ADR-002).
 - **Population layer:** N_t (reference-equivalent count): survivors ~ Bin(N_{t−1}, φ), births ~ Pois(λ_t); one or two
-  area classes per Step 1; truncation K per Step 1. Transition factorizes as A_t = S·B_t (two matrix–vector products per
-  day; never store T×K×K).
+  area classes per Step 1; truncation K per Step 1 — **K comes from a robust upper quantile of reported
+  counts, never from `max(GROUPS)`** (issue D17: v1.3's two largest values, 93 and 58, are implausible
+  outliers above a tail that stops at 53, and taking 93 at face value would inflate the state space by
+  ~60% for two rows; the 99.99th percentile is below 40). Transition factorizes as A_t = S·B_t (two
+  matrix–vector products per day; never store T×K×K).
 - **Detection layer:** emission tables P(y | N, θ_o) built from real reference areas with a soft threshold, splitting
   (allows y > N), career drift; hierarchical observer population with optional metadata covariates (ADR-004).
 - **Reporting layer:** MNAR spotless-day recording; blanket statements as Π_t [1 − q_o(1 − P(y=0 | N_t))] per statement
   (an extra per-day emission factor) with a literal/rhetorical mixture weight.
-- **Anchor:** reference epoch with fixed detection (ADR-003).
+- **Anchor:** reference epoch with fixed detection (ADR-003, **as amended by ADR-009: two co-equal
+  anchors**). Fit and release the posterior ensemble under **both** anchorings — Debrecen cycles
+  21–23 and RGO cycles 15–19 — since the difference between them is the anchor-sensitivity result
+  ADR-003 requires, not an optional robustness check. Record which anchoring each run used.
 - **Inference:** exact forward filter in `jax.lax.scan` with float64 log-likelihood accumulation; emissions from long-format
   records via `segment_sum`; FFBS draws = ensemble; production sampler = blocked Gibbs (FFBS ↔ vectorized NUTS/MALA per
   observer ↔ λ update ↔ hyperparameters); tempered SMC for marginal likelihoods / model comparison; SVI only for
