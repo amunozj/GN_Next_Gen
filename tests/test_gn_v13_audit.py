@@ -13,8 +13,6 @@ import json
 import re
 import subprocess
 import sys
-from pathlib import Path
-
 import pytest
 
 from gn_next_gen.paths import DOCS, REPO_ROOT, SCRIPTS
