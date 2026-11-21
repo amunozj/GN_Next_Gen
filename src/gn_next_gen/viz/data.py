@@ -371,35 +371,49 @@ def leap_day_figure(mode: str = "light") -> plt.Figure:
         ax.legend(loc="lower center", ncol=1)
 
         ax = axes[1]
-        rule = {
-            "1700": 1700 in leap_years,
-            "1800": 1800 in leap_years,
-            "1900": 1900 in leap_years,
-            "2000": 2000 in leap_years,
-        }
-        names = list(rule)
-        values = [1 if rule[n] else 0 for n in names]
-        expected = [0, 0, 0, 1]
-        ax.bar(
-            np.arange(4) - 0.2,
-            values,
-            width=0.36,
+        # A zero-height bar renders as nothing, which reads as "no data" rather than
+        # "absent". Markers state both states explicitly.
+        centuries = [1700, 1800, 1900, 2000]
+        positions = np.arange(len(centuries))
+        in_data = [1 if year in leap_years else 0 for year in centuries]
+        by_rule = [1 if year % 400 == 0 else 0 for year in centuries]
+        ax.scatter(
+            positions - 0.12,
+            in_data,
+            s=90,
             color=role_color("observed", mode),
             label="present in the data",
+            zorder=3,
         )
-        ax.bar(
-            np.arange(4) + 0.2,
-            expected,
-            width=0.36,
+        ax.scatter(
+            positions + 0.12,
+            by_rule,
+            s=90,
+            marker="D",
             color=role_color("simulated", mode),
             label="Gregorian rule",
+            zorder=3,
         )
-        ax.set_xticks(np.arange(4))
-        ax.set_xticklabels(names)
+        for position in positions:
+            ax.plot(
+                [position - 0.12, position + 0.12],
+                [0, 0],
+                color=theme["grid"],
+                linewidth=0.8,
+                zorder=1,
+            )
+        agree = all(a == b for a, b in zip(in_data, by_rule, strict=True))
+        ax.set_xticks(positions)
+        ax.set_xticklabels([str(year) for year in centuries])
+        ax.set_xlim(-0.5, len(centuries) - 0.5)
+        ax.set_ylim(-0.35, 1.35)
         ax.set_yticks([0, 1])
         ax.set_yticklabels(["absent", "present"])
-        ax.set_title("Centurial years: data against the rule")
-        ax.legend(loc="upper left")
+        ax.set_title(
+            "Centurial years: data against the rule"
+            + ("  — agree everywhere" if agree else "  — MISMATCH")
+        )
+        ax.legend(loc="center left")
 
         caption(
             fig,
