@@ -1,0 +1,43 @@
+# Step 1 Check A -- do immigration-death dynamics plus observer thinning reproduce
+# the reference's daily statistics?  See docs/plans/step-1-plan.md.
+name: step1_check_a
+variant: sunspot_only
+seed: 20261121
+
+release: v1.3_4
+duplicate_rule: max          # D16: one conflict survives (Takuma 1982-10-13, 8 vs 7)
+kmas_role: reference         # ADR-009: KMAS bridges the two anchors as a reference survey
+
+# PI, 2026-11-21: Step 1 excludes sporer (tracks no groups) and schwabe (no spotless
+# days); see D23.  rgo and debrecen are the two anchors, kmas bridges them.
+surveys: [rgo, debrecen, kmas]
+thresholds: [0.0, 10.0, 30.0, 60.0, 100.0]
+
+datasets:
+  - path: reference_groups_2026-10
+    role: calibration
+    kind: sunspot
+  - path: gn_database_v1.3
+    role: diagnostic          # Check A fits the reference's own counts, not the network's
+    kind: sunspot
+  - path: silso
+    role: comparison          # never calibration (ADR-002, ADR-003)
+    kind: silso
+
+params:
+  # Latent chain
+  truncation_k: 41            # D17: P(GROUPS >= 41) < 1e-5 and above the reference max of 31
+  area_classes: [1, 2]        # the 1-vs-2 class decision this check has to make
+  class_split_msh: 100.0      # observable split, so class membership is not latent
+  # Birth rate lambda(t)
+  lambda_knot_days: 27        # one solar rotation
+  lambda_penalty_order: 2
+  lambda_penalties: [1.0, 10.0, 100.0]   # held-out day selection, reported at all three
+  # Visibility (N2: obs_duration is visible residence, not intrinsic lifetime)
+  disk_transit_days: 13.5
+  # Scoring
+  acf_max_lag: 30
+  activity_bins: 5
+  smoothing_days: 91
+  n_simulations: 200
+  holdout_fraction: 0.1

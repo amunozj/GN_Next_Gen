@@ -1,0 +1,41 @@
+# Step 1 Check B -- is the area distribution, conditional on activity, stationary
+# across the reference era?  See docs/plans/step-1-plan.md.
+name: step1_check_b
+variant: sunspot_only
+seed: 20261121
+
+release: v1.3_4
+duplicate_rule: max
+kmas_role: reference
+surveys: [rgo, debrecen, kmas]
+thresholds: [0.0, 10.0, 30.0, 60.0, 100.0]
+
+datasets:
+  - path: reference_groups_2026-10
+    role: calibration
+    kind: sunspot
+  - path: silso
+    role: comparison
+    kind: silso
+
+params:
+  # Epochs, by (survey, cycles).  RGO 12-14 are the D5-excluded early era; RGO 15-19
+  # and Debrecen 21-23 are the two ADR-009 anchors; KMAS 20-24 bridges them.
+  epochs:
+    rgo_early: {survey: rgo, cycles: [12, 13, 14]}
+    rgo_anchor: {survey: rgo, cycles: [15, 16, 17, 18, 19]}
+    rgo_late: {survey: rgo, cycles: [20]}
+    debrecen_anchor: {survey: debrecen, cycles: [21, 22, 23]}
+    kmas_bridge: {survey: kmas, cycles: [20, 21, 22, 23, 24]}
+  # PI, 2026-11-21: condition on the smoothed group COUNT, not on smoothed area --
+  # conditioning on area would condition on a function of the quantity under test.
+  activity_variable: smoothed_count
+  activity_sensitivity: amp_whole_sm91
+  smoothing_days: 91
+  activity_bins: 5
+  # D14: upstream recommends >= 30 MSH; the primary test uses that floor so that
+  # per-survey completeness floors are not mistaken for solar change.
+  area_floor_msh: 30.0
+  block_bootstrap_days: 27
+  n_bootstrap: 1000
+  mixture_components: [1, 2]

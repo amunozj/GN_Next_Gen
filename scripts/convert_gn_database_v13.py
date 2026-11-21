@@ -63,8 +63,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from gn_next_gen.paths import (  # noqa: E402
     DATA_INTERIM,
     GN_DATABASE_V13,
-    GN_V13_RELEASES,
     GN_V13_CURRENT_RELEASE,
+    GN_V13_RELEASES,
 )
 
 OBS_SHEETS = ("1610-1946", "1947-1988", "1989-2010")
@@ -94,8 +94,12 @@ class Release:
 
 
 RELEASES = {
-    "v1.3_3": Release("v1.3_3", changed_flag_from="fill", changelog_layout="blocks", observer_max_col=5),
-    "v1.3_4": Release("v1.3_4", changed_flag_from="column", changelog_layout="sheets", observer_max_col=6),
+    "v1.3_3": Release(
+        "v1.3_3", changed_flag_from="fill", changelog_layout="blocks", observer_max_col=5
+    ),
+    "v1.3_4": Release(
+        "v1.3_4", changed_flag_from="column", changelog_layout="sheets", observer_max_col=6
+    ),
 }
 
 
@@ -365,12 +369,16 @@ def main() -> None:
     print(f"  rows with STATION > 0     {len(real):,}")
     print(f"  distinct stations w/data  {real['STATION'].nunique()}")
     print(f"  observers listed          {len(obsv)}")
-    print(f"  changed_in_v13            {flag_report['from_column']} "
-          f"(fill {flag_report['from_fill']}, disagree {flag_report['disagree']})")
+    print(
+        f"  changed_in_v13            {flag_report['from_column']} "
+        f"(fill {flag_report['from_fill']}, disagree {flag_report['disagree']})"
+    )
     print(f"  coverage                  {obs['ORDINAL'].min()} -> {obs['ORDINAL'].max()}")
     print(f"  max GROUPS                {obs['GROUPS'].max()}  (D17)")
-    print(f"  duplicate (date,station)  {len(dup)} keys, "
-          f"{int((dup['nunique'] > 1).sum())} conflicting  (D16)")
+    print(
+        f"  duplicate (date,station)  {len(dup)} keys, "
+        f"{int((dup['nunique'] > 1).sum())} conflicting  (D16)"
+    )
 
 
 if __name__ == "__main__":
