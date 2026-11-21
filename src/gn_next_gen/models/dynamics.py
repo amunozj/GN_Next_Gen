@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax.scipy.special import gammaln
+from scipy.special import gammaln as np_gammaln
 
 
 def survival_matrix(phi: jax.Array | float, k: int) -> jax.Array:
@@ -134,3 +136,48 @@ def simulate_counts(
     keys = jax.random.split(key_path, lam_t.shape[0])
     _, path = jax.lax.scan(step, start.astype(jnp.int32), (lam_t, keys))
     return path
+
+
+def simulate_paths(
+    phi: float,
+    lam_t: np.ndarray,
+    k: int,
+    n_paths: int = 1,
+    *,
+    seed: int = 0,
+    n0: np.ndarray | None = None,
+) -> np.ndarray:
+    """Sample ``n_paths`` independent paths of the chain, in NumPy.
+
+    Returns an ``(n_paths, T)`` array.
+
+    Deliberately not JAX.  Nothing here is differentiated, and a ``lax.scan`` over
+    150,000 steps has to be compiled before it can be sampled -- which on this
+    machine failed outright inside XLA's CPU JIT part-way through a long run
+    ("Failed to materialize symbols").  Stepping in NumPy while vectorizing over the
+    replicates costs one Python loop over days regardless of how many paths are
+    drawn, so it is both faster for the sizes Check A needs and has nothing to
+    compile.  :func:`simulate_counts` keeps the JAX version, which the tests use as
+    an independent implementation of the same process.
+    """
+    lam_t = np.asarray(lam_t, dtype=float)
+    rng = np.random.default_rng(seed)
+    n_days = len(lam_t)
+
+    if n0 is None:
+        mean = float(lam_t[0]) / (1.0 - phi)
+        counts = np.arange(k)
+        pmf = np.exp(counts * np.log(max(mean, 1e-12)) - mean - np_gammaln(counts + 1))
+        pmf[k - 1] = max(1.0 - pmf[: k - 1].sum(), 0.0)
+        pmf = pmf / pmf.sum()
+        state = rng.choice(k, size=n_paths, p=pmf)
+    else:
+        state = np.broadcast_to(np.asarray(n0), (n_paths,)).copy()
+
+    out = np.empty((n_paths, n_days), dtype=np.int32)
+    for day in range(n_days):
+        survivors = rng.binomial(state, phi)
+        births = rng.poisson(lam_t[day], size=n_paths)
+        state = np.minimum(survivors + births, k - 1)
+        out[:, day] = state
+    return out

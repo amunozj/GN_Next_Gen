@@ -38,7 +38,7 @@ if "--device" not in sys.argv and "JAX_PLATFORMS" not in __import__("os").enviro
 from gn_next_gen.config import load_run_config, write_lineage  # noqa: E402
 from gn_next_gen.inference.forward_filter import fit_immigration_death  # noqa: E402
 from gn_next_gen.io import daily_counts, load_day_status, load_group_single_entry  # noqa: E402
-from gn_next_gen.models.dynamics import simulate_counts  # noqa: E402
+from gn_next_gen.models.dynamics import simulate_paths  # noqa: E402
 from gn_next_gen.models.visibility import simulate_marked_process  # noqa: E402
 from gn_next_gen.paths import OUTPUTS  # noqa: E402
 from gn_next_gen.stats.discrepancy import (  # noqa: E402
@@ -77,24 +77,17 @@ def observed_spans(survey: str) -> np.ndarray:
     return single["obs_duration"].dropna().to_numpy()
 
 
-def simulate_like_observed(
-    fit, series: np.ndarray, observed: np.ndarray, k: int, seed: int
-) -> np.ndarray:
-    """One simulated series with the observing calendar transplanted onto it.
+def transplant_calendar(path: np.ndarray, observed: np.ndarray) -> np.ndarray:
+    """Blank a simulated series wherever the real survey did not observe.
 
-    The transplant is the legacy missing-day imprinting idea
-    (``legacy/ADFSSN/scripts/SSN_ADF.py`` l. 867-871): a simulated series compared
-    against an observed one must be missing the same days, or every gap-sensitive
-    statistic is measured on different supports.
+    The legacy missing-day imprinting idea (``legacy/ADFSSN/scripts/SSN_ADF.py``
+    l. 867-871): a simulated series compared against an observed one has to be
+    missing the same days, or every gap-sensitive statistic is measured on a
+    different support.
     """
-    import jax
-
-    path = np.asarray(
-        simulate_counts(jax.random.key(seed), float(fit.phi[0]), fit.lam_t, k)
-    ).astype(float)
-    path[~observed] = np.nan
-    del series
-    return path
+    out = np.asarray(path, dtype=float).copy()
+    out[~observed] = np.nan
+    return out
 
 
 def run(
@@ -160,18 +153,22 @@ def run(
                     k_per_class=int(params["two_class_k"]) if n_classes == 2 else None,
                 )
 
+                # All replicates in one vectorized pass: one Python loop over days
+                # regardless of how many paths, and nothing to compile.
+                paths = simulate_paths(
+                    float(fit.phi[0]), fit.lam_t, k, n_paths=n_sims, seed=config.seed
+                )
+                # The lifetime prediction is a property of the fitted chain, not of any
+                # one sampled path, so the rotation model is simulated once per fit.
+                marked = simulate_marked_process(
+                    fit.lam_t, float(1.0 / (1.0 - fit.phi[0])), seed=config.seed
+                )
+
                 scored = []
                 sim_keep = None
                 for index in range(n_sims):
-                    simulated = simulate_like_observed(
-                        fit, series, observed, k, config.seed + index
-                    )
+                    simulated = transplant_calendar(paths[index], observed)
                     sim_activity = smooth_centered(simulated, smoothing)
-                    marked = simulate_marked_process(
-                        fit.lam_t,
-                        float(1.0 / (1.0 - fit.phi[0])),
-                        seed=config.seed + index,
-                    )
                     score = score_check_a(
                         series,
                         simulated,
