@@ -97,12 +97,19 @@ def simulate_like_observed(
     return path
 
 
-def run(config_path: Path, *, quick: bool, out_dir: Path) -> pd.DataFrame:
+def run(
+    config_path: Path,
+    *,
+    quick: bool,
+    out_dir: Path,
+    only_surveys: list[str] | None = None,
+    only_thresholds: list[float] | None = None,
+) -> pd.DataFrame:
     config = load_run_config(config_path)
     params = config.params
     k = int(params["truncation_k"])
-    thresholds = [30.0] if quick else list(config.thresholds)
-    surveys = ["rgo"] if quick else list(config.surveys)
+    thresholds = [30.0] if quick else list(only_thresholds or config.thresholds)
+    surveys = ["rgo"] if quick else list(only_surveys or config.surveys)
     class_counts = [1] if quick else list(params.get("area_classes", [1]))
     smoothing = int(params.get("smoothing_days", 91))
     n_bins = int(params.get("activity_bins", 5))
@@ -300,6 +307,16 @@ def main() -> None:
     ap.add_argument("--quick", action="store_true", help="one survey, one threshold, few sims")
     ap.add_argument("--out-dir", type=Path, default=None)
     ap.add_argument(
+        "--surveys", nargs="+", default=None, help="restrict the grid, e.g. --surveys debrecen"
+    )
+    ap.add_argument(
+        "--thresholds",
+        nargs="+",
+        type=float,
+        default=None,
+        help="restrict the acuity thresholds, e.g. --thresholds 30",
+    )
+    ap.add_argument(
         "--device",
         choices=["cpu", "gpu"],
         default=None,
@@ -307,7 +324,13 @@ def main() -> None:
     )
     args = ap.parse_args()
     out = args.out_dir or (OUTPUTS / "step1" / ("check_a_quick" if args.quick else "check_a"))
-    run(args.config, quick=args.quick, out_dir=out)
+    run(
+        args.config,
+        quick=args.quick,
+        out_dir=out,
+        only_surveys=args.surveys,
+        only_thresholds=args.thresholds,
+    )
 
 
 if __name__ == "__main__":
