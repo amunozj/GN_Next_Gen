@@ -8,7 +8,7 @@ against their own copy.
 
 Usage
 -----
-    python scripts/audit_gn_database_v13.py [--json OUT.json]
+    python scripts/audit_gn_database_v13.py [--release v1.3_3] [--json OUT.json]
 """
 
 from __future__ import annotations
@@ -22,7 +22,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from gn_next_gen.paths import GN_V13_XLSX  # noqa: E402
+from gn_next_gen.paths import GN_V13_RELEASES  # noqa: E402
+
+# This script backs docs/results/gn-v13-feedback-report.md, which is a dated report
+# to the v1.3 authors about release v1.3_3.  It therefore audits _3 by default, not
+# whichever release data/raw currently derives its tables from (ADR-010).
+AUDIT_RELEASE_DEFAULT = "v1.3_3"
 
 OBS_SHEETS = ("1610-1946", "1947-1988", "1989-2010")
 CHANGELOG_BLOCKS = {"v1.12": 0, "v1.2": 8, "v1.21": 16, "v1.3": 24}
@@ -36,14 +41,22 @@ def _hr(title: str) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", type=Path, help="also write the findings as JSON")
+    ap.add_argument(
+        "--release",
+        choices=sorted(GN_V13_RELEASES),
+        default=AUDIT_RELEASE_DEFAULT,
+        help=f"workbook release to audit (default {AUDIT_RELEASE_DEFAULT}, the one the "
+        "feedback report is about)",
+    )
     args = ap.parse_args()
+    xlsx = GN_V13_RELEASES[args.release]
 
     import openpyxl
 
-    print(f"workbook: {GN_V13_XLSX}")
-    print(f"size:     {GN_V13_XLSX.stat().st_size:,} bytes")
+    print(f"workbook: {xlsx}")
+    print(f"size:     {xlsx.stat().st_size:,} bytes")
 
-    wb = openpyxl.load_workbook(GN_V13_XLSX, read_only=True, data_only=True)
+    wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
     print(f"sheets:   {wb.sheetnames}")
 
     per_sheet: dict[str, int] = {}
@@ -102,7 +115,7 @@ def main() -> None:
     wb.close()
 
     # Fills need a non-read-only workbook.
-    wb2 = openpyxl.load_workbook(GN_V13_XLSX, data_only=True)
+    wb2 = openpyxl.load_workbook(xlsx, data_only=True)
     ws2 = wb2["Observers"]
     filled = [
         (r[0].value, r[4].value)
@@ -184,7 +197,7 @@ def main() -> None:
         args.json.write_text(
             json.dumps(
                 {
-                    "workbook_bytes": GN_V13_XLSX.stat().st_size,
+                    "workbook_bytes": xlsx.stat().st_size,
                     "per_sheet_rows": per_sheet,
                     "blank_tail": blank_tail,
                     "total_rows": total_rows,

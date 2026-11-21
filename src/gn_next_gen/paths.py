@@ -33,9 +33,18 @@ REFERENCE_CYCLE_COVERAGE = REFERENCE_GROUPS / "survey_cycle_coverage.csv"
 REFERENCE_AREAS_LEGACY = DATA_RAW / "reference_areas"
 
 # --- Group-number observation database --------------------------------------
-# Current observation database: v1.3 revised collection, 1610-2010.
+# Current observation database: v1.3 revised collection, 1610-2010.  Two releases
+# live side by side; v1.3_4 (2026-11) is current and the derived tables track it,
+# while v1.3_3 is retained byte-exact and regenerates into data/interim/ on
+# demand.  See ADR-010.
 GN_DATABASE_V13 = DATA_RAW / "gn_database_v1.3"
-GN_V13_XLSX = GN_DATABASE_V13 / "Revised collection_v1.3_3.xlsx"
+GN_V13_CURRENT_RELEASE = "v1.3_4"
+GN_V13_RELEASES = {
+    "v1.3_3": GN_DATABASE_V13 / "Revised collection_v1.3_3.xlsx",
+    "v1.3_4": GN_DATABASE_V13 / "Revised collection_v1.3_4.xlsx",
+}
+GN_V13_XLSX = GN_V13_RELEASES[GN_V13_CURRENT_RELEASE]
+GN_V13_XLSX_V133 = GN_V13_RELEASES["v1.3_3"]
 GN_V13_OBSERVATIONS = GN_DATABASE_V13 / "gn_v13_observations.parquet"
 GN_V13_OBSERVERS = GN_DATABASE_V13 / "gn_v13_observers.parquet"
 GN_V13_CHANGELOG = GN_DATABASE_V13 / "gn_v13_changelog.csv"

@@ -538,7 +538,9 @@ v1.3,"WOLF, C., MAGDEBURG",1709,"Erratum corrected in the number of groups (in p
 v1.3,"MÜLLER, J.H., ALTORF",1716-1718,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abd949)."
 v1.3,"MÜLLER, J.C., BRANDEIS, CZECH REPUBLIC",-,"The name of the observation place (Prague) was corrected to ""Brandeis"""
 v1.3,"MÜLLER, J.C., BRANDEIS, CZECH REPUBLIC",1719-1720,"Corrected according to Hayakawa et al. (2021, doi: 10.1007/s11207-021-01880-8)"
+v1.3,"ALISCHER, J.L., JAUER",1719-1726,"Added and corrected according to Carrasco et al. (2024, doi: 10.3847/1538-4357/ad3fb9); Observations made by Alischer in 1727 were not removed."
 v1.3,MOLYNEUX,1722,"Added according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
+v1.3,"HAUSEN, C.A., LEIPZIG",1725,"Date corrected according to Carrasco et al. (2024, doi: 10.3847/1538-4357/ad3fb9)"
 v1.3,"BRADLEY, J., GREENWICH",1726-1739,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
 v1.3,"BLANCHINI, F., VERONA",1727,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
 v1.3,"CASSINI DE THURY, PARIS",1727,"Corrected according to Hayakawa et al. 2022, doi: 10.3847/1538-4357/ac6671)"
@@ -560,7 +562,7 @@ v1.3,"WARGENTIN, P., UPPSALA",1748,"Added according to Hayakawa et al. 2022, doi
 v1.3,"SANSAI ZUSETSU, JAPAN",1749-1750,"Added according to Hayakawa et al. (2018, doi: 10.1093/pasj/psy066). Note that we chose the observation with the highest number of groups corresponding to observations made on 2 Dec 1749"
 v1.3,"ORIANI, B., MILAN",1778,"Corrected according to Nogales et al. (2020, doi: 10.1007/s11207-020-01638-8)"
 v1.3,"ORIANI, B., MILAN",1779,"Incorporated according to Nogales et al. (2020, doi: 10.1007/s11207-020-01638-8)"
-v1.3,"LINDENER, B.A., GLATZ",1800-1827,"Corrected according to Hayakawa et al. (2023, doi: 10.1051/swsc/2023023)"
+v1.3,"LINDENER, B.A., GLATZ",1800-1827,"Corrected according to Hayakawa et al. (2023, doi: 10.1051/swsc/2023023); If there is more than one observation per day, only the observation with the largest number of groups is included. This happens three times for Lindener."
 v1.3,"DERFFLINGER, T., KREMSMUNSTER",1802-1824,"Corrected according to Hayakawa et al. (2020, doi: 10.3847/1538-4357/ab65c9). Note that, when several observations are avialable in the same dates, it was taken the highest number of groups recorded in the two documentary sources consulted in that work"
 v1.3,"PRANTNER, S.M.J., WILTEN",1804-1844,"Corrected according to Hayakawa et al. (2021, doi: 10.3847/1538-4357/abee1b)"
 v1.3,"HALLASCHKA, F.I.C., PRAGUE",1816,"Corrected according to Carrasco et al. (2018, doi: 10.1007/s11207-018-1322-5)"
@@ -571,7 +573,7 @@ v1.3,"BOND, W.C., HARVARD",1847-1849,"Corrected according to Carrasco et al. (20
 v1.3,"WOLF, R., ZURICH  (83/1320 mm Fraunhofer refractor; Friedli recount)",1849-1893,"Added according to Friedli (2016, doi: 10.1007/s11207-016-0907-0)"
 v1.3,"WOLF, R., ZURICH  (40/700 mm Parisian refractor; Friedli recount)",1849-1876,"Added according to Friedli (2016, doi: 10.1007/s11207-016-0907-0)"
 v1.3,"CARRINGTON, LONDON",1853-1861,"Corrected according to Teague (2020, http://www.sidc.be/silso/carrington) "
-v1.3,"SECCHI, ROME",1853-1878,"Corrected according to Ermolli (2023, doi: 10.3847/1538-4365/ad0886)"
+v1.3,"SECCHI, ROME",1853-1878,"Corrected according to Ermolli (2023, doi: 10.3847/1538-4365/ad0886); If there is more than one observation per day, only the observation with the largest number of groups is included. This happens several times for Secchi; 19 and 20 January 1868 are considered as days without observation and 21 and 22 January 1868 as spotless days according to the original drawings by Secchi."
 v1.3,"AGUILAR, MADRID",1876-1882,"Removed. These observations were actually made by Vicente Ventosa according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
 v1.3,"VENTOSA, V., MADRID OBSERVATORY",1876-1896,"Added according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
 v1.3,"MERINO, MADRID",1883-1896,"Removed. These observations were actually made by Vicente Ventosa according to Aparicio et al. (2014, doi: 10.1007/s11207-014-0567-x)"
@@ -580,8 +582,17 @@ v1.3,"HADDEN, D.E., ALTA, IOWA",1894,Correcting erratum. There were two observat
 v1.3,"AGUILAR, MADRID OBSERVATORY",1914-1920,"Added according to Lefèvre et al. (2016, doi: 10.1007/s11207-016-0905-2)"
 v1.3,"MISAWA, K., JAPAN",1921-1934,"Added according to Hayakawa et al. (2023, doi: 10.1093/mnras/stad2791)"
 v1.3,"CARRASCO, R., MADRID OBSERVATORY",1931-1933,"Added according to Aparicio et al. (2022, doi: 10.1007/s11207-022-01992-9)"
-v1.3,"KOYAMA, H., TOKYO",1945-1947,"Added according to Hayakawa et al. (2020, doi: 10.1093/mnras/stz3345)"
-v1.3,"SACRAMENTO PEAK OBSERVATORY, NEW MEXICO",1947-2004,"Incorpoated according to Carrasco et al. (2021, doi: 10.1007/s11207-020-01746-5)"
+v1.3,"KOYAMA, H., TOKYO",1945-1947,"Added according to Hayakawa et al. (2020, doi: 10.1093/mnras/stz3345); (NOT REMOVED) 10 October 1946: 38 groups -> This seems implausible."
+v1.3,"SACRAMENTO PEAK OBSERVATORY, NEW MEXICO",1947-2004,"Incorpoated according to Carrasco et al. (2021, doi: 10.1007/s11207-020-01746-5); If there is more than one observation per day, only the observation with the largest number of groups is included. This happens dozens of times."
 v1.3,"STRACH, E., LIVERPOOL",1969-2008,"Incorporated according to Carrasco et al. (2019, doi: 10.1029/2018SW002147)"
 v1.3,"CRAGG, T., LOS ANGELES",-,Erratum of this name was corrected
-v1.3,"TAKUMA, JAPAN",1972-2013,"Added according to Hayakawa et al. (2023, doi: 10.1002/gdj3.158)"
+v1.3,"TAKUMA, JAPAN",1972-2013,"Added until 2010 according to Hayakawa et al. (2023, doi: 10.1002/gdj3.158); Not included the group number corresponding to 26 September 1982 because it is 93 groups in the digital version of the dataset."
+v1.3,XE,1972,(Not removed) Some significant higher group number values from 21 February 1972
+v1.3,"KANDILLI, TURKEY                    ",1978,(Not removed) 31 January 1978: 40 groups -> It seems that it could be 10 groups.
+v1.3,"KIEV, U.R.S.S.                      ",1982,(Not removed) 3 February 1982: 30 groups -> It seems that it could be 20 groups.
+v1.3,AMERICAIN                          ,1982,(Not removed) 12 November 1982: 50 groups -> It is significantly higher than that at the other stations.
+v1.3,"LUNPING OBSERVATORY, TAIWAN",1989,(Not removed) There is a significant change on 15 May 1989 when it significantly increases the number of groups observed with respect to the group number values assigned to the remaining stations on the same days.
+v1.3,"FORS, SWEDEN                        ",1989,"(Not removed) Some observations have a group number of 30 or more, which is a number significantly higher than the group number values assigned to the remaining stations for the same days (e.g. 25 May 1989)."
+v1.3,"WATUKOSEK OBSERVATORY, INDONESIA    ",1991-1992,"Not removed but it should be taken with caution because some observations have a group number of 30 or more, which is a number significantly higher than the group number values assigned to the remaining stations for the same days (e.g. 15 May 1991)."
+v1.3,"LEARMOUTH, AUSTRALIA                ",1991,(Not removed) 19 August 1991: a significantly lower number of groups than at the other stations.
+v1.3,"LUNPING, REPUBLIC OF CHINA              ",1991,(Not removed) 19 August 1991: a significantly higher number of groups than at the other stations

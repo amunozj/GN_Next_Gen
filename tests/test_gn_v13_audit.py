@@ -15,20 +15,23 @@ import subprocess
 import sys
 
 import pytest
-from test_gn_database_v13 import (  # noqa: I001  (sibling test module, shared constants)
-    CHANGELOG_COUNTS,
-    OBSERVERS_LISTED,
-    STATION_ROWS,
-    STATIONS_WITH_DATA,
-    TOTAL_ROWS,
-)
+from test_gn_database_v13 import V133  # noqa: I001  (sibling module, shared constants)
 
 from gn_next_gen.paths import DOCS, REPO_ROOT, SCRIPTS
 
 REPORT = DOCS / "results" / "gn-v13-feedback-report.md"
 AUDIT = SCRIPTS / "audit_gn_database_v13.py"
 
-# The findings the report is built around.  Keep in step with D16-D20.
+# The report is a dated artifact about release **v1.3_3**, so every number here comes
+# from V133 rather than from the current release's tables.  v1.3_4 has since fixed most
+# of these (D16 217 -> 3, D17's 93 gone, D18's sentinel gone, D20 now an explicit
+# column), which is recorded in docs/04_data/known_issues.md -- but the report must keep
+# saying what was true when it was sent, so these stay pinned to _3.
+TOTAL_ROWS = V133["total_rows"]
+STATION_ROWS = V133["station_rows"]
+STATIONS_WITH_DATA = V133["stations_with_data"]
+OBSERVERS_LISTED = V133["observers_listed"]
+CHANGELOG_COUNTS = V133["changelog_counts"]
 DUPLICATE_KEYS = 217
 DUPLICATE_IDENTICAL = 122
 DUPLICATE_CONFLICTING = 95
@@ -101,7 +104,7 @@ def test_report_records_what_verified_clean(report):
 def test_audit_script_reproduces_the_pinned_numbers(tmp_path):
     out = tmp_path / "audit.json"
     proc = subprocess.run(
-        [sys.executable, str(AUDIT), "--json", str(out)],
+        [sys.executable, str(AUDIT), "--release", "v1.3_3", "--json", str(out)],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
