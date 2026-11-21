@@ -29,6 +29,13 @@ params:
   truncation_k: 41            # D17: P(GROUPS >= 41) < 1e-5 and above the reference max of 31
   area_classes: [1, 2]        # the 1-vs-2 class decision this check has to make
   class_split_msh: 100.0      # observable split, so class membership is not latent
+  # A two-class chain squares the state space (41 -> 1,681), so it is fitted where
+  # the decision rule reads it off rather than across the whole grid.
+  two_class_thresholds: [30.0]
+  two_class_surveys: [rgo, debrecen]
+  # Each class needs far less room than the total: two chains reaching 20 cover any
+  # daily count the reference shows, at 441 joint states instead of 1,681.
+  two_class_k: 21
   # Birth rate lambda(t)
   lambda_knot_days: 27        # one solar rotation
   lambda_penalty_order: 2
@@ -39,5 +46,8 @@ params:
   acf_max_lag: 30
   activity_bins: 5
   smoothing_days: 91
-  n_simulations: 200
+  # 50 simulations put the Monte-Carlo error on each mean measure well below the
+  # differences the check is looking at, at 1.4 s per simulation over 37,620 days.
+  n_simulations: 50
+  maxiter: 150
   holdout_fraction: 0.1

@@ -26,6 +26,15 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+# Run the filter on the CPU unless asked otherwise.  This is not a guess: at
+# T = 152,000 and K = 41 one likelihood evaluation measured 0.667 s on this machine's
+# CPU against 6.95 s on one A100 (scripts/benchmark_forward_filter.py, figure f12).
+# A single-chain sequential scan with 41-vector bodies is latency-bound, so per-step
+# launch overhead dominates and the GPU loses by an order of magnitude; it wins only
+# for batched chains, which is a Step 4 concern.
+if "--device" not in sys.argv and "JAX_PLATFORMS" not in __import__("os").environ:
+    __import__("os").environ["JAX_PLATFORMS"] = "cpu"
+
 from gn_next_gen.config import load_run_config, write_lineage  # noqa: E402
 from gn_next_gen.inference.forward_filter import fit_immigration_death  # noqa: E402
 from gn_next_gen.io import daily_counts, load_day_status, load_group_single_entry  # noqa: E402
@@ -103,7 +112,7 @@ def run(config_path: Path, *, quick: bool, out_dir: Path) -> pd.DataFrame:
     # reads it off -- the primary threshold, for the two anchor surveys.
     two_class_thresholds = set(params.get("two_class_thresholds", [30.0]))
     two_class_surveys = set(params.get("two_class_surveys", ["rgo", "debrecen"]))
-    maxiter = 25 if quick else 300
+    maxiter = 25 if quick else int(params.get("maxiter", 150))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     write_lineage(config, out_dir, extra={"script": "check_a_dynamics.py", "quick": quick})
@@ -141,6 +150,7 @@ def run(config_path: Path, *, quick: bool, out_dir: Path) -> pd.DataFrame:
                     ),
                     holdout_mask=holdout,
                     maxiter=maxiter,
+                    k_per_class=int(params["two_class_k"]) if n_classes == 2 else None,
                 )
 
                 scored = []
@@ -155,34 +165,19 @@ def run(config_path: Path, *, quick: bool, out_dir: Path) -> pd.DataFrame:
                         float(1.0 / (1.0 - fit.phi[0])),
                         seed=config.seed + index,
                     )
-                    scored.append(
-                        score_check_a(
-                            series,
-                            simulated,
-                            activity,
-                            sim_activity,
-                            spans,
-                            marked.first_apparition_spans,
-                            k=k,
-                            max_lag=max_lag,
-                            n_bins=n_bins,
-                            detrend_days=smoothing,
-                        ).as_dict()
-                        | {
-                            "aggregate": score_check_a(
-                                series,
-                                simulated,
-                                activity,
-                                sim_activity,
-                                spans,
-                                marked.first_apparition_spans,
-                                k=k,
-                                max_lag=max_lag,
-                                n_bins=n_bins,
-                                detrend_days=smoothing,
-                            ).aggregate
-                        }
+                    score = score_check_a(
+                        series,
+                        simulated,
+                        activity,
+                        sim_activity,
+                        spans,
+                        marked.first_apparition_spans,
+                        k=k,
+                        max_lag=max_lag,
+                        n_bins=n_bins,
+                        detrend_days=smoothing,
                     )
+                    scored.append(score.as_dict() | {"aggregate": score.aggregate})
                     if index == 0:
                         sim_keep = (simulated, sim_activity, marked)
 
@@ -304,6 +299,12 @@ def main() -> None:
     ap.add_argument("--config", type=Path, default=Path("configs/step1_check_a.yaml"))
     ap.add_argument("--quick", action="store_true", help="one survey, one threshold, few sims")
     ap.add_argument("--out-dir", type=Path, default=None)
+    ap.add_argument(
+        "--device",
+        choices=["cpu", "gpu"],
+        default=None,
+        help="override the CPU default; the GPU is slower for this filter (f12)",
+    )
     args = ap.parse_args()
     out = args.out_dir or (OUTPUTS / "step1" / ("check_a_quick" if args.quick else "check_a"))
     run(args.config, quick=args.quick, out_dir=out)

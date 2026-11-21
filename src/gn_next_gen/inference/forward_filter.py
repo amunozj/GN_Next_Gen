@@ -205,12 +205,21 @@ def fit_immigration_death(
     *,
     k: int = 41,
     n_classes: int = 1,
+    k_per_class: int | None = None,
     knot_days: int = 27,
     penalty: float = 10.0,
     holdout_mask: np.ndarray | None = None,
     maxiter: int = 300,
 ) -> FitResult:
     """Maximum penalized likelihood for ``(phi, log lambda(t))``, and the class split.
+
+    Parameters
+    ----------
+    k_per_class
+        State-space size for *each* class of a two-class fit.  The joint space is
+        ``k_per_class ** 2``, so the full ``k`` would cost 1,681 states where two
+        chains each reaching ~20 suffice; the default halves ``k`` and rounds up.
+        The sum still reaches ``2 * (k_per_class - 1)``, well past the counts seen.
 
     Returns
     -------
@@ -222,6 +231,7 @@ def fit_immigration_death(
 
     counts = np.asarray(counts, dtype=np.int32)
     observed = np.asarray(observed, dtype=bool)
+    k_class = k_per_class or (k + 1) // 2
     fit_mask = observed if holdout_mask is None else observed & ~np.asarray(holdout_mask, bool)
 
     basis_np = knot_basis(len(counts), knot_days)
@@ -254,7 +264,7 @@ def fit_immigration_death(
             loglik = forward_loglik(emissions, phi[0], lam, k)
         else:
             lam_two = jnp.stack([lam * weight, lam * (1.0 - weight)], axis=1)
-            loglik = forward_loglik_two_class(counts_j, mask, phi, lam_two, k)
+            loglik = forward_loglik_two_class(counts_j, mask, phi, lam_two, k_class)
         return -(loglik - penalty * second_difference_penalty(log_knots))
 
     value_and_grad = jax.jit(jax.value_and_grad(lambda x: objective(x, fit_j)))
@@ -294,6 +304,7 @@ def fit_immigration_death(
             "n_iter": int(result.nit),
             "phi_init": phi0,
             "lam_init": lam0,
+            "k_per_class": k_class if n_classes == 2 else None,
         },
     )
 

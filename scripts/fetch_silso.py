@@ -119,7 +119,8 @@ def main() -> None:
                 "coverage_start": start,
                 "coverage_end": end,
                 "origin": f"Downloaded from {url} on {dt.date.today():%Y-%m-%d}",
-                "upstream": "WDC-SILSO, Royal Observatory of Belgium; Sunspot Number V2.0; CC BY-NC 4.0",
+                "upstream": "WDC-SILSO, Royal Observatory of Belgium; Sunspot Number "
+                "V2.0; CC BY-NC 4.0",
                 "notes": "COMPARISON ONLY - never a calibration input (ADR-002, ADR-003). "
                 "-1 marks a missing value. Supersedes ../silso/, which is retained; "
                 "that older snapshot is comma-separated with a header (D6)",

@@ -263,7 +263,8 @@ def area_distribution_figure(
         fig, axes = plt.subplots(1, 3, figsize=(11.5, 4.0))
 
         ax = axes[0]
-        grid = np.linspace(0.5, 4.0, 200)
+        # Coarse enough that sampling noise does not read as structure.
+        grid = np.linspace(0.5, 4.0, 71)
         for epoch, colour in zip(epochs, colors, strict=True):
             values = np.log10(np.asarray(epoch_areas[epoch], dtype=float))
             values = values[np.isfinite(values)]
