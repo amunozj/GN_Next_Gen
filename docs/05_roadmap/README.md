@@ -27,7 +27,7 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 | Step | Spec | Plan | Status | Verification |
 |---|---|---|---|---|
 | 0 | Clean slate (this repository's initial content) | — | Done (2026-10-28) | — |
-| 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | — | Not started | — |
+| 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | In progress (plan approved 2026-11-21) | — |
 | 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | — | Not started | — |
 | 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | — | Not started | — |
 | 4 | [step-4-joint-latent-population-model.md](step-4-joint-latent-population-model.md) | — | Not started | — |
