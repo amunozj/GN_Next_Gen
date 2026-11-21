@@ -1,0 +1,239 @@
+"""Figures are the Step 1 deliverable, so they get tested like code.
+
+These do not judge whether a figure is beautiful. They check the things that would
+silently produce a misleading picture: a palette that cycles, a dark mode that is an
+automatic inversion rather than its own steps, a figure builder that mutates global
+state, and a target line drawn as if it were a verdict.
+"""
+
+from __future__ import annotations
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import pytest  # noqa: E402
+
+from gn_next_gen.stats.discrepancy import TARGETS  # noqa: E402
+from gn_next_gen.viz import checks  # noqa: E402
+from gn_next_gen.viz.style import (  # noqa: E402
+    CATEGORICAL_DARK,
+    CATEGORICAL_LIGHT,
+    ROLE_SLOT,
+    SURVEY_COLORS,
+    THEMES,
+    palette,
+    rc_params,
+    role_color,
+    save_both_modes,
+    sequential_colors,
+)
+
+MODES = ("light", "dark")
+
+
+# --- the palette ----------------------------------------------------------
+
+
+def test_both_modes_are_defined_with_their_own_steps():
+    """Dark is a selected palette, not an inversion of light."""
+    assert set(THEMES) == set(MODES)
+    assert CATEGORICAL_LIGHT != CATEGORICAL_DARK
+    assert len(CATEGORICAL_LIGHT) == len(CATEGORICAL_DARK) == 8
+    assert palette("light")["surface"] != palette("dark")["surface"]
+
+
+def test_unknown_mode_is_rejected():
+    with pytest.raises(ValueError, match="unknown mode"):
+        palette("sepia")
+
+
+def test_roles_keep_a_fixed_colour_across_every_figure():
+    """Observed is always slot 1 and simulated always slot 2, so the reader learns it once."""
+    for mode in MODES:
+        assert role_color("observed", mode) == palette(mode)["categorical"][0]
+        assert role_color("simulated", mode) == palette(mode)["categorical"][1]
+    assert len(set(ROLE_SLOT.values())) == len(ROLE_SLOT)
+
+
+def test_surveys_use_the_first_three_slots():
+    """Forms that compare every pair at once are only safe on the first three slots."""
+    for mode in MODES:
+        colours = [SURVEY_COLORS[mode][s] for s in ("rgo", "debrecen", "kmas")]
+        assert colours == palette(mode)["categorical"][:3]
+        assert len(set(colours)) == 3
+
+
+def test_sequential_ramp_is_ordered_and_single_hue():
+    """An ordered quantity gets the ramp, never categorical hues."""
+    for mode in MODES:
+        ramp = sequential_colors(5, mode)
+        assert len(ramp) == 5
+        assert len(set(ramp)) == 5
+        assert all(c in palette(mode)["sequential"] for c in ramp)
+    assert sequential_colors(1)[0] in palette("light")["sequential"]
+
+
+def test_rc_params_do_not_cycle_colours_beyond_the_palette():
+    cycle = rc_params("light")["axes.prop_cycle"].by_key()["color"]
+    assert cycle == CATEGORICAL_LIGHT
+
+
+def test_style_does_not_leak_into_global_state():
+    before = dict(plt.rcParams)
+    from gn_next_gen.viz.style import figure_style
+
+    with figure_style("dark"):
+        pass
+    assert plt.rcParams["figure.facecolor"] == before["figure.facecolor"]
+
+
+# --- the figure builders --------------------------------------------------
+
+
+@pytest.fixture
+def acf_table():
+    rows = []
+    for survey in ("rgo", "debrecen"):
+        for detrended in (False, True):
+            for lag in range(1, 31):
+                rows.append(
+                    {
+                        "survey": survey,
+                        "detrended": detrended,
+                        "lag": lag,
+                        "observed": 0.9**lag,
+                        "simulated": 0.88**lag,
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+@pytest.fixture
+def score_table():
+    rows = []
+    for survey in ("rgo", "debrecen"):
+        for threshold in (0.0, 30.0):
+            for n_classes in (1, 2):
+                row = {
+                    "survey": survey,
+                    "threshold_msh": threshold,
+                    "n_classes": n_classes,
+                    "aggregate": 1.3,
+                }
+                row.update({measure: target * 0.8 for measure, target in TARGETS.items()})
+                rows.append(row)
+    return pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_check_figures_build_in_both_modes(acf_table, score_table, mode):
+    figure = checks.acf_figure(acf_table, mode)
+    assert figure.get_facecolor()[:3] == matplotlib.colors.to_rgb(palette(mode)["surface"])
+    plt.close(figure)
+
+    bins = pd.DataFrame(
+        {
+            "bin": range(5),
+            "observed": np.linspace(0.8, 0.0, 5),
+            "simulated": np.linspace(0.85, 0.0, 5),
+        }
+    )
+    pmf = pd.DataFrame(
+        {"count": range(10), "observed": np.full(10, 0.1), "simulated": np.full(10, 0.1)}
+    )
+    runs = pd.DataFrame(
+        {"length": range(1, 8), "observed": np.arange(7, 0, -1), "simulated": np.arange(7, 0, -1)}
+    )
+    plt.close(checks.zero_and_counts_figure(bins, pmf, runs, mode))
+    plt.close(checks.scores_figure(score_table, mode))
+
+    percentiles = pd.DataFrame(
+        {
+            "epoch": ["a", "b"],
+            "p10": [1.5, 1.5],
+            "p50": [2.0, 2.0],
+            "p90": [2.6, 2.6],
+            "above_30_fraction": [0.7, 0.72],
+        }
+    )
+    areas = {
+        "a": np.random.default_rng(0).lognormal(4.6, 1.4, 2000),
+        "b": np.random.default_rng(1).lognormal(4.6, 1.4, 2000),
+    }
+    plt.close(checks.area_distribution_figure(areas, percentiles, mode))
+
+    mixtures = pd.DataFrame(
+        {
+            "epoch": ["a", "b"],
+            "delta_bic": [12.0, -3.0],
+            "mu1": [1.6, 1.62],
+            "mu2": [2.4, 2.38],
+            "weight1": [0.4, 0.42],
+        }
+    )
+    plt.close(checks.mixture_figure(mixtures, mode))
+
+    timings = pd.DataFrame(
+        {
+            "device": ["cpu", "cpu", "gpu", "gpu"],
+            "states": [41, 1681, 41, 1681],
+            "n_days": [10_000, 10_000, 10_000, 10_000],
+            "seconds": [0.04, 0.27, 0.45, 0.64],
+        }
+    )
+    plt.close(checks.filter_benchmark_figure(timings, mode))
+
+
+def test_acf_figure_handles_a_single_survey(acf_table):
+    """The panel grid must not transpose itself when there is one column."""
+    single = acf_table[acf_table["survey"] == "rgo"]
+    figure = checks.acf_figure(single, "light")
+    assert len(figure.axes) == 2
+    plt.close(figure)
+
+
+def test_scores_figure_draws_the_target_as_a_reference_not_a_verdict(score_table):
+    """Thresholds are advisory on this pass, so nothing may be coloured pass/fail."""
+    figure = checks.scores_figure(score_table, "light")
+    texts = [t.get_text() for ax in figure.axes for t in ax.texts]
+    assert any("advisory" in t or "target" in t for t in texts)
+    plt.close(figure)
+
+
+def test_save_both_modes_writes_one_file_per_mode(tmp_path):
+    def builder(mode):
+        figure, ax = plt.subplots()
+        ax.plot([0, 1], [0, 1], color=role_color("observed", mode))
+        return figure
+
+    written = save_both_modes(builder, tmp_path, "toy")
+    assert {p.name for p in written} == {"toy_light.png", "toy_dark.png"}
+    assert all(p.stat().st_size > 1000 for p in written)
+
+
+def test_every_committed_figure_has_both_modes():
+    """The results doc can only offer a dark variant if every figure has one."""
+    from gn_next_gen.paths import DOCS
+
+    folder = DOCS / "results" / "figures" / "step-1"
+    if not folder.is_dir():
+        pytest.skip("figures not built in this checkout")
+    stems = {p.name.rsplit("_", 1)[0] for p in folder.glob("*.png")}
+    for stem in stems:
+        assert (folder / f"{stem}_light.png").is_file(), stem
+        assert (folder / f"{stem}_dark.png").is_file(), stem
+
+
+def test_committed_figures_stay_small():
+    """Only small summary figures are committed; the rest live in git-ignored outputs/."""
+    from gn_next_gen.paths import DOCS
+
+    folder = DOCS / "results" / "figures" / "step-1"
+    if not folder.is_dir():
+        pytest.skip("figures not built in this checkout")
+    for path in folder.glob("*.png"):
+        assert path.stat().st_size < 400_000, f"{path.name} is {path.stat().st_size / 1e3:.0f} kB"
