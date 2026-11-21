@@ -19,7 +19,7 @@
 |---|---|
 | Is the area distribution stationary across the reference era? | **Yes**, across the anchor-era epochs — percentile spread 0.034–0.083 dex against a 0.1 dex target. **Early RGO (cycles 12–14) is the exception**, independently corroborating D5 |
 | Is there two-population structure in areas? | **Yes, decisively** — ΔBIC +965 to +4,268 for two lognormal components in every epoch, with stable component means |
-| Does an immigration–death chain reproduce the reference's daily statistics? | *(see Check A below)* |
+| Does an immigration–death chain reproduce the reference's daily statistics? | **Partly.** It reproduces the count marginals (zero fraction, count distribution, run lengths) within target, and fails the rotation-dependent measures by 3–5×: the lag-13 trough, the lag-27 recurrence and the lifetime distribution. **Go, with an explicit rotation component required in Step 4** |
 | What should Step 4 use? | K = 41; φ is a **visible-residence** parameter, not an intrinsic lifetime; lifetimes need an explicit rotation kernel |
 | Is the forward filter affordable at full length? | **Yes, on CPU**: 0.667 s per evaluation at T = 152,000, K = 41. **Not on GPU**: 6.95 s, ten times slower |
 
@@ -171,7 +171,72 @@ deepest survey — not a solar difference.
 
 ## 3. Check A — do immigration–death dynamics reproduce the reference?
 
-*(Filled in below from `outputs/step1/check_a/scores.csv`.)*
+**Design.** Per (survey, threshold, class count): exact-filter maximum penalized likelihood for
+(φ, log λ(t)) on the survey's own daily counts, with unobserved days contributing a flat emission so
+the real observing calendar is respected. Then 50 simulated paths with that calendar **transplanted
+onto them**, scored against five pre-registered measures. 17 cells; **16 converged** (KMAS at
+T = 100 hit the 400-iteration cap).
+
+**Fitted parameters are physically sensible.** One class, across all surveys and thresholds:
+
+| | range |
+|---|---|
+| φ | 0.783 – 0.846 |
+| mean visible residence, 1/(1−φ) | 4.6 – 6.5 days |
+| observed median `obs_duration` | 5 – 6 days |
+
+φ rises with threshold (RGO 0.783 at T = 0 to 0.836 at T = 60), which is what size-biased detection
+predicts: larger groups live longer, so a higher acuity cut selects a longer-lived population.
+
+**Result: three measures of five pass, and the same two fail everywhere** (`f09`). At T = 30:
+
+| measure | RGO | Debrecen | target | |
+|---|---|---|---|---|
+| ACF lag-1 error | 0.004 | 0.021 | 0.03 | **pass** |
+| zero fraction, max over bins | 0.034 | 0.033 | 0.05 | **pass** |
+| zero fraction, mean | 0.012 | 0.012 | 0.02 | **pass** |
+| count-PMF total variation | 0.020 | 0.025 | 0.05 | **pass** |
+| dispersion-index error | 0.084 | 0.141 | 0.15 | **pass** |
+| run-length mean error | 0.035 | 0.093 | 0.15 | **pass** |
+| run-length KS | 0.048 | 0.077 | 0.05 | pass / marginal |
+| **ACF RMSE, lags 1–30** | **0.157** | **0.147** | 0.05 | **3× over** |
+| **ACF trough at lag 13** | **0.222** | **0.207** | 0.05 | **4× over** |
+| **ACF recurrence at lag 27** | **0.262** | **0.225** | 0.05 | **5× over** |
+| **visible-duration KS** | **0.177** | **0.201** | 0.05 | **3.5× over** |
+| **≥13-day fraction, relative** | **0.571** | **0.490** | 0.20 | **2.5× over** |
+
+**The pattern is the finding.** Every measure the chain passes is a *marginal* count statistic — how
+many groups on a day, how often a day is blank, how blank days cluster. Every measure it fails is
+*temporal structure imposed by rotation*: the autocorrelation trough at one disk transit, the
+recurrence bump at one synodic rotation, and the disk-passage-censored lifetime distribution. The
+chain gets one-day persistence exactly right (lag-1 error 0.004) and then decays monotonically where
+the data dips at lag 13 and rises again at lag 27 (`f07`).
+
+That is not a surprise in hindsight: a memoryless geometric survival has no mechanism that can
+produce a 27-day echo. It is the quantitative version of what `f06` already showed about lifetimes.
+
+**Two area classes do not help.** With the symmetric saddle avoided, the two-class fits do separate
+(class weights 0.94 and 0.93, φ split across the classes) — and they score **worse**: aggregate
++4.0% for RGO and +6.2% for Debrecen, against a bar of −25% to adopt them. Every failing measure
+stays failing. So the deficiency is not unmodelled heterogeneity in lifetimes; it is the absence of
+rotation. **Decision: one area class.**
+
+### Verdict: **go, with a required modification**
+
+The latent-population engine is viable for what the detection layer consumes — the count marginals
+and the spotless-day structure, which is what observer calibration is built on, are reproduced
+within the advisory targets. But **Step 4 must carry an explicit rotation/visibility component**.
+A plain Markov chain in `N` alone cannot reproduce the reference's autocorrelation structure or its
+lifetimes, and reporting a lifetime or an autocorrelation from such a model would be wrong by
+factors of 3–5 on exactly the statistics the research report singled out.
+
+The rotation kernel built for this step (`gn_next_gen.models.visibility`) is the natural starting
+point: it already reproduces the 13.6-day cliff (`f06`). Candidate forms for Step 4, in increasing
+cost: an age-structured latent state; a visibility-kernel shot-noise formulation with the
+closed-form pairwise bivariate-Poisson likelihood of research note Q2(e)1; or particle methods that
+track individual groups. **The binding go/no-go rule and the final thresholds are set here, from
+these magnitudes, rather than before the fits — a deliberate deviation from the spec's
+pre-registration, taken by the PI on 2026-11-21 and recorded in the plan.**
 
 ## 4. The forward filter's cost (Step 4, early task 1)
 
@@ -200,8 +265,9 @@ the step's own compute.
 |---|---|---|
 | Truncation **K** | **41** | Smallest K with `P(GROUPS ≥ K) < 1e-5` that exceeds the reference's largest daily count (31, KMAS). v1.3_4's rule minimum is 39, v1.3_3's was 41, so 41 is stable across both releases (`f03`) |
 | Per-class K, two classes | 21 | 441 joint states; the sum still reaches 40 |
-| Lifetime parametrization | geometric survival **times an explicit rotation kernel** | `obs_duration` is a disk-passage-censored *span*, not an intrinsic lifetime (`f06`). φ is a visible-residence parameter and must be documented as one |
-| Area classes | *(see Check A)* | |
+| Lifetime parametrization | geometric survival **times an explicit rotation kernel — now required, not optional** | `obs_duration` is a disk-passage-censored *span* (`f06`), and Check A shows a chain without rotation misses the lag-13 trough, the lag-27 recurrence and the lifetime distribution by 3–5× |
+| Fitted φ to expect | 0.78–0.85, rising with acuity threshold | Mean visible residence 4.6–6.5 days against an observed median of 5–6 |
+| Area classes | **one** | Two classes separate properly once the symmetric saddle is avoided, and still score worse — +4.0% RGO, +6.2% Debrecen, against a −25% bar. The gap is rotation, not lifetime heterogeneity |
 | Anchors | unchanged (ADR-009) | |
 | Device for single-chain filtering | **CPU** | Measured, section 4 |
 

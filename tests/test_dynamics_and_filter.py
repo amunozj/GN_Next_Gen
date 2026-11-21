@@ -312,8 +312,9 @@ def test_two_class_fit_does_not_start_on_the_saddle():
     rng = np.random.default_rng(0)
     counts = rng.integers(0, 8, 400)
     observed = np.ones(400, dtype=bool)
-    fit = fit_immigration_death(counts, observed, k=11, n_classes=2, k_per_class=8,
-                                knot_days=200, maxiter=1)
+    fit = fit_immigration_death(
+        counts, observed, k=11, n_classes=2, k_per_class=8, knot_days=200, maxiter=1
+    )
     assert fit.phi[0] != fit.phi[1], "identical starting phis cannot ever separate"
 
 
@@ -326,9 +327,8 @@ def test_two_class_fit_recovers_two_distinct_lifetimes():
     counts = short + long_lived
     observed = np.ones(n_days, dtype=bool)
 
-    fit = fit_immigration_death(counts, observed, k=k, n_classes=2, k_per_class=k,
-                                knot_days=200, penalty=1.0, maxiter=200)
-    assert fit.phi[0] != fit.phi[1]
-    assert abs(fit.phi[1] - fit.phi[0]) > 0.05, (
-        f"the classes must stay distinct, got {fit.phi}"
+    fit = fit_immigration_death(
+        counts, observed, k=k, n_classes=2, k_per_class=k, knot_days=200, penalty=1.0, maxiter=200
     )
+    assert fit.phi[0] != fit.phi[1]
+    assert abs(fit.phi[1] - fit.phi[0]) > 0.05, f"the classes must stay distinct, got {fit.phi}"
