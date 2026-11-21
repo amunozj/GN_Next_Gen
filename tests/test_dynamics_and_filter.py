@@ -274,3 +274,61 @@ def test_fit_recovers_phi_and_lambda_from_simulated_data():
     relative = np.abs(fit.lam_t - lam_true) / lam_true
     assert np.sqrt((relative**2).mean()) < 0.25
     assert fit.mean_visible_days[0] == pytest.approx(1 / (1 - phi_true), rel=0.2)
+
+
+# --- the symmetric saddle in the two-class fit ----------------------------
+
+
+def test_two_class_symmetric_point_is_a_saddle():
+    """Identical classes are exchangeable, so antisymmetric gradients vanish there.
+
+    This is the trap the two-class fitter has to avoid, and it is measured rather
+    than argued: with phi_1 = phi_2 and weight = 1/2 the configuration maps to itself
+    under swapping the labels, so no gradient can separate the classes.
+    """
+    k, n_days = 15, 1500
+    shape = jnp.full(n_days, 1.1)
+    left = np.asarray(simulate_counts(jax.random.key(0), 0.70, jnp.full(n_days, 0.9), k))
+    right = np.asarray(simulate_counts(jax.random.key(1), 0.95, jnp.full(n_days, 0.25), k))
+    counts = jnp.asarray(left + right)
+    seen = jnp.ones(n_days, bool)
+
+    def loglik(params):
+        phi, weight = params[:2], params[2]
+        lam = jnp.stack([shape * weight, shape * (1.0 - weight)], axis=1)
+        return forward_loglik_two_class(counts, seen, phi, lam, k)
+
+    grad = jax.grad(loglik)(jnp.asarray([0.84, 0.84, 0.5]))
+    assert float(grad[0] - grad[1]) == pytest.approx(0.0, abs=1e-9)
+    assert float(grad[2]) == pytest.approx(0.0, abs=1e-6)
+
+    # Away from it the classes separate, so the saddle is the only obstacle.
+    asymmetric = jax.grad(loglik)(jnp.asarray([0.75, 0.93, 0.5]))
+    assert abs(float(asymmetric[0] - asymmetric[1])) > 1.0
+
+
+def test_two_class_fit_does_not_start_on_the_saddle():
+    """The guard: a two-class fit must begin with the classes already distinct."""
+    rng = np.random.default_rng(0)
+    counts = rng.integers(0, 8, 400)
+    observed = np.ones(400, dtype=bool)
+    fit = fit_immigration_death(counts, observed, k=11, n_classes=2, k_per_class=8,
+                                knot_days=200, maxiter=1)
+    assert fit.phi[0] != fit.phi[1], "identical starting phis cannot ever separate"
+
+
+@pytest.mark.slow
+def test_two_class_fit_recovers_two_distinct_lifetimes():
+    """With the saddle avoided, the fitter finds classes that are really there."""
+    k, n_days = 21, 4000
+    short = np.asarray(simulate_counts(jax.random.key(0), 0.70, jnp.full(n_days, 1.2), k))
+    long_lived = np.asarray(simulate_counts(jax.random.key(1), 0.95, jnp.full(n_days, 0.2), k))
+    counts = short + long_lived
+    observed = np.ones(n_days, dtype=bool)
+
+    fit = fit_immigration_death(counts, observed, k=k, n_classes=2, k_per_class=k,
+                                knot_days=200, penalty=1.0, maxiter=200)
+    assert fit.phi[0] != fit.phi[1]
+    assert abs(fit.phi[1] - fit.phi[0]) > 0.05, (
+        f"the classes must stay distinct, got {fit.phi}"
+    )

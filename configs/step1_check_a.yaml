@@ -49,5 +49,5 @@ params:
   # 50 simulations put the Monte-Carlo error on each mean measure well below the
   # differences the check is looking at, at 1.4 s per simulation over 37,620 days.
   n_simulations: 50
-  maxiter: 150
+  maxiter: 400              # 150 was hit as a cap, not a convergence point
   holdout_fraction: 0.1

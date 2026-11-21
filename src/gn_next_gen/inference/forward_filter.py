@@ -239,9 +239,20 @@ def fit_immigration_death(
     n_knots = basis_np.shape[1]
 
     phi0, lam0 = moment_initialization(counts, fit_mask)
+
+    # Two classes must NOT start symmetric.  With phi_1 = phi_2 and weight = 1/2 the
+    # chains are exchangeable, so the configuration maps to itself under swapping the
+    # labels and every antisymmetric derivative vanishes.  Measured, not assumed: at
+    # such a point the gradient along (phi_1 - phi_2) is exactly 0.0 and the one along
+    # the weight is ~1e-14, so L-BFGS returns the start unchanged and the two-class fit
+    # silently collapses onto the one-class answer.  Starting split -- as the
+    # assessment's "small/short-lived, large/long-lived" classes imply -- breaks it.
+    phi_start = (
+        np.full(1, phi0) if n_classes == 1 else np.clip([phi0 - 0.12, phi0 + 0.06], 0.05, 0.98)
+    )
     x0 = np.concatenate(
         [
-            _logit(np.full(n_classes, phi0)),
+            _logit(phi_start),
             np.full(n_knots, np.log(lam0)),
             [0.0] if n_classes == 2 else [],
         ]
