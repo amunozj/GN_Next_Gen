@@ -47,6 +47,13 @@ Observer-day diff: **144 new, 78 removed, 351 with changed counts** — see `f02
 because removing the ~428 duplicate rows outweighs the additions, so this is a
 correction-and-deduplication release, not an extension. Coverage still stops at 2010-12-31.
 
+**Where the corrections land is the striking part.** 99% of the changed counts, 100% of the new
+observer-days and 96% of the removals fall in **1715–1730**, concentrated in **1719–1721**
+(143, 117 and 61 changed counts respectively). That is the end of the Maunder Minimum and the
+start of the recovery — precisely the era this project's grand-minimum question turns on, and
+precisely where ADR-008 says the series must be calibrated rather than merely asserted. Anyone
+comparing a Maunder-era result against one computed from v1.3_3 is comparing different data.
+
 Landing it in place contradicted ADR-006, so it carries **ADR-010** rather than a silent
 deviation. Both workbooks are retained byte-exact; `convert_gn_database_v13.py --release v1.3_3`
 regenerates the superseded tables into `data/interim/` and refuses to write them into

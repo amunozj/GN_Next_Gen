@@ -27,7 +27,7 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 | Step | Spec | Plan | Status | Verification |
 |---|---|---|---|---|
 | 0 | Clean slate (this repository's initial content) | — | Done (2026-10-28) | — |
-| 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | In progress (plan approved 2026-11-21) | — |
+| 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | Implemented (2026-11-21) | [step-1-data-foundation.md](../results/step-1-data-foundation.md) |
 | 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | — | Not started | — |
 | 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | — | Not started | — |
 | 4 | [step-4-joint-latent-population-model.md](step-4-joint-latent-population-model.md) | — | Not started | — |
@@ -75,11 +75,15 @@ as first-class output: reference-equivalent scale, era-wide drift (prior sensiti
 reference, per-year prior→posterior contraction.
 
 Running list of paper items (add as steps produce them):
-- [x] Data provenance table and known-issue resolutions — mostly delivered by the 2026-10 renovation
-      ([results](../results/raw-data-renovation.md), ADR-009, `data/raw/MANIFEST.csv`, D1–D22 statuses).
-      Still to add in Step 1: resolutions for D16, D17, D22 and the KMAS single-use rule
+- [x] Area-distribution stationarity across the reference era, and the early-RGO exception (Step 1)
+- [x] Forward-filter cost measured on CPU and GPU, replacing the research report's estimates (Step 1)
+- [x] Data provenance table and known-issue resolutions — delivered by the 2026-10 renovation
+      ([results](../results/raw-data-renovation.md), ADR-009, `data/raw/MANIFEST.csv`) and completed in
+      Step 1: **D1–D23 all carry a status**, with D16–D20 largely resolved by release v1.3_4
+      ([ADR-010](../06_decisions/ADR-010-in-place-release-supersession.md)), D22 and D23 handled in
+      `gn_next_gen.io`, and the KMAS single-use rule and the ADR-002 firewall now **enforced in code**
 - [ ] Anchor-sensitivity comparison: the series under both ADR-009 anchorings (Steps 3–4)
-- [ ] Birth-death + thinning validation against reference statistics (Step 1)
+- [x] Birth-death + thinning validation against reference statistics (Step 1) — [results](../results/step-1-data-foundation.md), figures f06–f09
 - [ ] Benchmark design figure and baseline scores (Step 2)
 - [ ] Overlap-graph diagnostics through time (Step 3)
 - [ ] Benchmark comparison of all methods incl. coverage (Steps 3–4)
