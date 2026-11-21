@@ -58,6 +58,10 @@ def coverage_figure(mode: str = "light") -> plt.Figure:
     observations = load_observations(include_extension=True)
     observers = load_observers()
     observations = observations.assign(year=_years(observations["date_ord"].to_numpy()))
+    # The station count has to be split: v1.3's observers are the historical network,
+    # and the extension adds survey-derived stations that are not observers in the
+    # same sense (D21). Counting them together would overstate the network.
+    network = observations[observations["source"] == "v1.3_4"]
 
     per_year = observations.groupby("year").agg(
         observer_days=("station", "size"),
@@ -67,7 +71,7 @@ def coverage_figure(mode: str = "light") -> plt.Figure:
     spotless = observations.assign(zero=observations["groups"] == 0).groupby("year")["zero"].mean()
 
     with figure_style(mode):
-        fig, axes = plt.subplots(3, 1, figsize=(9.5, 7.6), sharex=True)
+        fig, axes = plt.subplots(4, 1, figsize=(9.5, 9.0), sharex=True)
 
         ax = axes[0]
         ax.fill_between(
@@ -91,31 +95,36 @@ def coverage_figure(mode: str = "light") -> plt.Figure:
         )
 
         ax = axes[1]
-        ax.plot(per_year.index, per_year["stations"], color=role_color("simulated", mode))
+        network_per_year = network.groupby("year")["station"].nunique()
+        ax.plot(
+            network_per_year.index, network_per_year.to_numpy(), color=role_color("simulated", mode)
+        )
         ax.set_ylabel("stations reporting")
         ax.set_title(
-            f"Distinct stations per year — {observations['station'].nunique()} of "
-            f"{len(observers)} listed observers ever report"
+            f"Distinct stations per year — {network['station'].nunique()} of "
+            f"{len(observers)} listed v1.3 observers ever report"
         )
 
         ax = axes[2]
-        ax.plot(
-            per_year.index,
-            per_year["mean_groups"],
-            color=role_color("observed", mode),
-            label="mean groups reported",
-        )
-        ax.plot(
-            spotless.index,
-            spotless * per_year["mean_groups"].max(),
-            color=role_color("alternative", mode),
-            linewidth=1.4,
-            label="fraction of reports that are zero (scaled)",
-        )
+        ax.plot(per_year.index, per_year["mean_groups"], color=role_color("observed", mode))
         ax.set_ylabel("groups per report")
+        ax.set_title("Mean groups reported")
+
+        # Its own panel rather than a scaled overlay: a second series squeezed onto
+        # another series' axis cannot be read quantitatively, and a twin axis is worse.
+        ax = axes[3]
+        ax.fill_between(
+            spotless.index,
+            spotless,
+            color=role_color("alternative", mode),
+            alpha=0.35,
+            linewidth=0,
+        )
+        ax.plot(spotless.index, spotless, color=role_color("alternative", mode))
+        ax.set_ylim(0, 1)
+        ax.set_ylabel("zero-count fraction")
         ax.set_xlabel("year")
-        ax.set_title("Reported level, and how much of the record is spotless")
-        ax.legend(loc="upper left")
+        ax.set_title("Fraction of reports that are spotless")
 
         caption(
             fig,
@@ -181,10 +190,21 @@ def release_diff_figure(diff: pd.DataFrame, mode: str = "light") -> plt.Figure:
         )
         ax.legend(loc="upper left")
 
+        # The cluster is the finding, so it is named rather than left to be noticed.
+        early = diff[(diff["year"] >= 1715) & (diff["year"] <= 1730)]
+        share = 100 * early["changed_groups"].sum() / max(diff["changed_groups"].sum(), 1)
+        for ax in axes:
+            ax.annotate(
+                f"1715–1730:\n{share:.0f}% of all corrections",
+                xy=(1731, ax.get_ylim()[1] * 0.75),
+                fontsize=7.5,
+                color=theme["text_secondary"],
+            )
         caption(
             fig,
-            "v1.3_4 is a correction-and-deduplication release: the duplicate keys that "
-            "dominated D16 are gone, and the corrections cluster where the recounts were.",
+            "v1.3_4 is a correction-and-deduplication release, and almost all of it lands in "
+            "1719–1721 — the end of the Maunder Minimum, which is the era this project's "
+            "grand-minimum question turns on.",
             mode,
         )
     return fig
