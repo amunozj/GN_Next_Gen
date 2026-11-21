@@ -59,4 +59,8 @@ GN_OBSERVER_EXTENSION = DATA_RAW / "gn_observer_extension_2026-10"
 GN_EXTENSION_COUNTS = GN_OBSERVER_EXTENSION / "observer_counts.parquet"
 GN_EXTENSION_STATIONS = GN_OBSERVER_EXTENSION / "station_assignment.csv"
 
-SILSO = DATA_RAW / "silso"
+# SILSO sunspot number: comparison only, never calibration (ADR-002, ADR-003).
+# The 2026-11 refresh runs to 2026-10; the 2018-era snapshot is retained and is in a
+# different format (comma-separated with a header, where SILSO ships semicolons).
+SILSO = DATA_RAW / "silso_2026-11"
+SILSO_2018 = DATA_RAW / "silso"

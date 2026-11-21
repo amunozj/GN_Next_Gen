@@ -340,3 +340,35 @@ def test_cached_frame_round_trips(tmp_path, monkeypatch):
     third = cache_mod.cached_frame("toy", [GN_V13_OBSERVATIONS], {"x": 1}, build, force=True)
     assert len(calls) == 2
     pd.testing.assert_frame_equal(first, third)
+
+
+# --- the SILSO refresh (D6) ------------------------------------------------
+
+
+def test_silso_refresh_reaches_the_present():
+    """The 2018-era snapshot is superseded; comparison figures need the present day."""
+    daily = load_silso_daily()
+    monthly = load_silso_monthly()
+    assert daily["YEAR"].max() >= 2026
+    assert monthly["YEAR"].max() >= 2026
+    assert daily["YEAR"].min() == 1818
+    assert monthly["YEAR"].min() == 1749
+
+
+def test_both_silso_layouts_parse_to_the_same_schema():
+    """SILSO ships semicolons and no header; the 2018 snapshot was converted. Sniff, don't guess."""
+    from gn_next_gen.io.silso import DAILY_COLUMNS
+    from gn_next_gen.io.silso import load_silso_daily as read_daily
+    from gn_next_gen.paths import SILSO_2018
+
+    refreshed = load_silso_daily()
+    retained = read_daily(SILSO_2018 / "SN_d_tot_V2.0.csv")
+    assert list(refreshed.columns) == list(retained.columns) == DAILY_COLUMNS
+    assert retained["YEAR"].max() == 2018, "the old snapshot is retained unchanged"
+
+
+def test_refreshed_silso_is_in_the_manifest(manifest_rows):
+    for name in ("SN_d_tot_V2.0.csv", "SN_m_tot_V2.0.csv", "README.md"):
+        assert f"silso_2026-11/{name}" in manifest_rows
+    row = manifest_rows["silso_2026-11/SN_d_tot_V2.0.csv"]
+    assert "COMPARISON ONLY" in row["notes"]

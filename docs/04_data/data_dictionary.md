@@ -75,17 +75,21 @@ are present.
 
 ## `gn_database_v1.3/` — group-count observation database (current)
 
-The v1.3 revised collection, **1610-01-01 → 2010-12-31**. Supersedes `gn_database_v1.22/`. The
-authoritative artifact is `Revised collection_v1.3_3.xlsx` (28.6 MB, 5 sheets); the three derived
-tables beside it are produced deterministically by `scripts/convert_gn_database_v13.py` and frozen
-here, following the same precedent as v1.22 (itself a conversion). Full detail in that folder's
-`README.md`.
+The v1.3 revised collection, **1610-01-01 → 2010-12-31**. Supersedes `gn_database_v1.22/`.
+
+**Two releases live in this folder** (ADR-010): `Revised collection_v1.3_4.xlsx` (28.2 MB, 8 sheets)
+is **current** and the derived tables are built from it; `Revised collection_v1.3_3.xlsx` (28.6 MB,
+5 sheets) is retained byte-exact and regenerates on demand with
+`python scripts/convert_gn_database_v13.py --release v1.3_3`, which writes to `data/interim/`. The
+derived tables are produced deterministically by that script and frozen here, following the same
+precedent as v1.22 (itself a conversion). The **output schema is identical for both releases**, so
+loaders never branch on release. Full detail in that folder's `README.md`.
 
 | File | Grain | Rows |
 |---|---|---|
-| `gn_v13_observations.parquet` | one row per (day, station) observation record | 1,156,673 |
-| `gn_v13_observers.parquet` | one row per listed observer | 775 |
-| `gn_v13_changelog.csv` | `version, name, year, note` — the four version blocks unstacked | 586 |
+| `gn_v13_observations.parquet` | one row per (day, station) observation record, **date-sorted** | 1,156,368 |
+| `gn_v13_observers.parquet` | one row per listed observer | 776 |
+| `gn_v13_changelog.csv` | `version, name, year, note` — the four version blocks unstacked | 597 |
 
 Observations: `YEAR, MONTH, DAY, ORDINAL, STATION, OBSER, GROUPS, FRACYEAR, SHEET`. Sentinels are
 v1.22's — **`STATION = 0` = no data**, **`GROUPS = −1` = missing** (only ever together). `ORDINAL`
@@ -93,19 +97,21 @@ and `FRACYEAR` are **derived** by the converter using v1.22's definitions (1610-
 the schema stays compatible; the workbook has neither, and names the flag column `OBSER` rather than
 `OBSERVER` (**D19**). `SHEET` records which of `1610-1946`, `1947-1988`, `1989-2010` a row came from.
 
-Observers: `STATION` (1–775), `INITIAL`, `FINAL` (**null** where the sheet carries the string `'NA'`),
-`TOT_OBS`, `OBSERVER`, `changed_in_v13`. 740 of the 775 codes carry data; the other 33 are listed
-with no observations (**D18**). `changed_in_v13` is recovered from green cell fill, the only place
-that information exists (**D20**), and is true for 94 observers.
+Observers: `STATION` (1–776), `INITIAL`, `FINAL` (**null** for placeholders — blank in `_4`, the
+string `'NA'` in `_3`, **D18**), `TOT_OBS`, `OBSERVER`, `changed_in_v13`. 740 of the 776 codes carry
+data; the other 34 are listed with no observations. `changed_in_v13` comes from `_4`'s explicit
+column and is true for 100 observers; the green fill `_3` relied on marks 99 and disagrees only on
+station 36 (**D20**).
 
 What changed from v1.22: 1,100,144 rows with `STATION > 0` (from 1,047,761), 740 stations with data
 (from 715), 775 observers listed (from 743), and 109 documented corrections with DOIs where v1.22
 shipped none — which resolves **D7** for 1610–2010. Coverage is unchanged: **v1.3 does not extend
 past 2010**, and `gn_observer_extension_2026-10/` closes that gap from a different source.
 
-Caveats before writing a loader: **D16** — 217 duplicate `(date, station)` keys, 95 with conflicting
-`GROUPS`, so do **not** key on `(date, station)` until a resolution rule is chosen; **D17** — the two
-implausible extreme counts, so size state spaces from a robust quantile and not from `max(GROUPS)`.
+Caveats, both now resolved in code: **D16** — 3 duplicate `(date, station)` keys survive in `_4`
+(217 in `_3`), one of them conflicting, and `gn_next_gen.io.load_observations` resolves them with a
+documented rule (`max` by default); **D17** — `max(GROUPS)` is 58 in `_4` (93 in `_3`), and state
+spaces are sized from a robust quantile: **K = 41**.
 
 ## `reference_groups_2026-10/` — the reference survey (current)
 

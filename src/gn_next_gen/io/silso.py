@@ -20,6 +20,32 @@ COMPARISON_ONLY = "comparison_only"
 DAILY = SILSO / "SN_d_tot_V2.0.csv"
 MONTHLY = SILSO / "SN_m_tot_V2.0.csv"
 
+DAILY_COLUMNS = ["YEAR", "MONTH", "DAY", "FRACYEAR", "DAILYSN", "DAILYSTD", "NOBS", "MARKER"]
+MONTHLY_COLUMNS = ["YEAR", "MONTH", "FRACYEAR", "MMEAN", "MSTD", "NOBS", "MARKER"]
+
+
+def _read(path, columns: list[str]) -> pd.DataFrame:
+    """Read either SILSO layout.
+
+    The 2026-11 refresh is SILSO's own download: semicolon-separated and headerless.
+    The retained 2018 snapshot was converted to comma-separated with a header during
+    the ADFSSN era. Both are byte-exact as received, so the loader sniffs instead of
+    anyone having to remember which is which.
+    """
+    first = path.read_text().splitlines()[0]
+    if ";" in first:
+        frame = pd.read_csv(
+            path,
+            sep=";",
+            header=None,
+            usecols=range(len(columns)),
+            names=columns,
+            skipinitialspace=True,
+        )
+    else:
+        frame = pd.read_csv(path)
+    return frame
+
 
 def _tag(frame: pd.DataFrame) -> pd.DataFrame:
     frame.attrs["role"] = COMPARISON_ONLY
@@ -32,7 +58,7 @@ def load_silso_daily(path=DAILY) -> pd.DataFrame:
     ``DAILYSN = -1`` marks a missing value and becomes NaN.  ``MARKER`` is 1 for
     definitive and 0 for provisional.
     """
-    frame = pd.read_csv(path)
+    frame = _read(path, DAILY_COLUMNS)
     for col in ("DAILYSN", "DAILYSTD"):
         frame[col] = frame[col].where(frame[col] >= 0)
     return _tag(frame)
@@ -40,7 +66,7 @@ def load_silso_daily(path=DAILY) -> pd.DataFrame:
 
 def load_silso_monthly(path=MONTHLY) -> pd.DataFrame:
     """Monthly mean SN; ``MSTD`` and ``NOBS`` of -1 mark missing values."""
-    frame = pd.read_csv(path)
+    frame = _read(path, MONTHLY_COLUMNS)
     for col in ("MMEAN", "MSTD", "NOBS"):
         frame[col] = frame[col].where(frame[col] >= 0)
     return _tag(frame)

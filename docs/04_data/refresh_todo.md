@@ -19,12 +19,18 @@ post-2010 extension. What is left is below.
 | *(not previously listed)* pre-1874 reference coverage | `reference_groups_2026-10/` (`schwabe`, `sporer`) | 1825–1894. The old `SC_SP_RG…` filename promised Schwabe/Spörer areas but contained none (**D2**); they genuinely exist now |
 | *(not previously listed)* observation record past 2010 | `gn_observer_extension_2026-10/` | KMAS and SWPC daily group counts, 1954/1996 → 2026. Counts only. **KMAS single-use rule applies** (ADR-009) |
 
+## Done (2026-11, Step 1)
+
+| Item | Delivered as | Notes |
+|---|---|---|
+| SILSO SN V2.0 daily and monthly to present | `silso_2026-11/` | Daily 1818-01-01 → **2026-10-31**, monthly 1749-01 → **2026-10**, from SILSO's own downloads (semicolon-separated, headerless). Resolves **D6** for SILSO. The 2018-era `silso/` is retained; `gn_next_gen.io.silso` reads both. **Comparison only** — the config validator refuses it as a calibration input |
+| Observation database correction release | `gn_database_v1.3/Revised collection_v1.3_4.xlsx` | Supplied by the PI 2026-11-21 and landed in place under **ADR-010**; resolves D16–D20 largely on its own. Still stops at 2010-12-31 |
+
 ## Still outstanding
 
 | Item | Why | Where to look |
 |---|---|---|
-| SILSO SN V2.0 daily and monthly to present | Comparison only, never calibration (ADR-002, ADR-003). Current snapshots end 2018-07 and 2017-10 (**D6**) | https://www.sidc.be/SILSO/datafiles |
-| Published GN series for comparison (Svalgaard & Schatten 2016, Usoskin et al. 2016/2021, Chatzistergos et al. 2017, Velasco Herrera et al. 2022, Hoyt & Schatten 1998) | Benchmarks for the paper; `legacy/GN_Series_matlab/data/` has three older yearly series | Papers' supplementary data |
+| Published GN series for comparison (Svalgaard & Schatten 2016, Usoskin et al. 2016/2021, Chatzistergos et al. 2017, Velasco Herrera et al. 2022, Hoyt & Schatten 1998) | Benchmarks for the paper; `legacy/GN_Series_matlab/data/` has three older yearly series. **Moved to Step 2** (PI, 2026-11-21), where the benchmark actually consumes them | Papers' supplementary data |
 | Observer metadata (aperture, projection vs direct, career dates, age) where available | Optional covariates under ADR-004; v1.3's `OBSERVER` field carries some instrument notes in free text (e.g. station 773's "83/1320 mm Fraunhofer refractor") but it is not a structured table | v1.3 observers sheet; literature |
 | An observer-collection extension past 2010 | The extension in hand is survey-derived, not visual observer counts (**D21**). Raised with the v1.3 authors in `docs/results/gn-v13-feedback-report.md` | v1.3 maintainers |
 | Annual ¹⁴C (Brehm et al. 2021), ¹⁰Be, aurora catalogues | Step 6 only (proxy-informed variant) | See `docs/05_roadmap/step-6-*.md` |
@@ -32,9 +38,9 @@ post-2010 extension. What is left is below.
 ## Open questions referred upstream
 
 `docs/results/gn-v13-feedback-report.md` is a report to the v1.3 authors on five findings. Two bear on work here:
-**D16** (217 duplicate `(date, station)` keys, 95 with conflicting counts) needs a resolution rule before any loader
-keys on `(date, station)`, and **D17** (`GROUPS = 93`, new in v1.3 and ~10× the same observer's neighbouring days)
-affects how the Step 4 state space is sized.
+**D16** (duplicate `(date, station)` keys) and **D17** (`GROUPS = 93`) were both raised there and both are
+**largely fixed in release v1.3_4**: the duplicates fall from 217 keys to 3, and the 93 is gone. The remaining
+conflict is one observer-day (Takuma, 1982-10-13), and the loader resolves it by a documented rule.
 
 Not in scope: sunspot drawings / group positions and butterfly data (decided by the PI; see ADR-004). The reference
 snapshot does carry positional columns, but as QA metadata only — ADR-004 bars them as model inputs. A positional
