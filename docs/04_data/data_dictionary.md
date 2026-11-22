@@ -154,6 +154,35 @@ Area semantics (resolves **D4**): all areas are millionths of the solar hemisphe
 whole-spot and foreshortening-corrected; `area_umbra_*` are the umbral equivalents; upstream halves
 millionths-of-disk at parse time and recomputes foreshortening from the raw projected areas.
 
+## `area_law_2026-11/` — the group-area law (Weibull + log-normal), per survey
+
+Frozen summaries of `sunspot-homogenization`'s per-survey fits of the group-area
+distribution, fixed by **ADR-011**. This project **does not refit them**.
+
+The law is a mixture on log-area `z = ln A`: a **Weibull** for small objects (pores and
+ephemeral regions, a fragmentation regime) plus a **log-normal** for large ones (bipolar
+active regions). **Not two log-normals** — fitting two log-normals folds observational
+effects into the small-object component, which is the form upstream's own paper rejects.
+
+| File | What |
+|---|---|
+| `solo_wln_posterior.csv` | one row per (survey, scale): `k_W`, `log_lambda_W`, `mu_LN`, `sigma_LN`, `pi_W`, `sigma_floor` as medians with 16/84 percentiles, plus truncation, kept counts and evidence |
+| `README.md`, `provenance.json` | the model, the conventions, the upstream commit |
+
+Two things bite if missed:
+
+- **`pi_W` weights the Weibull.** Muñoz-Jaramillo et al. (2015) write `c` for the weight
+  on the **log-normal**, so `c = 1 − pi_W`. Their published `c(AL) = 0.66·AL^0.230` is on
+  the log-normal weight.
+- **The fit is one area per group**, from `group_single_entry.parquet`, column
+  `area_corr`, strictly above the survey's `threshold_MSH`. Those kept counts reproduce
+  exactly here (RGO 16,880, Debrecen 8,306, KMAS 15,662), which is how the grain, the
+  column and the threshold were confirmed. Schwabe is calibrated on the umbral scale, so
+  its threshold applies to a different column.
+
+The log-normal component depends on activity level and the Weibull does not; Step 1
+measures that dependence (`docs/results/step-1-data-foundation.md` §2).
+
 ## `gn_observer_extension_2026-10/` — daily group counts, KMAS and SWPC (1954–2026)
 
 Carries the observation record past v1.3's 2010-12-31 end. Counts only, no areas. Both surveys over

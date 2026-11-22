@@ -17,8 +17,8 @@
 
 | Question | Answer |
 |---|---|
-| Is the area distribution stationary across the reference era? | **Yes**, across the anchor-era epochs — percentile spread 0.034–0.083 dex against a 0.1 dex target. **Early RGO (cycles 12–14) is the exception**, independently corroborating D5 |
-| Is there two-population structure in areas? | **Yes, decisively** — ΔBIC +965 to +4,268 for two lognormal components in every epoch, with stable component means |
+| Is the area distribution stationary across the reference era? | **At matched activity, yes** — RGO and Debrecen describe the same Weibull + log-normal law to within 0.05 in every parameter, a century apart. But the law **moves with the cycle**: within a survey, `μ` spans 0.31–0.42 across activity bins, more than any survey pair differs at matched activity |
+| Is there two-population structure in areas? | **Yes — Weibull (small objects) + log-normal (active regions)**, not two log-normals (ADR-011). The log-normal half tracks activity and reproduces the published power laws; the Weibull half does not move, and most of it lies below every survey's completeness threshold |
 | Does an immigration–death chain reproduce the reference's daily statistics? | **Partly.** It reproduces the count marginals (zero fraction, count distribution, run lengths) within target, and fails the rotation-dependent measures by 3–5×: the lag-13 trough, the lag-27 recurrence and the lifetime distribution. **Go, with an explicit rotation component required in Step 4** |
 | What should Step 4 use? | K = 41; φ is a **visible-residence** parameter, not an intrinsic lifetime; lifetimes need an explicit rotation kernel |
 | Is the forward filter affordable at full length? | **Yes, on CPU**: 0.667 s per evaluation at T = 152,000, K = 41. **Not on GPU**: 6.95 s, ten times slower |
@@ -128,46 +128,139 @@ Resolved in this step or by v1.3_4: D6 (for SILSO), D16, D17, D18, D19 (partly),
 registered: **D23**. Open by design: D5, D8, D10–D15, D21. Handled in code: D22, D23, and the
 KMAS single-use rule.
 
-## 2. Check B — is the area distribution stationary?
+## 2. Check B — the group-area law, its activity dependence, and its stationarity
 
-**Design.** Five epochs spanning 1874–2026, binned by activity quintile using the **91-day smoothed
-group count** (PI's choice: conditioning on smoothed *area* would condition on a function of the
-quantity under test). Primary test restricted to `area_corr ≥ 30 MSH` (D14). Significance from a
-**27-day block bootstrap**, because groups within a day and days within a rotation are dependent.
+> ### ⚠ Retraction (2026-11-21)
+>
+> The first version of this section fitted **two log-normal components** by EM and
+> reported ΔBIC +965…+4,268 in favour of two populations, plus a percentile/KS
+> stationarity battery on group-*days* conditioned on smoothed *counts*. **That result
+> is withdrawn.** Two log-normals fold observational effects — resolution, detection
+> bias, the convolution of cadence with feature lifetime — into the small-object
+> component, so the second "population" was partly the instrument. The grain and the
+> conditioning variable were wrong too. The two-population *finding* stands; its
+> parameterization did not. See [ADR-011](../06_decisions/ADR-011-group-area-law.md).
 
-**Result: stationary across the anchor-era epochs** (`f10`).
+**The law.** A **Weibull + log-normal** mixture on log-area `z = ln A`: a Weibull for
+small objects (pores and ephemeral regions, a fragmentation regime) and a log-normal for
+large ones (bipolar active regions, multiplicative growth). Calibrated per survey by
+`sunspot-homogenization` and **not refitted here** (ADR-011); frozen in
+`data/raw/area_law_2026-11/`.
 
-| epoch | groups ≥ 30 MSH | p10 | p50 | p90 | fraction ≥ 30 MSH |
-|---|---|---|---|---|---|
-| rgo_early (12–14) | 25,694 | 1.673 | 2.200 | 2.750 | **0.819** |
-| rgo_anchor (15–19) | 66,447 | 1.658 | 2.203 | 2.783 | 0.724 |
-| rgo_late (20) | 14,402 | 1.642 | 2.166 | 2.739 | 0.736 |
-| debrecen_anchor (21–23) | 42,747 | 1.676 | 2.214 | 2.822 | 0.767 |
-| kmas_bridge (20–24) | 66,442 | 1.653 | 2.208 | 2.784 | 0.747 |
+That we are using it correctly is settled by one number: upstream fitted **one area per
+group**, hard-truncated at each survey's own completeness threshold, and its kept counts
+reproduce **exactly** from data already frozen here — RGO 16,880, Debrecen 8,306, KMAS
+15,662 — which fixes the grain, the area column and the threshold at once.
 
-- Percentile spread across all five epochs: **p10 0.034, p50 0.049, p90 0.083 dex** — inside the
-  0.1 dex target.
-- Pairwise within activity bins: max |Δp50| **0.079 dex**, max |Δp90| **0.097 dex**.
-- 7 of 43 epoch-pair tests reject at p < 0.05, and **the rejections are concentrated in
-  `rgo_early`** (KS 0.093–0.120 against every other epoch, against a median of 0.033 overall).
-- The above-30-MSH fraction spans 0.724–0.819, a 13% relative spread — **outside** the 10% target.
-  Dropping `rgo_early` leaves 0.724–0.767, a 5.9% spread, inside it.
+**Activity level** is a 182-day Gaussian on daily sunspot area, in mHem (ADR-011),
+whole-Sun so that it carries no positional information and may feed Step 4. Two
+weightings differ by about six and must not be mixed: the 2015 paper's is
+**emergence-weighted** (one peak area per group, on its canonical day) and peaks at
+0.50 mHem for RGO, matching its published 0–0.4 axis; summing every group present on
+each day instead gives 3.24 mHem.
 
-**Reading.** The one epoch that fails is the one ADR-009 already excludes from the secondary anchor
-on D5 grounds. The stationarity test therefore *rediscovers* early RGO's inhomogeneity from areas
-alone, which is a useful independent check on a decision that was made on documentary grounds.
+### 2.1 The Weibull component does not move with activity
 
-**Consequence for the detection layer.** Over the anchored epochs, `q_o = E_F[π_o(a)]` may be
-computed against a single area law without an epoch effect. **Early RGO must carry its own**, which
-is what treating each reference segment as its own observer already does (ADR-003, D5). Nothing
-here licenses extrapolating the law to 1610 — counts cannot test that, and the methods paper has to
-say so.
+All five parameters free, per activity bin, ten bins per survey (`f11`):
 
-**Two-population structure: strongly supported** (`f11`). A two-component lognormal mixture beats a
-one-component fit by ΔBIC **+965 to +4,268** in every epoch, with stable components: small
-component at log₁₀ area ≈ 1.65 (weight 0.12–0.15), large at ≈ 2.30. Debrecen is the outlier
-(small-component mean 1.82, weight 0.27), which is the completeness effect of D14 — it is the
-deepest survey — not a solar difference.
+| | RGO | Debrecen | KMAS |
+|---|---|---|---|
+| `k_W` vs activity | ρ = −0.53 (P = 0.88) | +0.12 (P = 0.25) | +0.31 (P = 0.62) |
+| `λ_W` vs activity | ρ = −0.16 (P = 0.34) | +0.21 (P = 0.44) | +0.39 (P = 0.74) |
+
+Nothing reaches the 0.95 confidence the paper uses, and **the signs disagree across
+surveys**, which is what noise looks like rather than a trend. The magnetic-baseline
+claim of Muñoz-Jaramillo et al. (2015) holds on this data, and that is what licenses
+holding `(k, λ)` fixed. The check is a **gate**: the script stops before stage 2 if a
+Weibull parameter is ever detected in the same direction in every survey.
+
+One caveat stated plainly: above these truncation thresholds the Weibull component is
+only weakly identified — most of its mass is below the cut — so this is "no *detectable*
+dependence", not a proof of none.
+
+### 2.2 The log-normal component does, and reproduces the published power laws
+
+`(k, λ)` fixed at upstream's values; `μ`, `σ` and the log-normal weight `c` fitted per
+activity bin, then power laws in activity level. **Published** values are
+`μ = 5.97·AL^0.021`, `σ = 1.08·AL^0.117`, `c = 0.66·AL^0.230`:
+
+| survey | `μ(AL)` | `σ(AL)` | `c(AL)` |
+|---|---|---|---|
+| RGO | 5.709·AL^**0.025** (ρ = +0.93) | 0.940·AL^0.030 (ρ = +0.45) | 0.233·AL^0.057 (ρ = +0.21) |
+| Debrecen | 5.610·AL^0.015 (ρ = +0.43) | 1.104·AL^**0.095** (ρ = +0.70) | 0.403·AL^**0.225** (ρ = +0.85) |
+| **KMAS** | **5.917·AL^0.021** (ρ = +0.79) | **0.970·AL^0.109** (ρ = +0.72) | 0.340·AL^0.289 (ρ = +0.76) |
+
+**KMAS reproduces the published μ exponent to three decimals (0.021) with an amplitude
+0.9% low**, and its σ exponent lands at 0.109 against 0.117. Debrecen's `c` exponent is
+0.225 against 0.230. That is a real reproduction: different data, a different
+cross-calibration, a different fitting method, two independent decades apart. KMAS
+agreeing closest is what one would expect, since it is the survey the 2015 paper used.
+
+**The amplitudes sit systematically below the published ones**, most visibly for `c`
+(0.23–0.40 against 0.66). That offset was predicted before the fits ran and has two
+identifiable causes, neither of them a discrepancy to be tuned away: upstream's weight
+convention is on the Weibull (`c = 1 − π_W`), and upstream truncates at 20–28 MSH where
+the 2015 paper truncated near 10, which removes most of the Weibull mass and so changes
+what the mixing weight means.
+
+### 2.3 Stationarity, in the right parameterization
+
+At **matched activity**, comparing the log-normal parameters across surveys:
+
+| | `μ` | `σ` | `c` |
+|---|---|---|---|
+| RGO vs Debrecen | 0.052 (max 0.078) | 0.059 (max 0.123) | 0.054 (max 0.095) |
+| RGO vs KMAS | **0.252** (max 0.409) | 0.091 (max 0.157) | 0.032 (max 0.080) |
+
+RGO and Debrecen describe the same law — a century apart — to within 0.05 in every
+parameter. **KMAS sits 0.25 higher in `μ`**, which tracks its higher truncation
+threshold (23.4 MSH) and its much larger Weibull scale (14.5 MSH against RGO's 5.7),
+i.e. a survey-calibration difference rather than a solar one.
+
+Within a survey, each parameter moves more across activity than any survey pair differs
+at matched activity (`μ` spans 0.31–0.42 across bins, against 0.05 between RGO and
+Debrecen). **The cycle moves the area law more than the century does** — which is the
+result Step 4 needs.
+
+### 2.4 The grain bridge: per group against per group-day
+
+Step 4 integrates `q_o` over the areas **on the disk on a day**, while the published law
+describes **one area per group**. Fitting both the same way:
+
+| survey | `μ` per group | `μ` per group-day | shift |
+|---|---|---|---|
+| RGO | 5.468 | 5.273 | **−0.194** |
+| Debrecen | 5.474 | 5.278 | **−0.197** |
+| KMAS | 5.734 | 5.472 | **−0.262** |
+
+**The per-day law is smaller, not larger** — consistently, by about 0.2 in log area, a
+factor of 1.2. This overturned the expectation written into the plan, which anticipated
+the opposite from size-biasing (large groups live longer, so they appear on more days).
+That effect is real but is outweighed by a larger one: the per-group area is each
+group's **peak**, while the per-day law sees **instantaneous** areas, including every
+small day at the start and end of a group's life.
+
+**Consequence for Step 4: the published per-group law may not be used for `q_o`
+unmodified.** Either fit the per-group-day law directly, as done here, or apply this
+measured shift.
+
+### 2.5 Model comparison, and where we differ from the paper
+
+AIC over four nested forms, as the paper's Table 2 does:
+
+| model | RGO | Debrecen | KMAS |
+|---|---|---|---|
+| pooled, no activity dependence | 194.7 | 213.1 | 198.5 |
+| free per activity bin | **0.0** | **0.0** | 43.2 |
+| `(k, λ)` fixed, free per bin | 106.1 | 169.6 | 23.4 |
+| `(k, λ)` fixed, analytic power laws | 86.4 | 142.7 | **0.0** |
+
+Every survey rejects the activity-independent law decisively, which is the main point.
+But **only KMAS prefers the analytic power-law form that the paper found best**; RGO and
+Debrecen prefer the fully flexible per-bin fit. With ~1,700 groups per bin the extra 42
+parameters still pay for themselves, where the paper's bins were thinner. Reported as a
+difference from the published result rather than smoothed over: the power-law form is a
+good and portable *summary*, not the best available description of these two surveys.
 
 ## 3. Check A — do immigration–death dynamics reproduce the reference?
 
@@ -263,6 +356,11 @@ the step's own compute.
 
 | Setting | Value | Why |
 |---|---|---|
+| Group-area law | **Weibull + log-normal** on log-area, upstream's per-survey calibration, not refitted | ADR-011. Two log-normals fold observational effects into the small-object component |
+| Area law's activity dependence | `(k, λ)` fixed; `μ`, `σ`, `c` follow power laws in activity level | Measured here and consistent with the published 2015 coefficients (§2.2). **`q_o` is therefore not a constant per observer** — it moves with the cycle, which is the standing explanation for ADF's activity-dependent k-factors |
+| Area law for `q_o` | the **per-group-day** fit, or the per-group law shifted by −0.19 to −0.26 in `μ` | The published law is per group and uses peak areas; `q_o` averages over instantaneous areas on the disk (§2.4) |
+| Trustworthy threshold band | **T ≥ 30 MSH** | The surveys' own completeness thresholds are 20.4–28.1 MSH and the Weibull component peaks near 6 MSH, so T = 0 and T = 10 sample a regime that measures the instrument as much as the Sun (D14) |
+| Two area classes, if used | split at the **Weibull/log-normal crossover** — RGO 79, Debrecen 74, KMAS 129 MSH | A round number was arbitrary; the crossover is where the two populations actually separate |
 | Truncation **K** | **41** | Smallest K with `P(GROUPS ≥ K) < 1e-5` that exceeds the reference's largest daily count (31, KMAS). v1.3_4's rule minimum is 39, v1.3_3's was 41, so 41 is stable across both releases (`f03`) |
 | Per-class K, two classes | 21 | 441 joint states; the sum still reaches 40 |
 | Lifetime parametrization | geometric survival **times an explicit rotation kernel — now required, not optional** | `obs_duration` is a disk-passage-censored *span* (`f06`), and Check A shows a chain without rotation misses the lag-13 trough, the lag-27 recurrence and the lifetime distribution by 3–5× |

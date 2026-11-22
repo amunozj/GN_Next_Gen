@@ -81,8 +81,35 @@ def test_check_b_runs_and_writes_its_outputs(tmp_path):
         str(tmp_path),
     )
     assert proc.returncode == 0, proc.stderr[-3000:]
-    for name in ("percentiles.csv", "epoch_pairs.csv", "mixtures.csv", "lineage.json"):
+    for name in (
+        "stage1_free.csv",
+        "weibull_gate.csv",
+        "stage2_fixed_weibull.csv",
+        "power_laws.csv",
+        "stationarity_within.csv",
+        "grain_bridge.csv",
+        "model_comparison.csv",
+        "lineage.json",
+    ):
         assert (tmp_path / name).is_file(), name
+
+    import pandas as pd
+
+    # The gate must be evaluated and recorded, not skipped: ADR-011 makes holding
+    # the Weibull fixed conditional on it.
+    gate = pd.read_csv(tmp_path / "weibull_gate.csv")
+    assert set(gate["parameter"]) == {"k_W", "lambda_W"}
+    assert "detected" in gate.columns
+
+    # Stage 2 must leave the Weibull where upstream put it.
+    stage2 = pd.read_csv(tmp_path / "stage2_fixed_weibull.csv")
+    assert stage2["k_W"].nunique() == 1, "stage 2 must not move k_W"
+    assert (stage2["c_LN"] == 1 - stage2["pi_W"]).all()
+
+    # The analytic form must be among the models compared, as the paper's Table 2 does.
+    comparison = pd.read_csv(tmp_path / "model_comparison.csv")
+    assert comparison["model"].str.contains("analytic").any()
+    assert comparison["delta_aic"].min() == 0.0
 
 
 @pytest.mark.slow
