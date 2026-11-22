@@ -28,7 +28,7 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 |---|---|---|---|---|
 | 0 | Clean slate (this repository's initial content) | — | Done (2026-10-28) | — |
 | 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | **Pass with caveats** (verified 2026-11-22) | [results](../results/step-1-data-foundation.md) · [verification](../results/step-1-verification.md) |
-| 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | — | Not started | — |
+| 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | [step-2-plan.md](../plans/step-2-plan.md) | **In progress** (planned 2026-11-22) | — |
 | 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | — | Not started | — |
 | 4 | [step-4-joint-latent-population-model.md](step-4-joint-latent-population-model.md) | — | Not started | — |
 | 5 | [step-5-neural-emission-calibrator.md](step-5-neural-emission-calibrator.md) | — | Not started (conditional) | — |
