@@ -75,7 +75,10 @@ as first-class output: reference-equivalent scale, era-wide drift (prior sensiti
 reference, per-year prior→posterior contraction.
 
 Running list of paper items (add as steps produce them):
-- [x] Area-distribution stationarity across the reference era, and the early-RGO exception (Step 1)
+- [x] The group-area law: Weibull + log-normal, and its log-normal component's activity
+      dependence reproducing the published power laws (Step 1, ADR-011)
+- [x] Area-law stationarity at matched activity — RGO and Debrecen agree to 0.05 a century
+      apart, while the cycle moves the law more than the century does (Step 1)
 - [x] Forward-filter cost measured on CPU and GPU, replacing the research report's estimates (Step 1)
 - [x] Data provenance table and known-issue resolutions — delivered by the 2026-10 renovation
       ([results](../results/raw-data-renovation.md), ADR-009, `data/raw/MANIFEST.csv`) and completed in

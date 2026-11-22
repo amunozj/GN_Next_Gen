@@ -410,6 +410,12 @@ def activity_dependence_figure(
                     label="published (2015)",
                 )
             ax.set_xscale("log")
+            # Explicit ticks: matplotlib's log minor labels collide at this width.
+            ticks = [0.02, 0.05, 0.1, 0.2, 0.5]
+            ax.set_xticks(ticks)
+            ax.set_xticklabels([f"{v:g}" for v in ticks])
+            ax.set_xticks([], minor=True)
+            ax.set_xlim(0.015, 0.7)
             ax.set_xlabel("activity level (mHem)")
             ax.set_title(titles[name])
             if name == "mu_LN":

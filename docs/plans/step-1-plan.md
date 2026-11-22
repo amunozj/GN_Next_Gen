@@ -433,3 +433,269 @@ Recorded as they arise, per `CLAUDE.md`'s workflow.
    from the measured magnitudes. The results doc says so explicitly.
 3. **Schwabe is excluded from Step 1 as well as Spörer** (PI decision, 2026-11-21), so Check A and Check B
    cover 1874–2026 and no pre-1874 reference statistics are produced in this step. D23 carries the reason.
+
+
+---
+
+# Revision 1 (2026-11-21): the area law is Weibull + log-normal
+
+Approved by the PI on 2026-11-21, after Step 1 had shipped. The approved plan above and
+its Deviations section stay as the record of what was built first; this revision
+corrects Check B and is recorded in [ADR-011](../06_decisions/ADR-011-group-area-law.md).
+Results in [`step-1-data-foundation.md`](../results/step-1-data-foundation.md) §2, whose
+superseded two-log-normal section carries a retraction in place.
+
+## Context
+
+Step 1 shipped, but **Check B's two-population analysis is wrong**. The PI has supplied two
+authoritative corrections.
+
+1. **Fitting two log-normals folds observational effects into the small-object component.** The
+   correct form is **Weibull (small objects, fragmentation regime) + log-normal (large objects,
+   bipolar active regions)**, as implemented and calibrated in
+   `/d0/amunozj/git_repos/sunspot-homogenization`. That calibration is mature; **nothing is refit**.
+   Upstream's own paper says this outright (`paper/ms.tex` l. 199, 207) and names the two-log-normal
+   form as the alternative it rejected.
+2. **The log-normal component is strongly determined by activity level; the Weibull component is
+   not** (Muñoz-Jaramillo et al. 2015, ApJ 804:68). Its §7 fixes `(k, λ)` across activity bins and
+   finds `μ`, `σ` and the mixing weight follow power laws in activity level, while the Weibull
+   parameters show no correlation — the "magnetic baseline".
+
+What Step 1 shipped instead: `scripts/check_b_stationarity.py::lognormal_mixture`, an EM fit of
+1- against 2-component **log-normal** mixtures on **group-days**, conditioned on smoothed **counts**,
+reporting ΔBIC +965…+4,268 for "two populations". The functional form, the grain and the
+conditioning variable are each wrong against the authoritative sources. That result is **retracted**.
+
+This is not only a correction. It hands Step 4 what the original plan could not: an
+**activity-dependent area law**, so the detection layer's `q_o(t) = E_{F(·|AL(t))}[π_o(a)]` varies
+with the cycle in a published, calibrated way — the standing explanation for why ADF-style k-factors
+depend on activity (research report, "Mark-dependent thinning…").
+
+### What already checks out
+
+Upstream's fit **reproduces exactly** from data already frozen here, which fixes the grain, the area
+column and the threshold beyond doubt:
+
+| survey | `threshold_MSH` (frozen) | upstream `n_kept` | ours: `area_corr >` threshold on **single-entry** |
+|---|---|---|---|
+| rgo | 28.084 | 16,880 | **16,880** |
+| debrecen | 20.424 | 8,306 | **8,306** |
+| kmas | 23.415 | 15,662 | **15,662** |
+
+So: **one area per group** (`group_single_entry.parquet`, *not* group-days), column `area_corr`,
+**strictly greater** than the per-survey threshold already in
+`data/raw/reference_groups_2026-10/survey_calibration.csv` — which is upstream's
+`lifetime_divergence` threshold under the 10× rule of the 2015 paper §2.4.
+
+Mature per-survey posterior medians, from `data/processed/calibration/solo_wln/*.pkl`:
+
+| survey | `k_W` | `λ_W` (MSH) | `μ_LN` | `σ_LN` | `π_W` | `σ_floor` |
+|---|---|---|---|---|---|---|
+| rgo | 0.451 | 5.68 | 5.470 | 0.894 | 0.791 | 0.171 |
+| debrecen | 0.445 | 7.30 | 5.474 | 0.950 | 0.725 | 0.157 |
+| kmas | 0.439 | 14.46 | 5.712 | 0.847 | 0.772 | 0.167 |
+
+`k_W ≈ 0.44–0.45` against the 2015 paper's **0.46** — independent agreement on the baseline
+component, which is what licenses holding it fixed.
+
+## Decisions taken by the PI (2026-11-21)
+
+| Decision | Choice |
+|---|---|
+| Activity level | **Whole-Sun** 182-day Gaussian on `day_status.area_total`, carrying no positional information so it may feed Step 4 (ADR-004). The paper-exact **hemispheric** version is computed from `area_north`/`area_south` as a **diagnostic only** |
+| Activity dependence | **Hold `(k, λ)` fixed** at upstream's per-survey values; refit only `μ(AL)`, `σ(AL)`, `c(AL)` — the paper's §7 procedure. Published coefficients are a cross-check, not an input |
+| Grain | **Both.** The per-group law (upstream's and the paper's object) *and* the per-group-day law Step 4 integrates over, with the relationship between them reported |
+| Knock-ons | Re-ground Check A's two classes on the Weibull/log-normal split; flag that T = 0 and T = 10 sit below the surveys' own completeness thresholds; write an ADR |
+
+## Design
+
+### 1. Freeze upstream's area-law calibration into `data/raw` (ADR-006)
+
+The posteriors live in a git-ignored tree in another repository, so nothing may read them at run
+time. Land a small snapshot in a **new folder, overwriting nothing**:
+
+`data/raw/area_law_2026-11/`
+- `solo_wln_posterior.csv` — one row per survey: `k_W, log_lambda_W, mu_LN, sigma_LN, pi_W,
+  sigma_floor` as median plus 16/84 percentiles, with `y_trunc`, `n_kept`, `n_below`, `log_Z`,
+  `area_column`, `threshold_source`, `trunc_factor` and the upstream commit.
+- `README.md` — the model, the **`π_W` ↔ `c` mapping** (upstream weights the *Weibull*, the paper
+  weights the *log-normal*, so `c = 1 − π_W`), the truncation recipe, the provenance.
+- `provenance.json` and `MANIFEST.csv` rows, following the renovation's pattern.
+
+Exported by `scripts/export_area_law.py`: deterministic, `--check` verifies byte reproducibility,
+and it refuses to run if the upstream commit does not match the one recorded.
+
+### 2. `gn_next_gen.reference.area_law` — the law itself
+
+Ported from `sunspot_pipeline/processing/calibration_models.py` (`_log_pdf_latent_wln`,
+`_emit_hard_truncated_quadrature`) and citing those paths, as the hard rules require.
+
+- `log_pdf_latent(z, k, log_lambda, mu, sigma, pi_w)` — the mixture on `z = log A`. The Weibull's
+  density in log-area is `log k − k·log λ + k·z − exp(k·(z − log λ))`, a left-skewed Gumbel, mixed
+  with `N(z; μ, σ)`. **Not** two Gaussians in `z`.
+- `log_pdf_truncated(..., y_trunc, sigma_row, sigma_floor)` — per-row truncated likelihood by
+  quadrature on a fixed `z` grid (upstream's `-10, 10, 256`), carrying per-row measurement error from
+  `area_corr_unc` plus upstream's `sigma_floor`.
+- `load_upstream_parameters(survey)` — reads the frozen snapshot.
+- `fraction_above(threshold, params)` — the `q`-style functional the detection layer wants.
+- `activity_level(day_status, sigma_days=182, scope="whole")` — 182-day Gaussian on `area_total`,
+  or `area_north`/`area_south` for the diagnostic. **Units: `area_total` is μHem and the paper's AL
+  is mHem, so `AL = smoothed / 1000`** — the power-law coefficients are meaningless in the wrong
+  unit, so this is asserted in a test, not left to a comment.
+
+### 3. Check B, rewritten (`scripts/check_b_stationarity.py`)
+
+Three tests replace the percentile/KS/ΔBIC battery. Data: `group_single_entry`, D22-clean,
+`area_corr > threshold_MSH`, Step 1's three surveys.
+
+1. **Is the Weibull component activity-independent?** All five parameters free, per AL bin, per
+   survey; report Spearman ρ of `k_W` and `λ_W` against AL with confidence levels, as the paper
+   does. *This test licenses step 2.* If `(k, λ)` move with AL, holding them fixed is unjustified
+   and the run says so instead of proceeding.
+2. **Refit the log-normal activity dependence.** Hold `(k, λ)` at upstream's per-survey values; fit
+   `μ_j, σ_j, c_j` per AL bin by truncated MLE; fit power laws `μ = a·AL^b` and so on. Report
+   coefficients, ρ and reduced χ² **against the published** `μ = 5.97·AL^0.021`,
+   `σ = 1.08·AL^0.117`, `c = 0.66·AL^0.230`.
+3. **Stationarity, in the right parameterization.** At **matched AL**, compare `(μ, σ, c)` across
+   epochs and surveys. This is what Step 1 owes Step 4 — is `F(·|AL)` the same law in 1874 as in
+   2014? — now asked about three parameters rather than about percentiles.
+
+Then the **grain bridge**: the per-group-day law, fitted the same way on `group_day_observations`,
+with the mapping between the two reported as the size-biasing that lifetime × visibility imposes
+(large groups live longer, so the visible-on-a-day law is biased large). Check A already showed the
+model must carry that weighting; this measures it.
+
+Model comparison by AIC across four nested forms — no AL dependence / free per bin / `(k,λ)` fixed
+per bin / analytic power-law dependence — mirroring the paper's Table 2, which is also the clean way
+to retire the two-log-normal form on the record rather than by assertion.
+
+### 4. Check A's two classes, re-grounded
+
+`configs/step1_check_a.yaml`'s `class_split_msh: 100.0` was arbitrary. Replace it with the
+**Weibull/log-normal crossover** computed from the fitted law per survey — the area where the two
+components' densities cross. Re-run only the two 2-class cells (RGO and Debrecen at T = 30); the
+other 15 are untouched. The verdict is expected to stand — rotation is what is missing, not lifetime
+heterogeneity — but the 1-vs-2 class decision then means something physical.
+
+### 5. The threshold finding
+
+The frozen truncation thresholds are **20.4–28.1 MSH**, so the sweep's `T = 0` and `T = 10` sample
+the regime upstream deliberately truncates away, where the Weibull component and observational
+incompleteness dominate. Record in the results doc and in **D14**: counts below a survey's own
+threshold are not comparable across surveys, and Steps 2–4 should treat `T ≥ 30` as the trustworthy
+band. This also explains why Check A's `T = 0` fits sit apart from the rest.
+
+### 6. ADR-011
+
+*The group-area law is Weibull + log-normal, calibrated upstream and not refitted; its log-normal
+component depends on activity level.* Records the functional form and why two log-normals are
+rejected; that upstream's posterior is adopted as-is; that `(k, λ)` are held fixed and only the
+log-normal's activity dependence is fitted here; that activity level is whole-Sun by ADR-004 with
+hemispheric as diagnostic; and the consequence for Step 4 — emission tables become
+activity-dependent.
+
+## Files
+
+| Path | Change |
+|---|---|
+| `data/raw/area_law_2026-11/` | **new** frozen snapshot + `MANIFEST.csv` rows |
+| `scripts/export_area_law.py` | **new** exporter; `--check` reproducible, upstream commit pinned |
+| `src/gn_next_gen/reference/area_law.py` | **new** — the law, the truncated likelihood, AL, the fitters |
+| `src/gn_next_gen/paths.py` | constants for the new folder |
+| `scripts/check_b_stationarity.py` | rewritten around the three tests; `lognormal_mixture` **deleted** |
+| `src/gn_next_gen/viz/checks.py` | `f10` becomes the law and its AL dependence; `f11` becomes parameter-vs-AL panels with the published power laws overlaid |
+| `configs/step1_check_b.yaml` | AL definition, bins, fixed-`(k,λ)` switch, published coefficients as cross-check |
+| `configs/step1_check_a.yaml` | `class_split_msh` → crossover, computed not hard-coded |
+| `docs/06_decisions/ADR-011-*.md` | **new**, indexed in `docs/06_decisions/README.md` |
+| `docs/results/step-1-data-foundation.md` | §2 rewritten; the ΔBIC two-log-normal claim **retracted in place**, not quietly deleted |
+| `docs/04_data/known_issues.md` | D14 sharpened with the threshold finding |
+| `docs/04_data/data_dictionary.md` | the new raw folder |
+| `tests/test_area_law.py` | **new** |
+
+## Tests
+
+- **The reproduction test that anchors everything**: `area_corr > threshold_MSH` on single-entry
+  returns exactly 16,880 / 8,306 / 15,662 for RGO / Debrecen / KMAS. If this fails, the grain or the
+  column is wrong and nothing downstream is trustworthy.
+- `log_pdf_latent` integrates to 1 over the `z` grid; reduces to a pure log-normal as `π_W → 0` and a
+  pure Weibull as `π_W → 1`; matches a `scipy` Weibull transformed to log-area.
+- Truncated likelihood normalizes over the retained support and agrees with a brute-force integral.
+- **Synthetic recovery**: simulate from the law at known `(k, λ, μ, σ, π)`, truncate, refit with
+  `(k, λ)` fixed, recover `μ, σ, c` within tolerance (slow).
+- Activity level: a 182-day Gaussian on a synthetic sinusoid returns the right amplitude and phase;
+  whole-Sun equals the area-weighted combination of the hemispheric series; **a unit test asserts AL
+  is in mHem**.
+- Parameter snapshot pinned against `MANIFEST.csv`; `--check` reproducibility (slow).
+- Regression: `lognormal_mixture` is gone and nothing imports it.
+
+## Acceptance criteria
+
+| Criterion | Measurement | Pass |
+|---|---|---|
+| Upstream's fit reproduces | kept-counts above `threshold_MSH` | exactly 16,880 / 8,306 / 15,662 |
+| Weibull is activity-independent | Spearman ρ of `k_W`, `λ_W` vs AL, per survey | small \|ρ\| at low confidence, as the paper finds; **if not, stop and report** |
+| Log-normal dependence recovered | ρ and power-law fits for `μ, σ, c` vs AL | ρ positive and significant for `μ` and `σ`; reduced χ² < 1, as in the paper |
+| Published coefficients cross-checked | fitted exponents vs 5.97/0.021, 1.08/0.117, 0.66/0.230 | agreement, or a **stated and quantified** offset with its cause (`π_W` vs `c` convention, calibration scale) |
+| Stationarity at matched AL | `(μ, σ, c)` across epochs within AL bins | spread stated with uncertainties; consequence for `q_o` written down |
+| Grain bridge | per-group vs per-group-day law | both fitted; difference reported as size-biasing |
+| Model comparison | AIC over the four nested forms | the AL-dependent form wins, as in the paper's Table 2 |
+| Two classes re-grounded | crossover split; 2 cells re-run | split computed from the law; decision restated |
+| Thresholds flagged | D14 + results doc | the 20.4–28.1 MSH band recorded with the T = 0/10 caveat |
+| Retraction visible | results doc §2 | the superseded two-log-normal result shown as retracted, with its reason |
+
+## Verification
+
+```bash
+conda activate gn-next-gen
+pytest && pytest -m slow
+python scripts/export_area_law.py --check          # byte-reproducible, commit pinned
+pytest tests/test_data_manifest.py                 # new folder checksummed
+python scripts/check_b_stationarity.py --config configs/step1_check_b.yaml
+python scripts/check_a_dynamics.py --config configs/step1_check_a.yaml \
+       --surveys rgo debrecen --thresholds 30      # the two re-grounded 2-class cells
+python scripts/make_step1_figures.py
+ruff check . && ruff format --check .
+git diff --name-status data/raw legacy             # additions only, bar the new folder
+```
+
+Then read `docs/results/step-1-data-foundation.md` §2 with figures `f10` and `f11`: the
+parameter-vs-AL panels must show a flat Weibull and a rising log-normal, with the published power
+laws overlaid.
+
+## Risks
+
+| Risk | How it shows | Fallback |
+|---|---|---|
+| `π_W` (0.72–0.79) and the paper's `1 − c` (≈ 0.45) disagree | the refit `c(AL)` sits well off the published curve | Expected, not a bug: different truncation and calibration scale. Report both and attribute the offset rather than tuning to match |
+| `(k, λ)` turn out to move with AL | test 1 shows significant ρ | Do **not** proceed to the fixed-`(k,λ)` refit. Report that the baseline claim fails on this data and escalate — that would contradict the paper and matters more than the rest of this revision |
+| Few groups per AL bin at high activity | wide intervals in the top bins, as in the paper's Fig. 5 | Equal-count rather than equal-width bins; report counts per bin |
+| Per-group-day fit dominated by long-lived groups | per-day `μ` far above per-group `μ` | That *is* the size-biasing; report it as the measured bridge, not as a discrepancy |
+| Schwabe/Spörer kept-counts do not reproduce (6,813 vs 5,588; 5,189 vs 5,202) | — | Both are excluded from Step 1 (D23), and Schwabe's calibration is umbral so its threshold applies to a different column. Note and move on |
+
+## Open questions
+
+None blocking — the four design decisions were taken by the PI on 2026-11-21 and are recorded above.
+
+
+## Revision 1 outcome
+
+Implemented as planned, with these results and one reversal:
+
+- The anchor check passed exactly (RGO 16,880 / Debrecen 8,306 / KMAS 15,662), fixing
+  the grain, the column and the threshold.
+- The Weibull gate passed: no correlation with activity reaches 0.95 confidence and the
+  signs disagree across surveys, so holding `(k, λ)` fixed is licensed.
+- The log-normal's activity dependence reproduces the published power laws, with KMAS
+  matching the published `μ` exponent to three decimals. Amplitudes sit below the
+  published ones for the two reasons the plan predicted.
+- **The grain bridge came out with the opposite sign to the plan's expectation.** The
+  plan anticipated the per-group-day law would be *larger* in `μ` from size-biasing; it
+  is smaller, by 0.19–0.26, because the per-group law uses each group's peak area while
+  the per-day law sees instantaneous ones. The plan's risk table called the opposite
+  outcome "the measured bridge, not a discrepancy" — that framing was wrong about the
+  direction, and the measurement stands on its own.
+- Model comparison diverges from the paper for RGO and Debrecen, which prefer the
+  flexible per-bin fit over the analytic power laws; reported as a difference.
+- Two defects found while re-grounding Check A's classes: `class_split_msh` was dead
+  config, and the two-class filter's docstring claimed observable classes while the code
+  made them latent — which is why the earlier symmetric-saddle bug was possible.
