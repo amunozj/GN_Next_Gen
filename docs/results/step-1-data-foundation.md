@@ -14,8 +14,11 @@
 > Verification in this step is figure-first: each claim names the figure that shows it, and
 > **every figure is embedded here with a caption**, so the argument can be read without opening a
 > single file. Figures are referred to by their code (`f01`-`f12`), which is also their filename
-> under [`figures/step-1/`](figures/step-1/). Each one is rendered in both light and dark and the
-> embed picks the variant matching your theme, so a dark-mode reader gets the dark figure.
+> under [`figures/step-1/`](figures/step-1/). Each is rendered in both light and dark; the light
+> variant is embedded, because it renders everywhere, and the `*_dark.png` beside it is there for
+> dark slides and talks. (A `<picture>` embed that switched on your theme was tried first and
+> reverted: GitHub does not resolve relative paths in a `<source srcset>`, so every figure broke
+> for dark-theme readers.)
 
 ## Summary
 
@@ -51,12 +54,7 @@ Observer-day diff: **144 new, 78 removed, 351 with changed counts** — see `f02
 because removing the ~428 duplicate rows outweighs the additions, so this is a
 correction-and-deduplication release, not an extension. Coverage still stops at 2010-12-31.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f02_v13_release_diff_dark.png">
-    <img alt="Per-year observer-day additions, removals and changed counts between v1.3_3 and v1.3_4, spiking at 1719-1721." src="figures/step-1/f02_v13_release_diff_light.png">
-  </picture>
-</p>
+![Per-year observer-day additions, removals and changed counts between v1.3_3 and v1.3_4, spiking at 1719-1721.](figures/step-1/f02_v13_release_diff_light.png)
 
 **Figure f02** — v1.3_3 against v1.3_4, from the committed per-year diff. Almost the whole
 correction is one spike at **1719–1721**, the end of the Maunder Minimum and the start of the
@@ -96,12 +94,7 @@ Coverage and sentinels are checked against `MANIFEST.csv` itself rather than aga
 the test file (`f01`). The record's first observation is Harriot on **1610-12-18**; the manifest's
 1610-01-01 is the table's calendar start, which is a no-observation sentinel row.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f01_coverage_dark.png">
-    <img alt="Observer-days and active stations per year, mean groups reported, and the spotless fraction, 1610-2026." src="figures/step-1/f01_coverage_light.png">
-  </picture>
-</p>
+![Observer-days and active stations per year, mean groups reported, and the spotless fraction, 1610-2026.](figures/step-1/f01_coverage_light.png)
 
 **Figure f01** — Coverage of the observation database, v1.3_4 plus the 2026 count extension:
 observer-days and active stations per year, mean groups reported, and the fraction of reports that
@@ -109,12 +102,7 @@ are spotless. The record thins towards 1610 and the spotless fraction rises into
 Minimum — which is the regime the reporting layer has to model. The Maunder era is not a time of
 fewer groups in this record; it is a time of mostly blank reports.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f04_leapday_calendar_dark.png">
-    <img alt="Presence or absence of 29 February in every year of the record, against the Gregorian leap-year rule." src="figures/step-1/f04_leapday_calendar_light.png">
-  </picture>
-</p>
+![Presence or absence of 29 February in every year of the record, against the Gregorian leap-year rule.](figures/step-1/f04_leapday_calendar_light.png)
 
 **Figure f04** — Every 29 February in the record against the Gregorian rule — the figure that shows
 the calendar conversion is right. 1700, 1800 and 1900 carry none because they are not Gregorian
@@ -131,12 +119,7 @@ explicit marker so that a correct absence cannot be misread as missing data.
 | **D17** state-space sizing | "use a robust quantile" | a stated rule with both releases' numbers, pinned by a test (`f03`) |
 | **D22** KMAS group-id collisions | "exclude them from lifetime work" | dropped by default in group-keyed tables, kept in daily counts, both tested |
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f03_groups_tail_and_K_dark.png">
-    <img alt="The reported-count tail of v1.3_4 with the 58 and 93 outliers separated, and the robust quantiles that set K = 41." src="figures/step-1/f03_groups_tail_and_K_light.png">
-  </picture>
-</p>
+![The reported-count tail of v1.3_4 with the 58 and 93 outliers separated, and the robust quantiles that set K = 41.](figures/step-1/f03_groups_tail_and_K_light.png)
 
 **Figure f03** — The `GROUPS` tail of v1.3_4 and the robust quantiles that size the state space.
 The two implausible outliers sit above a tail that stops at 53, which is why **K** comes from a
@@ -157,12 +140,7 @@ Measured from the snapshot and shown in `f05`:
 | debrecen | 343 | 2,231 | 13,862 | 11,412 | median 6, max 41 |
 | kmas | 1,319 | 3,320 | 22,024 | 22,295 | median 5 (clean) |
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f05_reference_daystatus_dark.png">
-    <img alt="day_status through time for each of the five reference surveys; Schwabe and Spörer have no spotless band at all." src="figures/step-1/f05_reference_daystatus_light.png">
-  </picture>
-</p>
+![day_status through time for each of the five reference surveys; Schwabe and Spörer have no spotless band at all.](figures/step-1/f05_reference_daystatus_light.png)
 
 **Figure f05** — `day_status` per survey through time — the figure that shows **D23**. Schwabe and
 Spörer have no spotless band anywhere in their span, so neither can supply a zero fraction or a
@@ -228,12 +206,7 @@ weightings differ by about six and must not be mixed: the 2015 paper's is
 0.50 mHem for RGO, matching its published 0–0.4 axis; summing every group present on
 each day instead gives 3.24 mHem.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f10_checkB_area_law_dark.png">
-    <img alt="The fitted Weibull + log-normal law on log-area for each survey, with the completeness threshold marked and most Weibull mass below it." src="figures/step-1/f10_checkB_area_law_light.png">
-  </picture>
-</p>
+![The fitted Weibull + log-normal law on log-area for each survey, with the completeness threshold marked and most Weibull mass below it.](figures/step-1/f10_checkB_area_law_light.png)
 
 **Figure f10** — The fitted **Weibull + log-normal** law against the data, per survey, on log-area.
 This is the visual form of the retraction above: the small-object component is a left-skewed Gumbel
@@ -260,12 +233,7 @@ One caveat stated plainly: above these truncation thresholds the Weibull compone
 only weakly identified — most of its mass is below the cut — so this is "no *detectable*
 dependence", not a proof of none.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f11_checkB_activity_dark.png">
-    <img alt="mu, sigma and c against activity level with the published 2015 power laws overlaid, plus Spearman rho for the Weibull parameters." src="figures/step-1/f11_checkB_activity_light.png">
-  </picture>
-</p>
+![mu, sigma and c against activity level with the published 2015 power laws overlaid, plus Spearman rho for the Weibull parameters.](figures/step-1/f11_checkB_activity_light.png)
 
 **Figure f11** — The log-normal parameters `μ`, `σ` and `c` against activity level, with the
 **published 2015 power laws overlaid** (dashed), and the Weibull gate in the fourth panel. The
@@ -394,12 +362,7 @@ predicts: larger groups live longer, so a higher acuity cut selects a longer-liv
 | **visible-duration KS** | **0.177** | **0.201** | 0.05 | **3.5× over** |
 | **≥13-day fraction, relative** | **0.571** | **0.490** | 0.20 | **2.5× over** |
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f09_checkA_scores_dark.png">
-    <img alt="Each discrepancy measure against its advisory target, one class against two, per survey and threshold." src="figures/step-1/f09_checkA_scores_light.png">
-  </picture>
-</p>
+![Each discrepancy measure against its advisory target, one class against two, per survey and threshold.](figures/step-1/f09_checkA_scores_light.png)
 
 **Figure f09** — Every discrepancy measure against its advisory target, 1-class against 2-class.
 Bars past the dashed line are measures the fitted chain does not yet match: the three
@@ -414,12 +377,7 @@ recurrence bump at one synodic rotation, and the disk-passage-censored lifetime 
 chain gets one-day persistence exactly right (lag-1 error 0.004) and then decays monotonically where
 the data dips at lag 13 and rises again at lag 27 (`f07`).
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f07_checkA_acf_dark.png">
-    <img alt="Observed against simulated autocorrelation, raw and detrended, for RGO and Debrecen; the simulation decays through the lag-13 trough and the lag-27 bump." src="figures/step-1/f07_checkA_acf_light.png">
-  </picture>
-</p>
+![Observed against simulated autocorrelation, raw and detrended, for RGO and Debrecen; the simulation decays through the lag-13 trough and the lag-27 bump.](figures/step-1/f07_checkA_acf_light.png)
 
 **Figure f07** — Observed against simulated autocorrelation, raw and detrended, per survey. The raw
 ACF rides on the solar cycle; detrending against a 91-day mean is what exposes the **~13-day
@@ -427,12 +385,7 @@ transit trough** and the **~27-day recurrence bump**. The fitted chain matches l
 then decays monotonically straight through both features — this is the shape of the missing
 rotation component.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f08_checkA_zero_counts_dark.png">
-    <img alt="Zero fraction by activity bin, daily count distribution, and spotless run lengths, observed against simulated." src="figures/step-1/f08_checkA_zero_counts_light.png">
-  </picture>
-</p>
+![Zero fraction by activity bin, daily count distribution, and spotless run lengths, observed against simulated.](figures/step-1/f08_checkA_zero_counts_light.png)
 
 **Figure f08** — The three statistics ADF compresses into one number, kept apart: how often a day
 is blank (by activity bin), how the daily counts are distributed, and how blank days cluster. All
@@ -442,12 +395,7 @@ is why the verdict is go rather than no-go.
 That is not a surprise in hindsight: a memoryless geometric survival has no mechanism that can
 produce a 27-day echo. It is the quantitative version of what `f06` already showed about lifetimes.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f06_lifetimes_dark.png">
-    <img alt="Observed visible spans against the rotation kernel's prediction: a flat hazard for nine days, then a cliff at disk passage." src="figures/step-1/f06_lifetimes_light.png">
-  </picture>
-</p>
+![Observed visible spans against the rotation kernel's prediction: a flat hazard for nine days, then a cliff at disk passage.](figures/step-1/f06_lifetimes_light.png)
 
 **Figure f06** — Observed visible spans against the rotation kernel's prediction. The hazard is
 flat for about nine days and then falls off a cliff — **not geometric**. `obs_duration` measures
@@ -516,12 +464,7 @@ Measured, replacing the research report's unbenchmarked estimates (`f12`):
 > process on the device, the timings above are stable to 0.002 s. The CPU column reproduced
 > unchanged. See `docs/results/step-1-verification.md`.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f12_filter_benchmark_dark.png">
-    <img alt="Measured forward-filter cost on CPU against one A100, by state count and series length." src="figures/step-1/f12_filter_benchmark_light.png">
-  </picture>
-</p>
+![Measured forward-filter cost on CPU against one A100, by state count and series length.](figures/step-1/f12_filter_benchmark_light.png)
 
 **Figure f12** — Measured forward-filter cost, CPU against one A100, by state count and series
 length. The research report's 0.2–1 s CPU estimate is **confirmed**, and its 1–3 s single-chain

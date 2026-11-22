@@ -235,50 +235,31 @@ comes from.
 ## Figures
 
 All twelve regenerate from the committed configs and seeds; ten came back byte-identical. The four
-that carry a verification claim are below.
+that carry a verification claim are below, as their light variants — see the results doc's preamble
+for why the theme-switching embed was reverted.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f03_groups_tail_and_K_dark.png">
-    <img alt="The reported-count tail of v1.3_4 with its outliers separated, and the robust quantiles that set K." src="figures/step-1/f03_groups_tail_and_K_light.png">
-  </picture>
-</p>
+![The reported-count tail of v1.3_4 with its outliers separated, and the robust quantiles that set K.](figures/step-1/f03_groups_tail_and_K_light.png)
 
 **Figure f03** — the `GROUPS` tail and the quantiles that size the state space. Re-measured, the
 rule's minimum is **39 under both releases** and K = 41 sits two above it; the caption in this
 figure previously said the minimum was 41 for `_3`, which verification could not reproduce (F4).
 Regenerated with the corrected text.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f09_checkA_scores_dark.png">
-    <img alt="Each Check A discrepancy measure against its advisory target, one class against two, per survey and threshold." src="figures/step-1/f09_checkA_scores_light.png">
-  </picture>
-</p>
+![Each Check A discrepancy measure against its advisory target, one class against two, per survey and threshold.](figures/step-1/f09_checkA_scores_light.png)
 
 **Figure f09** — Check A's measures against their advisory targets, from the fresh 17-cell grid.
 The pattern reproduces exactly: the three rotation-dependent measures and the two lifetime measures
 sit past the line in every cell, and the count marginals do not. This figure changed on
 regeneration because the committed version predated the two-class re-grounding (F7).
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f11_checkB_activity_dark.png">
-    <img alt="mu, sigma and c against activity level with the published 2015 power laws overlaid, plus Spearman rho for the Weibull parameters." src="figures/step-1/f11_checkB_activity_light.png">
-  </picture>
-</p>
+![mu, sigma and c against activity level with the published 2015 power laws overlaid, plus Spearman rho for the Weibull parameters.](figures/step-1/f11_checkB_activity_light.png)
 
 **Figure f11** — the activity dependence, reproducing to three decimals, with the Weibull gate in
 the fourth panel. What the panels show is sound; what is **not** shown — and should not be added
 until F1 is fixed — is the reduced χ² behind these fits, which is pinned at 1.125 by its own
 estimator.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-1/f12_filter_benchmark_dark.png">
-    <img alt="Measured forward-filter cost on CPU against one A100, by state count and series length." src="figures/step-1/f12_filter_benchmark_light.png">
-  </picture>
-</p>
+![Measured forward-filter cost on CPU against one A100, by state count and series length.](figures/step-1/f12_filter_benchmark_light.png)
 
 **Figure f12** — the corrected benchmark. Every GPU bar moved: full length is **3.19 s**, not the
 6.95 s first published, because the original measurement ran against a loaded machine (F3). The CPU

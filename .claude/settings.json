@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"=== ruff config in pyproject ===\" && sed -n '/\\\\[tool.ruff/,/^\\\\[tool\\\\.\\\\\\(pytest\\\\|setuptools\\\\\\)/p' pyproject.toml | head -20)"
+    ],
+    "additionalDirectories": [
+      "/d0/amunozj/git_repos/GN_Next_Gen"
+    ]
+  }
+}
