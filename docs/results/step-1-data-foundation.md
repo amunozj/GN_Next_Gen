@@ -308,11 +308,31 @@ the data dips at lag 13 and rises again at lag 27 (`f07`).
 That is not a surprise in hindsight: a memoryless geometric survival has no mechanism that can
 produce a 27-day echo. It is the quantitative version of what `f06` already showed about lifetimes.
 
-**Two area classes do not help.** With the symmetric saddle avoided, the two-class fits do separate
-(class weights 0.94 and 0.93, φ split across the classes) — and they score **worse**: aggregate
-+4.0% for RGO and +6.2% for Debrecen, against a bar of −25% to adopt them. Every failing measure
-stays failing. So the deficiency is not unmodelled heterogeneity in lifetimes; it is the absence of
-rotation. **Decision: one area class.**
+**Two area classes do not help — and why not is the useful part.** The classes are now
+*observable*, split at the Weibull/log-normal crossover of the area law (ADR-011): RGO 79 MSH,
+Debrecen 74 MSH. Each day's groups are assigned by their own area, so nothing is latent.
+
+The two populations really do have different visible residences, by a factor of four:
+
+| | φ small | mean visible days | φ large | mean visible days |
+|---|---|---|---|---|
+| RGO | 0.390 | **1.6** | 0.835 | **6.1** |
+| Debrecen | 0.369 | **1.6** | 0.849 | **6.6** |
+
+And yet two classes score **worse**: aggregate +39.8% for RGO and +27.8% for Debrecen, against a
+bar of −25% to adopt them.
+
+The reason is measurable, not speculative. **54% of RGO's multi-day groups above T = 30 have days
+on both sides of the crossover** (53% for Debrecen). An instantaneous-area split does not partition
+*groups* into two populations — it partitions *group-days*, and a group crosses the boundary as it
+grows and decays. Modelling the two as independent birth–death chains therefore invents an
+emergence event every time a group grows across the split, and loses the temporal coherence that
+makes the observed series autocorrelated. The fitted φ of 0.39 for the small class is not a
+population's lifetime; it is the dwell time of a group's *passage* through the small-area band.
+
+**Decision: one area class** — now for a understood reason rather than a null result. And a
+constraint for Step 4: **if two area classes are used, they must exchange members.** Two
+independent chains are the wrong structure, whatever the split.
 
 ### Verdict: **go, with a required modification**
 
@@ -365,7 +385,7 @@ the step's own compute.
 | Per-class K, two classes | 21 | 441 joint states; the sum still reaches 40 |
 | Lifetime parametrization | geometric survival **times an explicit rotation kernel — now required, not optional** | `obs_duration` is a disk-passage-censored *span* (`f06`), and Check A shows a chain without rotation misses the lag-13 trough, the lag-27 recurrence and the lifetime distribution by 3–5× |
 | Fitted φ to expect | 0.78–0.85, rising with acuity threshold | Mean visible residence 4.6–6.5 days against an observed median of 5–6 |
-| Area classes | **one** | Two classes separate properly once the symmetric saddle is avoided, and still score worse — +4.0% RGO, +6.2% Debrecen, against a −25% bar. The gap is rotation, not lifetime heterogeneity |
+| Area classes | **one**; if two are ever used they must **exchange members** | The two populations do differ in visible residence (1.6 against 6.1 days), but 54% of multi-day groups cross the split, so independent chains invent emergences and score 28–40% worse (§3) |
 | Anchors | unchanged (ADR-009) | |
 | Device for single-chain filtering | **CPU** | Measured, section 4 |
 
