@@ -51,10 +51,15 @@ from gn_next_gen.graph.overlap import OverlapGraph
 #: (D17); the same truncation applies here for the same reason.
 MAX_COUNT = 41
 
-#: CEA17's quality criteria (their §2.2.3).
+#: CEA17's quality criteria (their §2.2.3).  The matrix must carry statistics for
+#: "at least three columns **and one-quarter of the range of counts by the
+#: secondary observer**" -- the second clause is what makes the criterion bite at
+#: high acuity, where the secondary's counts span a wide range but only its low
+#: columns are populated.
 MIN_OVERLAP_DAYS = 20
 MIN_YEARS_FOR_LONG_RECORDS = 4
 MIN_POPULATED_COLUMNS = 3
+MIN_POPULATED_FRACTION_OF_RANGE = 0.25
 MAX_CHI2_PER_DOF = 6.0
 
 #: Candidate parents tried per observer when routing around a failed edge.
@@ -100,7 +105,13 @@ def conversion_matrix(
             matrix[:, value] = counts / counts.sum()
             populated.append(value)
 
-    diagnostics = {"n_populated": len(populated), "chi2_per_dof": np.nan}
+    count_range = int(source.max() - source.min()) + 1
+    diagnostics = {
+        "n_populated": len(populated),
+        "count_range": count_range,
+        "populated_fraction_of_range": len(populated) / max(count_range, 1),
+        "chi2_per_dof": np.nan,
+    }
     if len(populated) < 2:
         return matrix, diagnostics
 
@@ -152,8 +163,16 @@ def conversion_matrix(
     predicted = np.array([_offset_model(observed, *p) for p in draws])
     residual = offsets - predicted.mean(axis=0)
     spread = predicted.std(axis=0, ddof=1)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        chi2 = float(np.nanmean((residual / np.where(spread > 0, spread, np.nan)) ** 2))
+    # A perfect pair -- an observer calibrated against itself, which is exactly
+    # the acuity-0 end of the A157 grid -- has zero residual and zero bootstrap
+    # spread, and residual/0 reads as a catastrophically failed fit rather than
+    # a flawless one.  Score only the bins that carry spread, and call a fit
+    # with no scatter and no residual what it is.
+    informative = spread > 1e-9
+    if informative.any():
+        chi2 = float(np.mean((residual[informative] / spread[informative]) ** 2))
+    else:
+        chi2 = 0.0 if np.allclose(residual, 0.0, atol=1e-6) else np.inf
     diagnostics["chi2_per_dof"] = chi2
 
     width = max(float(np.std(target - source, ddof=1)), 0.5)
@@ -171,6 +190,16 @@ def conversion_matrix(
         if total > 0:
             matrix[:, value] = column / total
     return matrix, diagnostics
+
+
+def passes_criteria(diagnostics: dict) -> bool:
+    """CEA17's own exclusion rule, applied to one conversion matrix."""
+    if diagnostics["n_populated"] < MIN_POPULATED_COLUMNS:
+        return False
+    if diagnostics.get("populated_fraction_of_range", 1.0) < MIN_POPULATED_FRACTION_OF_RANGE:
+        return False
+    chi2 = diagnostics["chi2_per_dof"]
+    return not (np.isfinite(chi2) and chi2 > MAX_CHI2_PER_DOF)
 
 
 def compose(first: np.ndarray, second: np.ndarray) -> np.ndarray:
@@ -294,10 +323,7 @@ def calibrate_cea17(
             continue
         target, source = matched_counts(series[parent], series[station])
         edge_matrix, diagnostics = conversion_matrix(target, source, max_count=max_count, rng=rng)
-        chi2 = diagnostics["chi2_per_dof"]
-        if diagnostics["n_populated"] < MIN_POPULATED_COLUMNS or (
-            np.isfinite(chi2) and chi2 > MAX_CHI2_PER_DOF
-        ):
+        if not passes_criteria(diagnostics):
             continue
 
         chained[index[station]] = compose(chained[index[parent]], edge_matrix)
