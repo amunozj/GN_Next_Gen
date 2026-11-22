@@ -24,7 +24,7 @@
 
 | Question | Answer |
 |---|---|
-| Is the area distribution stationary across the reference era? | **At matched activity, yes** — RGO and Debrecen describe the same Weibull + log-normal law to within 0.05 in every parameter, a century apart. But the law **moves with the cycle**: within a survey, `μ` spans 0.31–0.42 across activity bins, more than any survey pair differs at matched activity |
+| Is the area distribution stationary across the reference era? | **At matched activity, yes** — RGO and Debrecen describe the same Weibull + log-normal law a century apart, to within 0.05 in every parameter on their own supports and 0.13 in `μ` on a common one (§2.3). But the law **moves with the cycle**: within a survey, `μ` spans 0.31–0.42 across activity bins, more than any survey pair differs at matched activity |
 | Is there two-population structure in areas? | **Yes — Weibull (small objects) + log-normal (active regions)**, not two log-normals (ADR-011). The log-normal half tracks activity and reproduces the published power laws; the Weibull half does not move, and most of it lies below every survey's completeness threshold |
 | Does an immigration–death chain reproduce the reference's daily statistics? | **Partly.** It reproduces the count marginals (zero fraction, count distribution, run lengths) within target, and fails the rotation-dependent measures by 3–5×: the lag-13 trough, the lag-27 recurrence and the lifetime distribution. **Go, with an explicit rotation component required in Step 4** |
 | What should Step 4 use? | K = 41; φ is a **visible-residence** parameter, not an intrinsic lifetime; lifetimes need an explicit rotation kernel |
@@ -276,15 +276,40 @@ At **matched activity**, comparing the log-normal parameters across surveys:
 | RGO vs Debrecen | 0.052 (max 0.078) | 0.059 (max 0.123) | 0.054 (max 0.095) |
 | RGO vs KMAS | **0.252** (max 0.409) | 0.091 (max 0.157) | 0.032 (max 0.080) |
 
-RGO and Debrecen describe the same law — a century apart — to within 0.05 in every
-parameter. **KMAS sits 0.25 higher in `μ`**, which tracks its higher truncation
-threshold (23.4 MSH) and its much larger Weibull scale (14.5 MSH against RGO's 5.7),
-i.e. a survey-calibration difference rather than a solar one.
+**Each survey is fitted on its own support**, and that has to be said before the numbers
+are read. Upstream truncates every survey at its own `threshold_MSH` — RGO 28.08,
+Debrecen 20.42, KMAS 23.41 — because those are the surveys' own completeness floors
+(D14), because `(k, λ)` are held at values calibrated under exactly that cut (ADR-011),
+and because the kept counts only reproduce with it. So the table above compares three
+fits on three different supports, which is a confound, not a detail.
 
-Within a survey, each parameter moves more across activity than any survey pair differs
-at matched activity (`μ` spans 0.31–0.42 across bins, against 0.05 between RGO and
-Debrecen). **The cycle moves the area law more than the century does** — which is the
-result Step 4 needs.
+`scripts/check_b_threshold_sensitivity.py` refits all three on a **common** cut, moving
+only the truncation point:
+
+| truncation | RGO vs Debrecen, `μ` | RGO vs KMAS, `μ` |
+|---|---|---|
+| per-survey (as above) | 0.052 | 0.252 |
+| common, 30 MSH | 0.088 | 0.257 |
+| common, 40 MSH | 0.134 | 0.240 |
+
+Two things follow, one of them a correction.
+
+**KMAS's offset is real.** It does not shrink on a common support — 0.252 → 0.257 → 0.240
+— so it is a property of the survey, not of where its data were cut. A first version of
+this section attributed it to "its higher truncation threshold (23.4 MSH)", which was
+wrong twice: 23.4 MSH is *lower* than RGO's 28.1, and the cut is not what drives the
+difference. What remains is the calibration-scale explanation — KMAS's Weibull scale is
+14.5 MSH against RGO's 5.7 — and that is a survey difference rather than a solar one.
+
+**The RGO–Debrecen agreement is partly a coincidence of their own thresholds.** On a
+common support their `μ` differs by 0.09–0.13, not 0.05. The "same law a century apart"
+claim holds in direction but not at that precision, and the honest figure is **≤ 0.13 in
+`μ` at a matched cut**.
+
+The ordering survives either way, and it is the ordering Step 4 needs: within a survey
+each parameter moves **0.31–0.42** in `μ` across activity bins, against at most 0.13
+between RGO and Debrecen at a matched cut. **The cycle moves the area law more than the
+century does** — by a factor of three even on the least favourable comparison.
 
 ### 2.4 The grain bridge: per group against per group-day
 

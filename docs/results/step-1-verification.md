@@ -218,6 +218,37 @@ area law and writes it back only as an output column. A stale 100.0 beside a doc
 is the kind of thing a later reader trusts. Replaced with a comment saying where the split actually
 comes from.
 
+### F8 — the stationarity comparison runs on three different supports
+
+Raised by the PI on 2026-11-22 and measured in response. Check B's stage 3 compares
+`(μ, σ, c)` across surveys at matched activity, but each survey is fitted above **its own**
+`threshold_MSH` (RGO 28.08, Debrecen 20.42, KMAS 23.41). Three fits on three supports are not
+obviously comparable, and the results doc attributed KMAS's offset to its "higher truncation
+threshold (23.4 MSH)" — which is *lower* than RGO's 28.1, so the explanation could not be right as
+written.
+
+`scripts/check_b_threshold_sensitivity.py` (new) refits all three on a common cut, moving only the
+truncation point and holding `(k, λ)` fixed throughout:
+
+| truncation | RGO vs Debrecen, `μ` | RGO vs KMAS, `μ` |
+|---|---|---|
+| per-survey | 0.052 | 0.252 |
+| common, 30 MSH | 0.088 | 0.257 |
+| common, 40 MSH | 0.134 | 0.240 |
+
+**KMAS's offset is not a truncation artifact** — it barely moves, so the survey-calibration reading
+stands and only the stated cause needed fixing. **The RGO–Debrecen agreement is partly one**: on a
+common support their `μ` differs by 0.09–0.13 rather than 0.05, so "the same law to within 0.05"
+was flattered by each survey keeping its own cut. The ordering that Step 4 depends on is unharmed —
+the within-survey cycle spread is 0.31–0.42, still three times the worst cross-survey figure — but
+the precision claim was overstated. §2.3 and the summary row are corrected and now state both
+numbers.
+
+Why the per-survey cuts are nonetheless right for the main fit: they are the surveys' own
+completeness floors (D14), `(k, λ)` are held at values calibrated under exactly that truncation
+(ADR-011), and the anchor counts only reproduce with them. The common-cut fits are a diagnostic,
+not a recalibration, and nothing was refitted into the frozen snapshot.
+
 ### F7 — smaller things, for the record
 
 - **The committed Check A outputs predated the re-grounding.** `outputs/step1/check_a/` had no
@@ -301,5 +332,9 @@ Each is a factual correction to a published number or a dead artifact, not a cha
 4. **The KMAS area law carries D22 contamination** — 261 of 15,662 calibration areas come from ids
    covering more than one physical group (1.7%). Counts are unaffected. Step 4 should prefer RGO or
    Debrecen wherever one survey's area law has to stand alone.
-5. **Merge the renovation branch into `main`** so the `data/raw` hard rule can be checked against
+5. **Cross-survey area-law comparisons need a stated support** (F8). Step 4 anchors to one
+   reference epoch across surveys; if it compares or combines their area laws, the truncation point
+   has to be part of the statement, because 0.05 and 0.13 are both true numbers for RGO vs Debrecen
+   depending on where the data are cut.
+6. **Merge the renovation branch into `main`** so the `data/raw` hard rule can be checked against
    `main`, as every plan from Step 2 on will assume.
