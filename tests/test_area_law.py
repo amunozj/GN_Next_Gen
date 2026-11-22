@@ -9,6 +9,8 @@ licenses using upstream's posterior without refitting it.
 
 from __future__ import annotations
 
+import dataclasses
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -270,7 +272,7 @@ def test_upstream_weibull_shape_agrees_with_the_published_value(params):
 
 
 def test_area_law_params_are_immutable(params):
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         params["rgo"].k_W = 0.9
     changed = params["rgo"].replace(pi_W=0.5)
     assert changed.pi_W == 0.5 and params["rgo"].pi_W != 0.5
