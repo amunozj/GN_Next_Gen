@@ -13,8 +13,23 @@
 ## Test suite
 Command(s) run and summary (passed / failed / skipped). Paste failures verbatim.
 
-## Figures and tables produced
-Paths (under `outputs/` are not committed; commit small summary figures under `docs/results/figures/` only if needed).
+## Figures
+**Embed every figure referred to anywhere in this document**, each with a caption (CLAUDE.md, "Reports and
+figures"). One block per figure:
+
+```html
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="figures/step-N/fNN_slug_dark.png">
+    <img alt="what the panels show" src="figures/step-N/fNN_slug_light.png">
+  </picture>
+</p>
+
+**Figure fNN** — what to look at, then the claim it supports.
+```
+
+Committed figures live under `docs/results/figures/step-N/` in both modes and stay small; the CSVs behind them
+stay in git-ignored `outputs/` and are listed here by path.
 
 ## Deviations from the plan
 What changed and why.

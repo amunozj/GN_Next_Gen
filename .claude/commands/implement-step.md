@@ -18,6 +18,8 @@ You are implementing **roadmap step $ARGUMENTS** of GN_Next_Gen.
    "Deviations" section) before continuing.
 6. Update the step's row in `docs/05_roadmap/README.md` to "In progress" when you start and "Implemented" when done;
    tick any paper items produced.
+   Any report you write under `docs/` follows CLAUDE.md's "Reports and figures": **embed and caption every figure
+   you cite**, light and dark, so the argument reads without opening a file.
 7. Do not push or open a PR unless the PI asks.
 8. Finish with: what was built (files), test results (pasted summary), anything left undone, and the suggestion to run
    `/verify-step $ARGUMENTS`.

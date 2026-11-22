@@ -252,3 +252,31 @@ def test_committed_figures_stay_small():
         pytest.skip("figures not built in this checkout")
     for path in folder.glob("*.png"):
         assert path.stat().st_size < 400_000, f"{path.name} is {path.stat().st_size / 1e3:.0f} kB"
+
+
+def test_every_committed_figure_is_embedded_and_captioned():
+    """CLAUDE.md's "Reports and figures" rule, as a test rather than as prose.
+
+    A committed figure that no report shows is a figure the reader has to go hunting for, and a
+    figure embedded in light mode only is a black-on-black panel for half of them. Both are easy
+    to do by accident and invisible in review, so they are checked here.
+    """
+    from gn_next_gen.paths import DOCS
+
+    results = DOCS / "results"
+    reports = {path: path.read_text() for path in results.glob("*.md")}
+    if not reports:
+        pytest.skip("no reports in this checkout")
+
+    for light in sorted(results.glob("figures/step-*/*_light.png")):
+        relative = light.relative_to(results).as_posix()
+        stem = light.name.removesuffix("_light.png")
+        code = stem.split("_", 1)[0]
+        hosts = [text for text in reports.values() if relative in text]
+        assert hosts, f"{relative} is committed but no report embeds it"
+        for text in hosts:
+            assert relative.replace("_light", "_dark") in text, (
+                f"{relative} is embedded without its dark variant: a dark-mode reader sees "
+                "a light figure on a dark page"
+            )
+            assert f"**Figure {code}**" in text, f"{relative} is embedded without a caption"

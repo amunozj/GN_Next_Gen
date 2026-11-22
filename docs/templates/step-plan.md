@@ -22,7 +22,9 @@ New/modified files under `src/`, `tests/`, `scripts/` or `notebooks/`, with one 
 Unit tests, property tests, synthetic-data recovery tests; how long the fast suite takes.
 
 ## Acceptance criteria
-Map every criterion in the spec to a concrete, checkable measurement (number, threshold, figure). Add any new ones.
+Map every criterion in the spec to a concrete, checkable measurement (number, threshold, figure). Add any new
+ones. Name the figure that will show each criterion: it has to be embedded and captioned in the results doc
+(CLAUDE.md, "Reports and figures"), so plan it as a deliverable, not as an afterthought.
 
 | Spec criterion | Measurement | Pass condition |
 |---|---|---|

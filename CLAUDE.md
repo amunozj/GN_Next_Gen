@@ -81,6 +81,31 @@ Still true:
 - Raw files mix CRLF and LF line endings; keep bytes unchanged (`.gitattributes`).
 - SILSO snapshots are still old (daily to 2018-07, monthly to 2017-10) and are comparison-only anyway.
 
+## Reports and figures
+Every report under `docs/` — results, verification, feedback, plan outcomes — is **figure-first and
+self-contained**: a reader must be able to follow the argument without opening a single file.
+- **Embed every figure you cite.** A report that names a figure shows it inline, with the light/dark `<picture>`
+  block so the reader's theme picks the variant (GitHub and VS Code both honour it):
+  ```html
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="figures/step-N/fNN_slug_dark.png">
+      <img alt="what the panels show" src="figures/step-N/fNN_slug_light.png">
+    </picture>
+  </p>
+
+  **Figure fNN** — what to look at, then the claim it supports.
+  ```
+- **Caption, never just label.** The caption states what the reader should see *and* the claim it carries; the
+  `alt` text describes the panels for someone who cannot see them. A bare "Figure 3" is not a caption.
+- A figure's code (`fNN_slug`) is both its label in prose and its filename, so a claim traces to a file by eye.
+  Render both modes with `viz.style.save_both_modes`; commit small figures (< 400 kB) under
+  `docs/results/figures/step-N/`; leave the CSVs behind them in git-ignored `outputs/`.
+- **Favour visual verification over print statements** (PI, 2026-11-21). Each number in a report traces to a
+  committed CSV, and the figure beside it is how the claim gets checked.
+- `tests/test_viz.py` enforces the mechanical half of this: both modes present, size limit, and every committed
+  figure embedded *and* captioned in some report.
+
 ## Code conventions
 - Python ≥ 3.11, `src/` layout, type hints, NumPy-style docstrings, small pure functions.
 - JAX: explicit PRNG keys; `jit` at API boundaries; float64 for log-likelihood accumulation
