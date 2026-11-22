@@ -1,0 +1,41 @@
+{
+  "exported_utc": "2026-11-22T23:25:32Z",
+  "exporter": "scripts/fetch_published_gn_series.py",
+  "not_acquired": {
+    "chatzistergos_2017": "A&A 602, A69 supplement at CDS/VizieR -- unreachable from this machine",
+    "velasco_herrera_2024": "Adv. Space Res. 73, 2788 supplement -- no open source found"
+  },
+  "role": "comparison_only",
+  "series": {
+    "hoyt_schatten_1998": {
+      "note": "the original group sunspot number; reads blanket statements as daily observations (D7)",
+      "reference": "Hoyt & Schatten 1998, Sol. Phys. 179, 189",
+      "sha256": "f39a9e9ad2e85d3632bd293810e3f9307d009ff53dda5a30d7af5c9003f713d0",
+      "source": "legacy/GN_Series_matlab/data/GNhs_y.txt"
+    },
+    "svalgaard_schatten_2016_backbone": {
+      "note": "the backbone series; A157 finds linear scaling amplifies strong cycles",
+      "reference": "Svalgaard & Schatten 2016, Sol. Phys. 291, 2653",
+      "sha256": "e6efdd30a9c32ccc056389ca49ccb715094e59da08694c5d8a526cb81f7f8a0a",
+      "source": "legacy/GN_Series_matlab/data/GNbb2_y.txt"
+    },
+    "usoskin_series": {
+      "note": "ADF-family series as carried by the 2017 MATLAB snapshot; the version string was not recorded there, so it is NOT asserted to be Usoskin et al. 2021",
+      "reference": "Usoskin et al., active-day-fraction family (exact version not recorded upstream)",
+      "sha256": "bb3886bc7b469059fbfb8063ddc401765dd9f8a3a16f8671caa58905a6f1bb48",
+      "source": "legacy/GN_Series_matlab/data/GNiu_y2.txt"
+    },
+    "vaquero": {
+      "note": "sparse yearly reconstruction",
+      "reference": "Vaquero et al., as carried by the 2017 snapshot",
+      "sha256": "103b98c2a036cb44a51b3d7d0a1c6e615d1d239357d0a31935bcd6a09c51fe16",
+      "source": "legacy/GN_Series_matlab/data/Vaquero.csv"
+    },
+    "zolotova": {
+      "note": "sparse yearly reconstruction",
+      "reference": "Zolotova & Ponyavin, as carried by the 2017 snapshot",
+      "sha256": "2da468b5d5f2037056f858675ed34813ed77e3495c9fd508c2be564ee707f905",
+      "source": "legacy/GN_Series_matlab/data/Zolotova.csv"
+    }
+  }
+}

@@ -36,6 +36,7 @@ from gn_next_gen.benchmark.progress import Progress  # noqa: E402
 from gn_next_gen.benchmark.scoring import COVERAGE_LEVELS, score  # noqa: E402
 from gn_next_gen.benchmark.store import (  # noqa: E402
     BENCHMARK_ROOT,
+    read_observations,
     read_sealed_parameters,
     read_sealed_truth,
 )
@@ -72,28 +73,59 @@ def _load(seed_dir: Path, method: str) -> CalibrationResult:
     )
 
 
-def _case_study_rows(result: CalibrationResult, parameters: pd.DataFrame, scenario, seed):
-    """True against recovered acuity for the ten named observers (f25/f26)."""
+def _case_study_rows(
+    result: CalibrationResult,
+    parameters: pd.DataFrame,
+    scenario,
+    seed,
+    true_factors: dict[int, float],
+):
+    """The ten named observers (f25/f26): acuity *and* scale, per method.
+
+    Only UEA21 and GRP estimate an acuity, so acuity alone leaves most panels
+    empty.  Every method produces a **scale factor** mapping an observer onto the
+    reference, and the truth implies one too -- the ratio of what the reference
+    observer would have counted on that observer's own days to what it reported.
+    Recovered against implied is therefore comparable across all nine.
+    """
     named = parameters[parameters["kind"].isin(CASE_STUDY_KINDS)]
     if named.empty or result.observers.empty:
         return []
     merged = named.merge(result.observers, on="station", how="left")
     rows = []
     for row in merged.itertuples():
+        station = int(row.station)
+        recovered = float(getattr(row, "factor", np.nan))
+        implied = true_factors.get(station, np.nan)
         rows.append(
             {
                 "scenario": scenario,
                 "seed": seed,
                 "method": result.name,
-                "station": int(row.station),
+                "station": station,
                 "kind": row.kind,
                 "true_threshold_msh": float(row.base_threshold_msh),
                 "recovered_threshold_msh": float(getattr(row, "recovered_threshold_msh", np.nan)),
-                "factor": float(getattr(row, "factor", np.nan)),
+                "factor": recovered,
+                "true_factor": implied,
+                "factor_ratio": recovered / implied if implied and implied == implied else np.nan,
                 "reached": bool(getattr(row, "reached", False)),
             }
         )
     return rows
+
+
+def _implied_factors(truth, observations: pd.DataFrame) -> dict[int, float]:
+    """What each observer's counts must be multiplied by to reach the estimand."""
+    reference = truth.reference_counts()
+    joined = observations.assign(
+        truth=reference.reindex(observations["date_ord"]).to_numpy()
+    ).dropna(subset=["truth"])
+    grouped = joined.groupby("station")[["truth", "groups"]].mean()
+    return {
+        int(station): float(row["truth"] / row["groups"]) if row["groups"] > 0 else np.nan
+        for station, row in grouped.iterrows()
+    }
 
 
 def main() -> None:
@@ -124,17 +156,19 @@ def main() -> None:
     for scenario, seed, method, tag, seed_dir in cells:
         key = (scenario, seed)
         if key not in truths:
+            sealed = read_sealed_truth(scenario, seed, root=args.data_root)
             truths[key] = (
-                read_sealed_truth(scenario, seed, root=args.data_root),
+                sealed,
                 read_sealed_parameters(scenario, seed, root=args.data_root),
+                _implied_factors(sealed, read_observations(scenario, seed, root=args.data_root)),
             )
-        truth, parameters = truths[key]
+        truth, parameters, factors = truths[key]
         try:
             result = _load(seed_dir, method)
             row = score(truth, result, parameters, scenario=scenario, seed=seed)
             row["perturbation"] = tag
             rows.append(row)
-            case_rows += _case_study_rows(result, parameters, scenario, seed)
+            case_rows += _case_study_rows(result, parameters, scenario, seed, factors)
         except Exception as error:  # noqa: BLE001
             progress.record(failure=f"{scenario}/{seed}/{method}: {error!r}")
             print(f"FAILED {scenario} {seed} {method}: {error!r}", flush=True)

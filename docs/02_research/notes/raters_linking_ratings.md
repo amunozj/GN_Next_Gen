@@ -38,7 +38,7 @@ A Dawid-Skene (DS) model with one confusion matrix per observer, P(Y_{o,t}=y | G
 ### Inferences
 **(c) Mapping to GN**
 - Raters are observers, items are days, and the latent class is the true daily group count G_t, an integer from 0 to about 40. The DS confusion matrix pi_o[g, y] = P(Y_{o,t}=y | G_t=g) is a forward observation model for observer o.
-- Chatzistergos et al.'s PDM is, as I read the method (verify direction in their Sect. 2), an empirical conditional distribution linking observer counts to backbone counts on common days. It is therefore a DS confusion matrix estimated against a proxy for truth (the BB observer) instead of latent truth, one observer pair at a time.
+- Chatzistergos et al.'s PDM is, as I read the method (direction **settled in Step 2**: a column is indexed by the *secondary* observer's count and holds a PMF over the *reference* observer's count (Chatzistergos et al. 2025, A&A 699, A157, Sect. 2.2.3)), an empirical conditional distribution linking observer counts to backbone counts on common days. It is therefore a DS confusion matrix estimated against a proxy for truth (the BB observer) instead of latent truth, one observer pair at a time.
 - The DS generalization does three things the PDM cannot:
   - it uses every observer who reported on a given day, not just the BB;
   - it propagates the BB's own noise instead of treating the BB as exact;

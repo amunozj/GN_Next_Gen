@@ -230,28 +230,35 @@ def test_save_both_modes_writes_one_file_per_mode(tmp_path):
     assert all(p.stat().st_size > 1000 for p in written)
 
 
-def test_every_committed_figure_has_both_modes():
-    """The results doc can only offer a dark variant if every figure has one."""
+def _figure_folders():
+    """Every committed step folder, so a new step is covered the day it lands."""
     from gn_next_gen.paths import DOCS
 
-    folder = DOCS / "results" / "figures" / "step-1"
-    if not folder.is_dir():
+    return sorted(p for p in (DOCS / "results" / "figures").glob("step-*") if p.is_dir())
+
+
+def test_every_committed_figure_has_both_modes():
+    """The results doc can only offer a dark variant if every figure has one."""
+    folders = _figure_folders()
+    if not folders:
         pytest.skip("figures not built in this checkout")
-    stems = {p.name.rsplit("_", 1)[0] for p in folder.glob("*.png")}
-    for stem in stems:
-        assert (folder / f"{stem}_light.png").is_file(), stem
-        assert (folder / f"{stem}_dark.png").is_file(), stem
+    for folder in folders:
+        stems = {p.name.rsplit("_", 1)[0] for p in folder.glob("*.png")}
+        for stem in stems:
+            assert (folder / f"{stem}_light.png").is_file(), f"{folder.name}/{stem}"
+            assert (folder / f"{stem}_dark.png").is_file(), f"{folder.name}/{stem}"
 
 
 def test_committed_figures_stay_small():
     """Only small summary figures are committed; the rest live in git-ignored outputs/."""
-    from gn_next_gen.paths import DOCS
-
-    folder = DOCS / "results" / "figures" / "step-1"
-    if not folder.is_dir():
+    folders = _figure_folders()
+    if not folders:
         pytest.skip("figures not built in this checkout")
-    for path in folder.glob("*.png"):
-        assert path.stat().st_size < 400_000, f"{path.name} is {path.stat().st_size / 1e3:.0f} kB"
+    for folder in folders:
+        for path in folder.glob("*.png"):
+            assert path.stat().st_size < 400_000, (
+                f"{folder.name}/{path.name} is {path.stat().st_size / 1e3:.0f} kB"
+            )
 
 
 def test_every_committed_figure_is_embedded_and_captioned():

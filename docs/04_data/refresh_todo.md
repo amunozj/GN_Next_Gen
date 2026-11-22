@@ -19,6 +19,12 @@ post-2010 extension. What is left is below.
 | *(not previously listed)* pre-1874 reference coverage | `reference_groups_2026-10/` (`schwabe`, `sporer`) | 1825–1894. The old `SC_SP_RG…` filename promised Schwabe/Spörer areas but contained none (**D2**); they genuinely exist now |
 | *(not previously listed)* observation record past 2010 | `gn_observer_extension_2026-10/` | KMAS and SWPC daily group counts, 1954/1996 → 2026. Counts only. **KMAS single-use rule applies** (ADR-009) |
 
+## Done (2026-11, Step 2)
+
+| Item | Delivered as | Notes |
+|---|---|---|
+| Published GN series for comparison | `gn_published_series_2026-11/` | **Three of five.** Hoyt & Schatten 1998, the Svalgaard & Schatten backbone and a Usoskin ADF-family series, plus Vaquero's and Zolotova's reconstructions, exported from the read-only 2017 MATLAB snapshot rather than re-downloaded -- those are the exact bytes the legacy analyses used, so a comparison against the legacy baselines is like for like. **Comparison only**, enforced by the firewall validator. The snapshot records no version string for the Usoskin file, so it is *not* asserted to be Usoskin et al. 2021. Chatzistergos 2017 and Velasco Herrera 2024 are still outstanding (see Still outstanding) |
+
 ## Done (2026-11, Step 1)
 
 | Item | Delivered as | Notes |
@@ -30,7 +36,7 @@ post-2010 extension. What is left is below.
 
 | Item | Why | Where to look |
 |---|---|---|
-| Published GN series for comparison (Svalgaard & Schatten 2016, Usoskin et al. 2016/2021, Chatzistergos et al. 2017, Velasco Herrera et al. 2022, Hoyt & Schatten 1998) | Benchmarks for the paper; `legacy/GN_Series_matlab/data/` has three older yearly series. **Moved to Step 2** (PI, 2026-11-21), where the benchmark actually consumes them | Papers' supplementary data |
+| Published GN series: **Chatzistergos et al. 2017** and **Velasco Herrera et al. 2024** | The other three landed in Step 2 (see Done, 2026-11, Step 2). These two live at CDS/VizieR, which is **unreachable from this machine** (connection timeout), and no alternative open source was found. Comparison-only; the benchmark does not depend on them | A&A 602, A69 and Adv. Space Res. 73, 2788 supplements |
 | Observer metadata (aperture, projection vs direct, career dates, age) where available | Optional covariates under ADR-004; v1.3's `OBSERVER` field carries some instrument notes in free text (e.g. station 773's "83/1320 mm Fraunhofer refractor") but it is not a structured table | v1.3 observers sheet; literature |
 | An observer-collection extension past 2010 | The extension in hand is survey-derived, not visual observer counts (**D21**). Raised with the v1.3 authors in `docs/results/gn-v13-feedback-report.md` | v1.3 maintainers |
 | Annual ¹⁴C (Brehm et al. 2021), ¹⁰Be, aurora catalogues | Step 6 only (proxy-informed variant) | See `docs/05_roadmap/step-6-*.md` |

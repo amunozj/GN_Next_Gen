@@ -511,10 +511,60 @@ rather than as questions:
 
 Recorded as they arise, per `CLAUDE.md`'s workflow.
 
-1. **Spec acceptance criterion 4 is not met** (PI decision 7, 2026-11-22). The spec asks that "a port,
-   if used, reproduces legacy thresholds on a stated set of observers within a stated tolerance".
-   `legacy/ADFSSN/runcsvs/` was not produced by the committed driver settings and the snapshot already
-   carries `uncommitted.diff`, so the target is not well defined. Criterion **A7** replaces it with an
-   external, published target: the ports must reproduce Chatzistergos et al. (2025) Fig. 3b behaviour
-   on that paper's own setup. The recovered `runcsvs/` parameters are preserved in
+1. **Spec acceptance criterion 4 is not met** (PI decision 7, 2026-11-22). The spec asks
+   that "a port, if used, reproduces legacy thresholds on a stated set of observers
+   within a stated tolerance". `legacy/ADFSSN/runcsvs/` was not produced by the
+   committed driver settings and the snapshot already carries `uncommitted.diff`, so the
+   target is not well defined. Criterion **A7** replaces it with an external, published
+   target. The recovered `runcsvs/` parameters are preserved in
    `docs/03_legacy/adfssn.md` so a later session can pick the check up.
+
+2. **A7 passes in part, and the part that does not is explained.** All five ported
+   methods agree in sign with A157's Fig. 3b. Their *exclusion limits* do not: HoSc98
+   gives up at 73 msd here against their 31. The cause is measured, not guessed --
+   HoSc98's factor is a ratio of sums, so losing a fraction `f` of group-days implies
+   `k ~ 1/(1-f)` and its 0.6-1.4 gate trips at `f = 0.29`, which our renovated RGO
+   reaches between 60 and 87 msd. A157 used the 2017 catalogue, whose small-group
+   completeness differs (D14 puts RGO's floor at 28.1 MSH). `a157_catalogue.csv` carries
+   the evidence. This is a data difference, not a port defect.
+
+3. **The replay's verbatim window is the donor survey's own span**, not 1825-2026.
+   The plan says "1825-2026 is the real reference, used as-is". With one donor survey
+   per realization -- which the plan also requires, because Schwabe's areas are umbral
+   and mixing donors would plant a scale jump -- the verbatim window is that survey's
+   own span: RGO 1877-1969 by default. Everything outside it, early *and* late, is
+   resequenced from the same survey's complete cycles. Tested: inside that window the
+   truth reproduces RGO's daily reference-equivalent counts exactly over 24,219 days.
+
+4. **Break-detection skill is NaN for all seven baselines.** None of them attempts to
+   detect a career break, so POD, FAR and the Heidke score have nothing to score. The
+   metric is implemented and unit-tested so Steps 3-4 can be scored on it, and the
+   absence is reported as a result -- break attribution is one of the generalizations a
+   joint model adds -- rather than filled with a proxy.
+
+5. **Three of the five published GN series were acquired, not five.** Chatzistergos
+   et al. (2017) and Velasco Herrera et al. (2024) live at CDS/VizieR, which is
+   unreachable from this machine (connection timeout), and no alternative open source
+   was found. The three in hand were exported from the read-only 2017 MATLAB snapshot
+   rather than re-downloaded, which is better for the purpose: they are the exact bytes
+   the legacy analyses used. Recorded in `docs/04_data/refresh_todo.md`. The benchmark
+   does not consume any of them.
+
+6. **The A157 validation takes 16 seconds, not the 30-60 minutes the plan budgeted.**
+   The estimate was wrong by two orders of magnitude, so this runs in session rather
+   than being handed to the PI. The other three long stages stand as planned.
+
+7. **The module layout differs from the plan's Files table**, recorded here rather than
+   discovered at verification (Step 1's finding F5). Added: `benchmark/case_studies.py`
+   (the ten named observers, which the plan described but did not place),
+   `benchmark/progress.py` (resumable-run bookkeeping, which decision 10 requires to be
+   workable), `baselines/base.py` (the shared pairwise/chaining machinery) and
+   `baselines/nulls.py` (the two floors). The plan's `benchmark/generators/synthetic.py`
+   -- a second, model-based generator -- **was not written**: the replay generator
+   already supplies the four structural misspecifications of decision 6 through real
+   data, and a parametric second generator would have added a knob without adding a
+   departure from the Step 4 model. Stated as a reduction in scope, not an omission.
+
+8. **Only a two-world S1 slice was run in session** (decision 10). The full grid, the
+   S6 structural ensemble and the scenarios S2-S4 are the PI's to launch from the
+   documented commands; the results doc marks every number that comes from the slice.
