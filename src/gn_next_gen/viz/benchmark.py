@@ -103,7 +103,10 @@ def scores_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Figure:
             )
             ax.axvline(0.0, color=theme["grid"], linewidth=1.0, zorder=1)
             ax.set_yticks(positions)
-            ax.set_yticklabels(methods if ax is axes[0] else [])
+            # With sharey, blanking the labels on one axis blanks them on all of
+            # them, so hide the ticks per axis instead of emptying the list.
+            ax.set_yticklabels(methods)
+            ax.tick_params(labelleft=(ax is axes[0]))
             ax.set_xlabel(f"groups, {label}")
             ax.set_title(label, fontsize=9, color=theme["text_secondary"])
         axes[0].legend(loc="lower right", fontsize=7.5, frameon=False)
@@ -144,9 +147,10 @@ def amplitude_slope_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Fig
         ax.set_xlabel("slope of (estimated - true) cycle amplitude against true amplitude")
         ax.annotate(
             "amplifies strong cycles ->",
-            xy=(0.98, 0.04),
+            xy=(0.995, 1.02),
             xycoords="axes fraction",
             ha="right",
+            va="bottom",
             fontsize=7.5,
             color=theme["text_secondary"],
         )
