@@ -62,5 +62,11 @@ GN_EXTENSION_STATIONS = GN_OBSERVER_EXTENSION / "station_assignment.csv"
 # SILSO sunspot number: comparison only, never calibration (ADR-002, ADR-003).
 # The 2026-11 refresh runs to 2026-10; the 2018-era snapshot is retained and is in a
 # different format (comma-separated with a header, where SILSO ships semicolons).
+# --- Group-area law ---------------------------------------------------------
+# Weibull + log-normal per-survey calibration, frozen from sunspot-homogenization
+# and never refitted here (ADR-011).
+AREA_LAW = DATA_RAW / "area_law_2026-11"
+AREA_LAW_POSTERIOR = AREA_LAW / "solo_wln_posterior.csv"
+
 SILSO = DATA_RAW / "silso_2026-11"
 SILSO_2018 = DATA_RAW / "silso"

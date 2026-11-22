@@ -1,0 +1,22 @@
+{
+  "generated_utc": "2026-11-22T00:55:26+00:00",
+  "generated_by": "scripts/export_area_law.py",
+  "upstream": {
+    "repo": "/d0/amunozj/git_repos/sunspot-homogenization",
+    "commit": "9d6abd16d590eb67eb7fae215bb7f3afdfa0bffc",
+    "source_dir": "data/processed/calibration/solo_wln",
+    "license": "MIT"
+  },
+  "model": {
+    "form": "Weibull + log-normal mixture on log-area z = ln A",
+    "weight_convention": "pi_W weights the WEIBULL; the 2015 paper's c weights the LOG-NORMAL, so c = 1 - pi_W",
+    "grain": "one area per group (group_single_entry), column area_corr",
+    "truncation": "hard, at the per-survey threshold_MSH in reference_groups_2026-10/survey_calibration.csv (lifetime_divergence threshold, trunc_factor 10)",
+    "refit_here": false
+  },
+  "data_lineage": "Sunspot-derived only: per-survey group areas and their calibration. No isotope, aurora, proxy or SILSO input (ADR-002).",
+  "sha256": {
+    "solo_wln_posterior.csv": "f76900973b3bc3ad034402bf3dec430c16a4c8313dc8b461d5d42bf4ece3b825",
+    "README.md": "148a453514c037ad75fcea2de19d79cf857b9be72133e5dca0dd94fbab7aaede"
+  }
+}

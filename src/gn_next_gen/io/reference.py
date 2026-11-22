@@ -77,11 +77,26 @@ def load_group_days(
 def load_day_status(
     surveys: tuple[str, ...] | list[str] = STEP1_SURVEYS,
 ) -> pd.DataFrame:
-    """One row per (survey, day): ``day_status`` and the survey's own ``n_groups``."""
+    """One row per (survey, day): ``day_status``, ``n_groups`` and the daily areas.
+
+    ``area_total`` is the whole-Sun daily sunspot area and ``area_north``/``area_south``
+    its hemispheric parts; :func:`gn_next_gen.reference.activity_level` smooths them
+    into the activity level the group-area law depends on.  The hemispheric columns are
+    **diagnostic only** -- hemisphere assignment is positional, which ADR-004 bars as a
+    model input.
+    """
     surveys = _check_surveys(surveys)
     frame = pd.read_parquet(
         REFERENCE_DAY_STATUS,
-        columns=["survey", "date_ord", "day_status", "n_groups", "area_total"],
+        columns=[
+            "survey",
+            "date_ord",
+            "day_status",
+            "n_groups",
+            "area_total",
+            "area_north",
+            "area_south",
+        ],
     )
     return frame[frame["survey"].isin(surveys)].reset_index(drop=True)
 
@@ -108,7 +123,9 @@ def load_group_single_entry(
             "obs_duration",
             "group_obs_kind",
             "area_corr",
+            "area_corr_unc",
             "cycle",
+            "hemisphere",
         ],
     )
     frame = frame[frame["survey"].isin(surveys)]
