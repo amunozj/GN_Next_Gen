@@ -28,7 +28,9 @@ params:
   # Latent chain
   truncation_k: 41            # D17: P(GROUPS >= 41) < 1e-5 and above the reference max of 31
   area_classes: [1, 2]        # the 1-vs-2 class decision this check has to make
-  class_split_msh: 100.0      # observable split, so class membership is not latent
+  # The observable area split is NOT configured: it is computed per survey as the
+  # Weibull/log-normal crossover of the area law (ADR-011), so it cannot drift from
+  # the calibration.  Step 1 measures 79 MSH for rgo, 74 for debrecen, 129 for kmas.
   # A two-class chain squares the state space (41 -> 1,681), so it is fitted where
   # the decision rule reads it off rather than across the whole grid.
   two_class_thresholds: [30.0]

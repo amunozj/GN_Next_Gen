@@ -27,8 +27,8 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 # Run the filter on the CPU unless asked otherwise.  This is not a guess: at
-# T = 152,000 and K = 41 one likelihood evaluation measured 0.667 s on this machine's
-# CPU against 6.95 s on one A100 (scripts/benchmark_forward_filter.py, figure f12).
+# T = 152,000 and K = 41 one likelihood evaluation measured 0.67 s on this machine's
+# CPU against 3.19 s on one idle A100 (scripts/benchmark_forward_filter.py, figure f12).
 # A single-chain sequential scan with 41-vector bodies is latency-bound, so per-step
 # launch overhead dominates and the GPU loses by an order of magnitude; it wins only
 # for batched chains, which is a Step 4 concern.

@@ -25,7 +25,7 @@
 | Is there two-population structure in areas? | **Yes — Weibull (small objects) + log-normal (active regions)**, not two log-normals (ADR-011). The log-normal half tracks activity and reproduces the published power laws; the Weibull half does not move, and most of it lies below every survey's completeness threshold |
 | Does an immigration–death chain reproduce the reference's daily statistics? | **Partly.** It reproduces the count marginals (zero fraction, count distribution, run lengths) within target, and fails the rotation-dependent measures by 3–5×: the lag-13 trough, the lag-27 recurrence and the lifetime distribution. **Go, with an explicit rotation component required in Step 4** |
 | What should Step 4 use? | K = 41; φ is a **visible-residence** parameter, not an intrinsic lifetime; lifetimes need an explicit rotation kernel |
-| Is the forward filter affordable at full length? | **Yes, on CPU**: 0.667 s per evaluation at T = 152,000, K = 41. **Not on GPU**: 6.95 s, ten times slower |
+| Is the forward filter affordable at full length? | **Yes, on CPU**: 0.67 s per evaluation at T = 152,000, K = 41. **Not on GPU**: 3.19 s, nearly five times slower |
 
 ## 1. The data foundation
 
@@ -141,7 +141,8 @@ explicit marker so that a correct absence cannot be misread as missing data.
 **Figure f03** — The `GROUPS` tail of v1.3_4 and the robust quantiles that size the state space.
 The two implausible outliers sit above a tail that stops at 53, which is why **K** comes from a
 quantile plus the reference's own daily maximum and never from `max(GROUPS)` (**D17**). The rule's
-minimum is 39 here and was 41 for v1.3_3, so **K = 41** is stable across both releases.
+minimum is **39 under both releases** (`P(GROUPS ≥ 41)` is 6.4e-6 for `_4` and
+7.3e-6 for `_3`), and **K = 41** is adopted two above it, which costs nothing and leaves headroom.
 
 ### 1.4 A new issue: D23
 
@@ -214,7 +215,11 @@ large ones (bipolar active regions, multiplicative growth). Calibrated per surve
 That we are using it correctly is settled by one number: upstream fitted **one area per
 group**, hard-truncated at each survey's own completeness threshold, and its kept counts
 reproduce **exactly** from data already frozen here — RGO 16,880, Debrecen 8,306, KMAS
-15,662 — which fixes the grain, the area column and the threshold at once.
+15,662 — which fixes the grain, the area column and the threshold at once. One caveat the
+reproduction itself reveals: KMAS matches only with the **D22-colliding group ids kept in**
+(dropping them gives 15,401), so upstream's KMAS calibration includes 261 group-areas from
+ids that cover more than one physical group. It is a 1.7% contamination of one survey's
+area law, not of the counts, and Step 4 should know it is there.
 
 **Activity level** is a 182-day Gaussian on daily sunspot area, in mHem (ADR-011),
 whole-Sun so that it carries no positional information and may feed Step 4. Two
@@ -382,9 +387,9 @@ predicts: larger groups live longer, so a higher acuity cut selects a longer-liv
 | count-PMF total variation | 0.020 | 0.025 | 0.05 | **pass** |
 | dispersion-index error | 0.084 | 0.141 | 0.15 | **pass** |
 | run-length mean error | 0.035 | 0.093 | 0.15 | **pass** |
-| run-length KS | 0.048 | 0.077 | 0.05 | pass / marginal |
+| run-length KS | 0.047 | 0.077 | 0.05 | RGO pass, **Debrecen 54% over** |
 | **ACF RMSE, lags 1–30** | **0.157** | **0.147** | 0.05 | **3× over** |
-| **ACF trough at lag 13** | **0.222** | **0.207** | 0.05 | **4× over** |
+| **ACF trough at lag 13** | **0.221** | **0.206** | 0.05 | **4× over** |
 | **ACF recurrence at lag 27** | **0.262** | **0.225** | 0.05 | **5× over** |
 | **visible-duration KS** | **0.177** | **0.201** | 0.05 | **3.5× over** |
 | **≥13-day fraction, relative** | **0.571** | **0.490** | 0.20 | **2.5× over** |
@@ -458,10 +463,10 @@ The two populations really do have different visible residences, by a factor of 
 
 | | φ small | mean visible days | φ large | mean visible days |
 |---|---|---|---|---|
-| RGO | 0.390 | **1.6** | 0.835 | **6.1** |
-| Debrecen | 0.369 | **1.6** | 0.849 | **6.6** |
+| RGO | 0.389 | **1.6** | 0.834 | **6.0** |
+| Debrecen | 0.374 | **1.6** | 0.847 | **6.5** |
 
-And yet two classes score **worse**: aggregate +39.8% for RGO and +27.8% for Debrecen, against a
+And yet two classes score **worse**: aggregate +39.2% for RGO and +26.8% for Debrecen, against a
 bar of −25% to adopt them.
 
 The reason is measurable, not speculative. **54% of RGO's multi-day groups above T = 30 have days
@@ -499,11 +504,17 @@ Measured, replacing the research report's unbenchmarked estimates (`f12`):
 
 | states | T | CPU | one A100 |
 |---|---|---|---|
-| 41 | 10,000 | 0.042 s | 0.451 s |
-| 41 | 40,000 | 0.169 s | 1.826 s |
-| **41** | **152,000** | **0.667 s** | **6.950 s** |
-| 1,681 | 10,000 | 0.272 s | 0.644 s |
-| 1,681 | 40,000 | 1.093 s | 2.569 s |
+| 41 | 10,000 | 0.042 s | 0.210 s |
+| 41 | 40,000 | 0.169 s | 0.847 s |
+| **41** | **152,000** | **0.666 s** | **3.192 s** |
+| 1,681 | 10,000 | 0.272 s | 0.296 s |
+| 1,681 | 40,000 | 1.090 s | 1.191 s |
+
+> **Corrected at verification (2026-11-22).** The GPU column first published here was
+> **about 2.2× too slow** — 6.950 s at full length against 3.192 s — because it was measured
+> while the Check A grid was running. Re-measured twice on an idle machine with no other
+> process on the device, the timings above are stable to 0.002 s. The CPU column reproduced
+> unchanged. See `docs/results/step-1-verification.md`.
 
 <p align="center">
   <picture>
@@ -513,18 +524,20 @@ Measured, replacing the research report's unbenchmarked estimates (`f12`):
 </p>
 
 **Figure f12** — Measured forward-filter cost, CPU against one A100, by state count and series
-length. The research report's 0.2–1 s CPU estimate is **confirmed**; its 1–3 s single-chain GPU
-estimate is **wrong by 2–7×**. A sequential scan over 41-vector bodies is latency-bound, so
-per-step launch overhead dominates and the GPU loses by an order of magnitude at this shape.
+length. The research report's 0.2–1 s CPU estimate is **confirmed**, and its 1–3 s single-chain
+GPU estimate lands at the top of its range rather than outside it. A sequential scan over
+41-vector bodies is latency-bound, so per-step launch overhead dominates and the GPU is **4.8×
+slower than the CPU** at this shape — which is the decision that matters, not the absolute figure.
 
-The report estimated 0.2–1 s on CPU — **confirmed** — and 1–3 s single-chain on GPU, which is
-**wrong by 2–7×**. The report's own reasoning explains it: a sequential scan with 41-vector bodies
-is latency-bound, so per-step launch overhead dominates and the GPU loses by an order of magnitude.
-It should win for batched chains, which is what Step 4's blocked Gibbs needs, but that is now a
-thing to measure rather than assume.
+The report estimated 0.2–1 s on CPU — **confirmed** — and 1–3 s single-chain on GPU, which the
+corrected measurement puts at **3.19 s**: the top of the estimate's range, not beyond it. The
+report's reasoning still holds and is what matters here: a sequential scan with 41-vector bodies is
+latency-bound, so per-step launch overhead dominates and **the GPU is 4.8× slower than the CPU** at
+this shape. It should win for batched chains, which is what Step 4's blocked Gibbs needs, but that
+is now a thing to measure rather than assume.
 
-**Acted on in this step:** Check A pins itself to the CPU by default, which is a tenfold saving on
-the step's own compute.
+**Acted on in this step:** Check A pins itself to the CPU by default, which is a near-fivefold
+saving on the step's own compute.
 
 ## 5. Settings handed to Step 4
 
@@ -535,11 +548,11 @@ the step's own compute.
 | Area law for `q_o` | the **per-group-day** fit, or the per-group law shifted by −0.19 to −0.26 in `μ` | The published law is per group and uses peak areas; `q_o` averages over instantaneous areas on the disk (§2.4) |
 | Trustworthy threshold band | **T ≥ 30 MSH** | The surveys' own completeness thresholds are 20.4–28.1 MSH and the Weibull component peaks near 6 MSH, so T = 0 and T = 10 sample a regime that measures the instrument as much as the Sun (D14) |
 | Two area classes, if used | split at the **Weibull/log-normal crossover** — RGO 79, Debrecen 74, KMAS 129 MSH | A round number was arbitrary; the crossover is where the two populations actually separate |
-| Truncation **K** | **41** | Smallest K with `P(GROUPS ≥ K) < 1e-5` that exceeds the reference's largest daily count (31, KMAS). v1.3_4's rule minimum is 39, v1.3_3's was 41, so 41 is stable across both releases (`f03`) |
+| Truncation **K** | **41** | Satisfies the rule — smallest K with `P(GROUPS ≥ K) < 1e-5` exceeding the reference's largest daily count (31, KMAS) — with margin. The rule's minimum is **39 under both releases**; 41 is adopted two above it (`f03`). A first version of this row said _3's minimum was 41; verification could not reproduce that, and the adopted value is unaffected |
 | Per-class K, two classes | 21 | 441 joint states; the sum still reaches 40 |
 | Lifetime parametrization | geometric survival **times an explicit rotation kernel — now required, not optional** | `obs_duration` is a disk-passage-censored *span* (`f06`), and Check A shows a chain without rotation misses the lag-13 trough, the lag-27 recurrence and the lifetime distribution by 3–5× |
 | Fitted φ to expect | 0.78–0.85, rising with acuity threshold | Mean visible residence 4.6–6.5 days against an observed median of 5–6 |
-| Area classes | **one**; if two are ever used they must **exchange members** | The two populations do differ in visible residence (1.6 against 6.1 days), but 54% of multi-day groups cross the split, so independent chains invent emergences and score 28–40% worse (§3) |
+| Area classes | **one**; if two are ever used they must **exchange members** | The two populations do differ in visible residence (1.6 against 6.0 days), but 54% of multi-day groups cross the split, so independent chains invent emergences and score 27–39% worse (§3) |
 | Anchors | unchanged (ADR-009) | |
 | Device for single-chain filtering | **CPU** | Measured, section 4 |
 

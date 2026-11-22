@@ -317,8 +317,8 @@ def groups_tail_figure(mode: str = "light") -> plt.Figure:
         caption(
             fig,
             "D17: K comes from a robust quantile and the reference's own daily maximum, "
-            "never from max(GROUPS). The rule's minimum is 39 here and was 41 for v1.3_3, "
-            "so 41 is stable across both releases.",
+            "never from max(GROUPS). The rule's minimum is 39 under both releases, and "
+            "K = 41 is adopted two above it.",
             mode,
         )
     return fig

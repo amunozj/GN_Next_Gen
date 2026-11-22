@@ -433,6 +433,17 @@ Recorded as they arise, per `CLAUDE.md`'s workflow.
    from the measured magnitudes. The results doc says so explicitly.
 3. **Schwabe is excluded from Step 1 as well as Spörer** (PI decision, 2026-11-21), so Check A and Check B
    cover 1874–2026 and no pre-1874 reference statistics are produced in this step. D23 carries the reason.
+4. **Six planned files were never created, and the work was re-homed** — found at verification
+   (2026-11-22, finding F5), not recorded at the time. `io/observers.py` → `io/observations.py::load_observers`;
+   `reference/counts.py` → `io/reference.py::daily_counts`; `reference/lifetimes.py` → `load_group_single_entry`'s
+   `obs_duration` plus the check script's own helper; `reference/areas.py` → `reference/area_law.py` and
+   `area_fit.py` under Revision 1; `scripts/land_gn_database_v134.py` → `convert_gn_database_v13.py --release`
+   under ADR-010. **`scripts/build_interim_cache.py` was never written at all**: caching is lazy inside the
+   loaders, keyed by manifest checksums, with three tests. The Files table above is therefore the plan's
+   intent, not the delivered layout, and the plan's verification step 5 names a script that does not exist.
+5. **`class_split_msh` survived Revision 1** (finding F6). Revision 1 specified replacing it with the computed
+   crossover and its outcome section reports it as found, but the key stayed in `configs/step1_check_a.yaml`
+   at its arbitrary 100.0 until verification removed it. Nothing read it.
 
 
 ---

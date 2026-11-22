@@ -219,8 +219,9 @@ def test_d17_robust_truncation_rule(obs):
     """K = 41 satisfies the plan's rule under this release, and under _3.
 
     Rule: the smallest K with P(GROUPS >= K) < 1e-5, and K above the largest
-    reference daily count (31, KMAS). _4's minimum is 39 and _3's was 41, so 41 is
-    the value stable across both releases -- which is why the plan adopted it.
+    reference daily count (31, KMAS). The rule's minimum is 39 under both releases --
+    verification (2026-11-22) could not reproduce an earlier claim of 41 for _3 -- so
+    K = 41 sits two above the minimum, with margin and at no cost.
     """
     groups = obs.loc[obs["STATION"] > 0, "GROUPS"]
     k = 41
