@@ -1,0 +1,55 @@
+# Step 2 -- the blind benchmark's worlds.  See docs/plans/step-2-plan.md.
+#
+# Scenario definitions live in gn_next_gen.benchmark.scenarios, not here, because
+# they are structure rather than configuration: S3 is "a grand minimum inserted by
+# deleting whole groups", and that is code.  What is configurable is which
+# scenarios run, how many realizations each gets, and the seed everything
+# descends from.
+name: step2_benchmark
+variant: sunspot_only
+seed: 20261122
+
+release: v1.3_4
+duplicate_rule: max
+kmas_role: reference        # ADR-009 single-use: KMAS is reference areas here
+surveys: [rgo, debrecen, kmas]
+thresholds: [30.0]          # D14: T >= 30 MSH is the trustworthy band
+
+datasets:
+  - path: reference_groups_2026-10
+    role: calibration       # the truth is built from the reference catalogues
+    kind: sunspot
+  - path: gn_database_v1.3
+    role: calibration       # real observing calendars are transplanted from it
+    kind: sunspot
+  - path: gn_observer_extension_2026-10
+    role: calibration
+    kind: sunspot
+  - path: area_law_2026-11
+    role: diagnostic
+    kind: sunspot
+  - path: silso_2026-11
+    role: comparison        # never calibration (ADR-002, ADR-003)
+    kind: silso
+
+params:
+  # Which scenarios to generate, and how many worlds each gets.  S6 is absent on
+  # purpose: a structural ensemble perturbs the *method's* free choices, so it
+  # reuses S2's worlds and lives in step2_baselines.yaml.
+  scenarios:
+    S1: 20
+    S2: 10
+    S3: 10
+    S4: 10
+    S5: 1
+  # Seeds are seed + scenario_offset + realization, so changing one scenario's
+  # count never reshuffles another's worlds.
+  scenario_seed_offsets:
+    S1: 0
+    S2: 1000
+    S3: 2000
+    S4: 3000
+    S5: 4000
+  donor_survey: rgo         # one donor per realization; see replay.py on why
+  anchoring: rgo_15_19      # ADR-009 secondary anchor; debrecen_21_23 is the other
+  min_calendar_days: 50

@@ -80,7 +80,8 @@ class ObserverParams:
         Career-median acuity: the area detected half the time, in MSH.
     softness
         Logistic width in log-area.  Small is nearly a hard threshold, which is
-        the limiting case the legacy ADF method assumes.
+        the limiting case the legacy ADF method assumes; **zero is exactly one**,
+        which is what the reference observer uses.
     seeing_sigma
         Per-day, per-group multiplicative noise on area, in log units.
     p_split, p_merge
@@ -142,8 +143,16 @@ class ObserverParams:
 class ObservedNetwork:
     """What the methods get to see, and what they do not.
 
-    ``observations`` and ``statements`` are open; ``parameters`` and
-    ``thresholds`` are sealed and written to the sealed root.
+    ``observations``, ``statements``, ``metadata`` and ``reference_areas`` are
+    open; ``parameters`` and ``thresholds`` are sealed.
+
+    ``reference_areas`` is the anchor survey's own per-group area catalogue, on
+    the reference observer's own days.  It is **open on purpose**: in the real
+    application RGO's and Debrecen's catalogues are published, the estimand is
+    defined from them (ADR-003), and UEA21 and CEA17 cannot exist without them --
+    UEA21 builds its acuity library by rethresholding exactly this table.  It
+    covers only the anchored epoch, which is 14% of the record, so it tells a
+    method nothing about 1610-1874.
     """
 
     observations: pd.DataFrame
@@ -151,6 +160,7 @@ class ObservedNetwork:
     parameters: pd.DataFrame
     thresholds: pd.DataFrame
     metadata: pd.DataFrame = field(default_factory=pd.DataFrame)
+    reference_areas: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def threshold_trajectory(
@@ -226,10 +236,20 @@ def observe_one(
         seen = np.log(flat_areas)
         if params.seeing_sigma > 0:
             seen = seen + rng.normal(0.0, params.seeing_sigma, size=len(seen))
-        # expit, not 1/(1+exp(-x)): a near-hard threshold makes the exponent
-        # huge and the naive form overflows exactly where ADF's limiting case lives.
-        probability = expit((seen - np.log(theta)) / params.softness)
-        detected = rng.random(len(probability)) < probability
+        if params.softness <= 0:
+            # A true step, not a very steep logistic.  The reference observer
+            # *defines* the estimand (ADR-003), so it must count exactly what
+            # Truth.reference_counts counts -- strictly greater, the convention
+            # used throughout.  A softness of 1e-3 left ~0.2% of days a coin flip
+            # for areas within 1% of the threshold, which is fine for an observer
+            # and not fine for the yardstick.
+            detected = seen > np.log(theta)
+        else:
+            # expit, not 1/(1+exp(-x)): a near-hard threshold makes the exponent
+            # huge and the naive form overflows exactly where ADF's limiting
+            # case lives.
+            probability = expit((seen - np.log(theta)) / params.softness)
+            detected = rng.random(len(probability)) < probability
         # bincount, not add.reduceat: a day with no visible group gives an empty
         # slice, and reduceat rejects a start index equal to the array length.
         day_index = np.repeat(np.arange(len(days)), per_day)

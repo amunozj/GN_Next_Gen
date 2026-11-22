@@ -73,15 +73,53 @@ def test_fitting_code_does_not_import_the_truth_module(package):
     assert offenders == [], f"{package} reaches truth: {offenders}"
 
 
+def _sealed_references(path: Path) -> list[str]:
+    """Code (not prose) in a file that names the sealed half.
+
+    A docstring explaining *why* a module must not read truth is not a leak, and
+    an earlier version of this test failed on exactly that.  So: identifiers and
+    runtime string constants only, with docstrings excluded.
+    """
+    tree = ast.parse(path.read_text())
+    docstrings = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            doc = ast.get_docstring(node, clean=False)
+            if doc is not None:
+                docstrings.add(doc)
+
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and "sealed" in node.id:
+            found.append(node.id)
+        elif isinstance(node, ast.Attribute) and "sealed" in node.attr:
+            found.append(node.attr)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if "sealed" in node.value and node.value not in docstrings:
+                found.append(node.value[:40])
+    return found
+
+
 @pytest.mark.parametrize("package", BLIND_PACKAGES)
 def test_fitting_code_never_names_the_sealed_directory(package):
-    """Even a string literal is a leak waiting to happen."""
-    offenders = [
-        str(path.relative_to(SRC))
+    """A string literal or an identifier is a leak waiting to happen."""
+    offenders = {
+        str(path.relative_to(SRC)): names
         for path in _python_files(package)
-        if "sealed" in path.read_text()
-    ]
-    assert offenders == [], f"{package} names the sealed half: {offenders}"
+        if (names := _sealed_references(path))
+    }
+    assert offenders == {}, f"{package} names the sealed half in code: {offenders}"
+
+
+def test_the_blindness_audit_would_catch_a_real_leak(tmp_path):
+    """The guard needs its own guard: prose passes, code does not."""
+    prose = tmp_path / "prose.py"
+    prose.write_text('"""This module must never read the sealed truth."""\n')
+    assert _sealed_references(prose) == []
+
+    leak = tmp_path / "leak.py"
+    leak.write_text("from gn_next_gen.benchmark.store import sealed_dir\nx = sealed_dir\n")
+    assert _sealed_references(leak)
 
 
 def test_only_the_declared_modules_read_truth():

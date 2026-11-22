@@ -31,7 +31,12 @@ from gn_next_gen.paths import OUTPUTS
 #: Default root for generated worlds.  Git-ignored, like everything in outputs/.
 BENCHMARK_ROOT = OUTPUTS / "benchmark"
 
-OPEN_FILES = ("observations.parquet", "statements.parquet", "metadata.parquet")
+OPEN_FILES = (
+    "observations.parquet",
+    "statements.parquet",
+    "metadata.parquet",
+    "reference_areas.parquet",
+)
 SEALED_FILES = ("groups.parquet", "group_days.parquet", "observer_parameters.parquet")
 
 
@@ -71,6 +76,7 @@ def write_dataset(
     network.observations.to_parquet(opened / "observations.parquet", index=False)
     network.statements.to_parquet(opened / "statements.parquet", index=False)
     network.metadata.to_parquet(opened / "metadata.parquet", index=False)
+    network.reference_areas.to_parquet(opened / "reference_areas.parquet", index=False)
 
     write_truth(truth, sealed)
     network.parameters.to_parquet(sealed / "observer_parameters.parquet", index=False)
@@ -112,6 +118,13 @@ def read_statements(scenario: str, seed: int, *, root: Path | str = BENCHMARK_RO
 def read_metadata(scenario: str, seed: int, *, root: Path | str = BENCHMARK_ROOT) -> pd.DataFrame:
     """Documented breaks -- the only observer truth a method may legitimately use."""
     return pd.read_parquet(open_dir(scenario, seed, root=root) / "metadata.parquet")
+
+
+def read_reference_areas(
+    scenario: str, seed: int, *, root: Path | str = BENCHMARK_ROOT
+) -> pd.DataFrame:
+    """The anchor survey's published catalogue. Open -- see ObservedNetwork."""
+    return pd.read_parquet(open_dir(scenario, seed, root=root) / "reference_areas.parquet")
 
 
 def read_sealed_truth(scenario: str, seed: int, *, root: Path | str = BENCHMARK_ROOT) -> Truth:

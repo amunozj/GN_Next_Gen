@@ -39,7 +39,11 @@ from gn_next_gen.benchmark.observers import (
     draw_population,
     observe,
 )
-from gn_next_gen.benchmark.truth import Truth
+from gn_next_gen.benchmark.truth import ANCHORINGS, Truth
+
+#: Station id of the reference observer.  Far above any real station number so it
+#: cannot collide with a transplanted calendar.
+REFERENCE_STATION = 9001
 
 
 def _ord(year: int, month: int = 1, day: int = 1) -> int:
@@ -134,12 +138,39 @@ SCENARIOS: dict[str, Scenario] = {
 STRUCTURAL_ENSEMBLE_SOURCE = "S2"
 
 
+def reference_calendar(anchoring: str) -> np.ndarray:
+    """The anchor epoch's own observing days.
+
+    ADR-003 defines GN as the count a **fixed reference observer** would have
+    made, and ADR-009 fixes that observer as a survey over whole cycles.  The
+    reference is therefore an observer in the network like any other, with a real
+    calendar covering only its own epoch -- which is what makes the benchmark
+    hard: every method has to carry the anchor's scale out to 1610 along the
+    overlap graph, and that carrying is what the scorer measures.
+    """
+    import pandas as pd
+
+    from gn_next_gen.io import load_day_status
+    from gn_next_gen.paths import REFERENCE_CYCLE_COVERAGE
+
+    spec = ANCHORINGS[anchoring]
+    coverage = pd.read_csv(REFERENCE_CYCLE_COVERAGE)
+    rows = coverage[(coverage["survey"] == spec["survey"]) & coverage["cycle"].isin(spec["cycles"])]
+    low, high = int(rows["first_ord"].min()), int(rows["last_ord"].max())
+
+    status = load_day_status(surveys=[spec["survey"]])
+    observed = status[
+        (status["day_status"] > 0) & (status["date_ord"] >= low) & (status["date_ord"] <= high)
+    ]
+    return np.sort(observed["date_ord"].to_numpy(dtype=np.int64))
+
+
 def _perfect(params: ObserverParams, threshold: float) -> ObserverParams:
     """Strip every detection effect, leaving only the calendar."""
     return replace(
         params,
         base_threshold_msh=threshold,
-        softness=1e-3,
+        softness=0.0,
         seeing_sigma=0.0,
         p_split=0.0,
         p_merge=0.0,
@@ -203,11 +234,42 @@ def build_realization(
             _with_synchronous_break(p, when, jump, calendars[p.station]) for p in population
         ]
 
+    # The reference observer joins the network, openly declared.  It is the one
+    # observer whose scale every method may assume (ADR-003), and it sees only
+    # its own epoch.
+    anchor_days = reference_calendar(scenario.anchoring)
+    inside = (anchor_days >= scenario.first_ord) & (anchor_days <= scenario.last_ord)
+    anchor_days = anchor_days[inside]
+    if len(anchor_days) == 0:
+        raise ValueError(
+            f"anchoring {scenario.anchoring!r} has no observing day inside "
+            f"{scenario.first_ord}-{scenario.last_ord}"
+        )
+    calendars = {**calendars, REFERENCE_STATION: anchor_days}
+    population = [
+        *population,
+        replace(
+            _perfect(
+                ObserverParams(REFERENCE_STATION, truth.reference_threshold_msh),
+                truth.reference_threshold_msh,
+            ),
+            kind="reference",
+        ),
+    ]
+
     network = observe(truth, population, calendars, rng)
+
+    # The anchor survey's catalogue, as published data rather than as truth.
+    visible = truth.group_days[truth.group_days["date_ord"].isin(set(anchor_days.tolist()))]
+    network.reference_areas = visible.rename(columns={"area_msh": "area_msh"}).reset_index(
+        drop=True
+    )
+
     config = {
         **scenario.as_dict(),
         "seed": seed,
         "n_observers": len(population),
         "n_groups": truth.n_groups,
+        "reference_station": REFERENCE_STATION,
     }
     return truth, network, config

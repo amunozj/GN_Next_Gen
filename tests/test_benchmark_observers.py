@@ -276,7 +276,9 @@ def test_all_ten_case_studies_are_placed_in_a_real_scenario():
 
     scenario = SCENARIOS["S1"]
     _truth, network, _config = build_realization(scenario, seed=1)
-    kinds = set(network.parameters["kind"]) - {"population"}
+    # "reference" is the anchor observer the scenario adds (ADR-003); it is not
+    # a case study and is not drawn from the population.
+    kinds = set(network.parameters["kind"]) - {"population", "reference"}
     assert kinds == set(CASE_STUDY_KINDS)
 
 
