@@ -151,31 +151,46 @@ def test_check_figures_build_in_both_modes(acf_table, score_table, mode):
     plt.close(checks.zero_and_counts_figure(bins, pmf, runs, mode))
     plt.close(checks.scores_figure(score_table, mode))
 
-    percentiles = pd.DataFrame(
-        {
-            "epoch": ["a", "b"],
-            "p10": [1.5, 1.5],
-            "p50": [2.0, 2.0],
-            "p90": [2.6, 2.6],
-            "above_30_fraction": [0.7, 0.72],
-        }
-    )
-    areas = {
-        "a": np.random.default_rng(0).lognormal(4.6, 1.4, 2000),
-        "b": np.random.default_rng(1).lognormal(4.6, 1.4, 2000),
-    }
-    plt.close(checks.area_distribution_figure(areas, percentiles, mode))
+    # The Check B figures: the law itself, and its activity dependence.
+    from gn_next_gen.reference.area_law import AreaLawParams
 
-    mixtures = pd.DataFrame(
+    base = AreaLawParams(
+        survey="rgo",
+        k_W=0.45,
+        log_lambda_W=float(np.log(5.7)),
+        mu_LN=5.47,
+        sigma_LN=0.89,
+        pi_W=0.79,
+        sigma_floor=0.17,
+        threshold_msh=28.08,
+    )
+    rng = np.random.default_rng(0)
+    groups = pd.DataFrame({"area_corr": rng.lognormal(5.47, 0.89, 3000)})
+    plt.close(checks.area_law_figure({"rgo": (groups, base)}, None, mode))
+
+    stage2 = pd.DataFrame(
         {
-            "epoch": ["a", "b"],
-            "delta_bic": [12.0, -3.0],
-            "mu1": [1.6, 1.62],
-            "mu2": [2.4, 2.38],
-            "weight1": [0.4, 0.42],
+            "survey": ["rgo"] * 5 + ["kmas"] * 5,
+            "activity": list(np.linspace(0.05, 0.5, 5)) * 2,
+            "mu_LN": list(np.linspace(5.4, 5.7, 5)) * 2,
+            "sigma_LN": list(np.linspace(0.85, 0.95, 5)) * 2,
+            "c_LN": list(np.linspace(0.2, 0.4, 5)) * 2,
+            "n_groups": [1500] * 10,
         }
     )
-    plt.close(checks.mixture_figure(mixtures, mode))
+    power = pd.DataFrame(
+        {
+            "survey": ["rgo", "rgo", "rgo", "kmas", "kmas", "kmas"],
+            "parameter": ["mu_LN", "sigma_LN", "c_LN"] * 2,
+            "a": [5.7, 0.94, 0.23, 5.9, 0.97, 0.34],
+            "b": [0.025, 0.03, 0.057, 0.021, 0.109, 0.289],
+        }
+    )
+    gate = [
+        {"survey": "rgo", "parameter": "k_W", "spearman_rho": -0.1},
+        {"survey": "rgo", "parameter": "lambda_W", "spearman_rho": 0.2},
+    ]
+    plt.close(checks.activity_dependence_figure(stage2, power, gate, mode))
 
     timings = pd.DataFrame(
         {

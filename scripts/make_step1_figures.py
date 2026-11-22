@@ -72,30 +72,30 @@ def build_check_figures(out_dir: Path, check_a: Path, check_b: Path, benchmark: 
     else:
         print(f"  skipping f07-f09: no Check A output in {check_a}")
 
-    if (check_b / "percentiles.csv").is_file():
-        from gn_next_gen.io import load_group_days
+    if (check_b / "stage2_fixed_weibull.csv").is_file():
+        from gn_next_gen.io import load_group_single_entry
+        from gn_next_gen.reference.area_law import load_upstream_parameters
 
-        percentiles = pd.read_csv(check_b / "percentiles.csv")
-        mixtures = pd.read_csv(check_b / "mixtures.csv")
-        groups = load_group_days(columns=["survey", "group_id", "date_ord", "area_corr", "cycle"])
-        import yaml
+        stage2 = pd.read_csv(check_b / "stage2_fixed_weibull.csv")
+        power = pd.read_csv(check_b / "power_laws.csv")
+        gate = pd.read_csv(check_b / "weibull_gate.csv").to_dict("records")
+        surveys = list(dict.fromkeys(stage2["survey"]))
 
-        from gn_next_gen.paths import CONFIGS
+        prepared = {}
+        for survey in surveys:
+            base = load_upstream_parameters(survey)
+            groups = load_group_single_entry([survey])
+            prepared[survey] = (groups[groups["area_corr"] > base.threshold_msh], base)
 
-        epochs = yaml.safe_load((CONFIGS / "step1_check_b.yaml").read_text())["params"]["epochs"]
-        epoch_areas = {
-            name: groups[
-                (groups["survey"] == spec["survey"]) & (groups["cycle"].isin(spec["cycles"]))
-            ]["area_corr"].to_numpy()
-            for name, spec in epochs.items()
-        }
         written += save_both_modes(
-            lambda mode: checks.area_distribution_figure(epoch_areas, percentiles, mode),
+            lambda mode: checks.area_law_figure(prepared, None, mode),
             out_dir,
-            "f10_checkB_areas",
+            "f10_checkB_area_law",
         )
         written += save_both_modes(
-            lambda mode: checks.mixture_figure(mixtures, mode), out_dir, "f11_checkB_mixtures"
+            lambda mode: checks.activity_dependence_figure(stage2, power, gate, mode),
+            out_dir,
+            "f11_checkB_activity",
         )
     else:
         print(f"  skipping f10-f11: no Check B output in {check_b}")

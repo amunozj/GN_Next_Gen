@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from gn_next_gen.reference.area_law import PUBLISHED_2015
 from gn_next_gen.stats.discrepancy import TARGETS
 from gn_next_gen.viz.style import (
     SURVEY_COLORS,
@@ -24,6 +25,13 @@ from gn_next_gen.viz.style import (
 )
 
 SURVEY_LABELS = {"rgo": "RGO", "debrecen": "Debrecen", "kmas": "KMAS"}
+
+#: The 2015 published power laws, for overlay. Keys match the fitted parameter names.
+PUBLISHED_TARGETS = {
+    "mu_LN": PUBLISHED_2015["mu_LN"],
+    "sigma_LN": PUBLISHED_2015["sigma_LN"],
+    "c_LN": PUBLISHED_2015["c_LN"],
+}
 TROUGH_LAG, BUMP_LAG = 13, 27
 
 
@@ -252,119 +260,176 @@ def scores_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Figure:
     return fig
 
 
-def area_distribution_figure(
-    epoch_areas: dict, percentiles: pd.DataFrame, mode: str = "light"
-) -> plt.Figure:
-    """f10 -- Check B: log-area distributions and percentile ladders by epoch."""
+def area_law_figure(prepared: dict, stage2: dict, mode: str = "light") -> plt.Figure:
+    """f10 -- the fitted Weibull + log-normal law against the data, per survey.
+
+    The panel that retires the two-log-normal form: the small-object component is a
+    left-skewed Gumbel in log-area, not a second Gaussian, and most of it sits below
+    each survey's own truncation threshold -- which is why that regime cannot be read
+    as solar structure.
+    """
+    from gn_next_gen.reference.area_law import log_pdf_latent, log_pdf_weibull, z_grid
+
     theme = palette(mode)
-    epochs = list(epoch_areas)
-    colors = sequential_colors(len(epochs), mode)
+    surveys = list(prepared)
     with figure_style(mode):
-        fig, axes = plt.subplots(1, 3, figsize=(11.5, 4.0))
-
-        ax = axes[0]
-        # Coarse enough that sampling noise does not read as structure.
-        grid = np.linspace(0.5, 4.0, 71)
-        for epoch, colour in zip(epochs, colors, strict=True):
-            values = np.log10(np.asarray(epoch_areas[epoch], dtype=float))
-            values = values[np.isfinite(values)]
-            if len(values) < 50:
-                continue
-            density = np.histogram(values, bins=grid, density=True)[0]
-            ax.plot(grid[:-1], density, color=colour, label=epoch.replace("_", " "))
-        ax.set_xlabel(r"$\log_{10}$ area_corr (MSH)")
-        ax.set_ylabel("density")
-        ax.set_title("Area distribution by epoch")
-        ax.legend(loc="upper left", fontsize=7.5)
-
-        ax = axes[1]
-        for percentile, marker in ((10, "v"), (50, "o"), (90, "^")):
-            column = f"p{percentile}"
-            if column not in percentiles:
-                continue
-            ax.plot(
-                range(len(percentiles)),
-                percentiles[column],
-                marker=marker,
-                color=sequential_colors(3, mode)[{10: 0, 50: 1, 90: 2}[percentile]],
-                label=f"{percentile}th percentile",
-            )
-        ax.set_xticks(range(len(percentiles)))
-        ax.set_xticklabels([e.replace("_", "\n") for e in percentiles["epoch"]], fontsize=7)
-        ax.set_ylabel(r"$\log_{10}$ area (MSH)")
-        ax.set_title("Percentile ladder, area $\\geq$ 30 MSH")
-        ax.legend(loc="upper left", fontsize=7.5)
-
-        ax = axes[2]
-        if "above_30_fraction" in percentiles:
-            ax.plot(
-                range(len(percentiles)),
-                percentiles["above_30_fraction"],
-                marker="o",
+        fig, axes = plt.subplots(1, len(surveys), figsize=(3.8 * len(surveys), 4.1), sharey=True)
+        axes = np.atleast_1d(axes)
+        for ax, survey in zip(axes, surveys, strict=True):
+            groups, base = prepared[survey]
+            grid = z_grid(2048)
+            areas = np.log(groups["area_corr"].to_numpy())
+            ax.hist(
+                areas,
+                bins=60,
+                density=True,
+                histtype="stepfilled",
                 color=role_color("observed", mode),
+                alpha=0.28,
+                linewidth=0,
+                label="observed, above threshold",
             )
-            ax.set_xticks(range(len(percentiles)))
-            ax.set_xticklabels([e.replace("_", "\n") for e in percentiles["epoch"]], fontsize=7)
-            ax.set_ylabel("fraction of groups above 30 MSH")
-            ax.set_title("What the detection layer actually consumes")
+
+            # Renormalize the latent law onto the retained support for comparison.
+            density = np.exp(
+                log_pdf_latent(
+                    grid, base.k_W, base.log_lambda_W, base.mu_LN, base.sigma_LN, base.pi_W
+                )
+            )
+            keep = grid > np.log(base.threshold_msh)
+            norm_const = np.trapezoid(density[keep], grid[keep])
+            ax.plot(
+                grid[keep],
+                density[keep] / norm_const,
+                color=role_color("simulated", mode),
+                label="Weibull + log-normal",
+            )
+
+            weibull = base.pi_W * np.exp(log_pdf_weibull(grid, base.k_W, base.log_lambda_W))
+            lognormal = (
+                (1 - base.pi_W)
+                * np.exp(-0.5 * ((grid - base.mu_LN) / base.sigma_LN) ** 2)
+                / (base.sigma_LN * np.sqrt(2 * np.pi))
+            )
+            ax.plot(
+                grid,
+                weibull / norm_const,
+                color=role_color("alternative", mode),
+                linestyle=(0, (4, 2)),
+                linewidth=1.5,
+                label="Weibull (small objects)",
+            )
+            ax.plot(
+                grid,
+                lognormal / norm_const,
+                color=theme["categorical"][6],
+                linestyle=(0, (2, 2)),
+                linewidth=1.5,
+                label="log-normal (active regions)",
+            )
+
+            ax.axvline(
+                np.log(base.threshold_msh),
+                color=theme["text_secondary"],
+                linestyle=(0, (4, 3)),
+                linewidth=1.1,
+            )
+            ax.annotate(
+                f"threshold\n{base.threshold_msh:.0f} MSH",
+                xy=(np.log(base.threshold_msh) - 0.15, 0.92),
+                xycoords=("data", "axes fraction"),
+                ha="right",
+                fontsize=7.5,
+                color=theme["text_secondary"],
+            )
+            ax.set_xlim(0, 9)
+            ax.set_ylim(0, None)
+            ax.set_xlabel(r"$\ln$ area (MSH)")
+            ax.set_title(SURVEY_LABELS.get(survey, survey))
+            if survey == surveys[0]:
+                ax.set_ylabel("density")
+                ax.legend(loc="upper right", fontsize=7)
         caption(
             fig,
-            "Check B asks about the functional the detection model uses, not about the "
-            "whole distribution: q_o is an expectation of the acuity curve over this law.",
+            "Two populations, and they are not two log-normals: most of the Weibull "
+            "component lies below each survey's own completeness threshold, so counts "
+            "from that regime measure the instrument as much as the Sun.",
             mode,
         )
-        del theme
     return fig
 
 
-def mixture_figure(mixtures: pd.DataFrame, mode: str = "light") -> plt.Figure:
-    """f11 -- one- against two-component lognormal fits per epoch, and their drift."""
+def activity_dependence_figure(
+    stage2: pd.DataFrame, power_laws: pd.DataFrame, gate_rows: list, mode: str = "light"
+) -> plt.Figure:
+    """f11 -- the log-normal moves with activity, the Weibull does not."""
     theme = palette(mode)
+    surveys = list(dict.fromkeys(stage2["survey"]))
+    panels = ("mu_LN", "sigma_LN", "c_LN")
+    titles = {
+        "mu_LN": r"log-normal mean $\mu$",
+        "sigma_LN": r"log-normal width $\sigma$",
+        "c_LN": "log-normal weight $c$",
+    }
+
     with figure_style(mode):
-        fig, axes = plt.subplots(1, 3, figsize=(11.0, 3.8))
-        epochs = list(mixtures["epoch"])
-        positions = np.arange(len(epochs))
+        fig, axes = plt.subplots(1, 4, figsize=(13.0, 3.9))
+        grid = np.linspace(0.02, 0.6, 100)
 
-        ax = axes[0]
-        ax.bar(positions, mixtures["delta_bic"], width=0.6, color=role_color("observed", mode))
-        ax.axhline(0, color=theme["grid"], linewidth=0.8)
-        ax.set_xticks(positions)
-        ax.set_xticklabels([e.replace("_", "\n") for e in epochs], fontsize=7)
-        ax.set_ylabel("BIC(1) − BIC(2)")
-        ax.set_title("Positive favours two populations")
-
-        ax = axes[1]
-        for index, (column, label) in enumerate(
-            (("mu1", "small component"), ("mu2", "large component"))
-        ):
-            if column in mixtures:
+        for ax, name in zip(axes[:3], panels, strict=True):
+            for survey in surveys:
+                sub = stage2[stage2["survey"] == survey]
                 ax.plot(
-                    positions,
-                    mixtures[column],
+                    sub["activity"],
+                    sub[name],
                     marker="o",
-                    color=sequential_colors(2, mode)[index],
-                    label=label,
+                    markersize=4.5,
+                    linestyle="none",
+                    color=SURVEY_COLORS[mode].get(survey, theme["categorical"][6]),
+                    label=SURVEY_LABELS.get(survey, survey),
                 )
-        ax.set_xticks(positions)
-        ax.set_xticklabels([e.replace("_", "\n") for e in epochs], fontsize=7)
-        ax.set_ylabel(r"component mean, $\log_{10}$ MSH")
-        ax.set_title("Do the components move?")
-        ax.legend(loc="upper left", fontsize=7.5)
+                law = power_laws[
+                    (power_laws["survey"] == survey) & (power_laws["parameter"] == name)
+                ]
+                if len(law):
+                    row = law.iloc[0]
+                    ax.plot(
+                        grid,
+                        row["a"] * grid ** row["b"],
+                        linewidth=1.3,
+                        color=SURVEY_COLORS[mode].get(survey, theme["categorical"][6]),
+                    )
+            published = PUBLISHED_TARGETS.get(name)
+            if published:
+                ax.plot(
+                    grid,
+                    published[0] * grid ** published[1],
+                    color=theme["text_secondary"],
+                    linestyle=(0, (4, 3)),
+                    linewidth=1.6,
+                    label="published (2015)",
+                )
+            ax.set_xscale("log")
+            ax.set_xlabel("activity level (mHem)")
+            ax.set_title(titles[name])
+            if name == "mu_LN":
+                ax.legend(loc="upper left", fontsize=7.5)
 
-        ax = axes[2]
-        if "weight1" in mixtures:
-            ax.plot(
-                positions, mixtures["weight1"], marker="o", color=role_color("alternative", mode)
-            )
-            ax.set_ylim(0, 1)
-            ax.set_xticks(positions)
-            ax.set_xticklabels([e.replace("_", "\n") for e in epochs], fontsize=7)
-            ax.set_ylabel("weight of the small component")
-            ax.set_title("Mixing weight")
+        ax = axes[3]
+        gate = pd.DataFrame(gate_rows)
+        positions = np.arange(len(gate))
+        colors = [SURVEY_COLORS[mode].get(s, theme["categorical"][6]) for s in gate["survey"]]
+        ax.barh(positions, gate["spearman_rho"], color=colors, height=0.62)
+        ax.axvline(0, color=theme["grid"], linewidth=0.8)
+        ax.set_yticks(positions)
+        ax.set_yticklabels([f"{r.survey}\n{r.parameter}" for r in gate.itertuples()], fontsize=7)
+        ax.set_xlim(-1, 1)
+        ax.set_xlabel(r"Spearman $\rho$ vs activity")
+        ax.set_title("Weibull: no consistent trend")
         caption(
             fig,
-            "Two populations are what would justify the two-class latent chain; stable "
-            "components across epochs are what would justify holding the law fixed.",
+            "The log-normal half of the law tracks activity, as the 2015 paper found; "
+            "the Weibull half does not, which is what licenses holding it fixed.",
             mode,
         )
     return fig

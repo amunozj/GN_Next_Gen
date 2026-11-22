@@ -14,9 +14,14 @@ properties matter and are tested:
   is the whole reason a filter is needed to fit a near-perfectly-observed reference.
 
 Two latent structures are supported.  One area class is a ``K``-state chain; two
-classes are a pair of chains whose **total** is observed, so the split is latent and
-the transition stays Kronecker-factorized -- the cheapest exact fix for the fact that
-day-by-day independent thinning ignores that large groups persist.
+classes are a pair of chains whose **total** is observed, so the split is **latent**
+and the transition stays Kronecker-factorized.  Because the split is latent, the
+symmetric configuration is a saddle -- see ``fit_immigration_death`` -- and the fit
+is only weakly identified: nothing in the data says which group belongs to which
+class.  Check A therefore decides its 1-vs-2 class question with *observable*
+classes instead, splitting the reference's own counts at the Weibull/log-normal
+crossover of the area law (ADR-011); this latent version is kept because Step 4 may
+need it where no area information is available.
 """
 
 from __future__ import annotations

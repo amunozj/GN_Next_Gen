@@ -37,10 +37,19 @@ if "--device" not in sys.argv and "JAX_PLATFORMS" not in __import__("os").enviro
 
 from gn_next_gen.config import load_run_config, write_lineage  # noqa: E402
 from gn_next_gen.inference.forward_filter import fit_immigration_death  # noqa: E402
-from gn_next_gen.io import daily_counts, load_day_status, load_group_single_entry  # noqa: E402
+from gn_next_gen.io import (  # noqa: E402
+    daily_counts,
+    load_day_status,
+    load_group_days,
+    load_group_single_entry,
+)
 from gn_next_gen.models.dynamics import simulate_paths  # noqa: E402
 from gn_next_gen.models.visibility import simulate_marked_process  # noqa: E402
 from gn_next_gen.paths import OUTPUTS  # noqa: E402
+from gn_next_gen.reference.area_law import (  # noqa: E402
+    component_crossover,
+    load_upstream_parameters,
+)
 from gn_next_gen.stats.discrepancy import (  # noqa: E402
     TARGETS,
     activity_bins,
@@ -75,6 +84,44 @@ def observed_spans(survey: str) -> np.ndarray:
     """Visible spans for the survey, D22-clean, as the snapshot measures them."""
     single = load_group_single_entry([survey])
     return single["obs_duration"].dropna().to_numpy()
+
+
+def class_split(survey: str) -> float:
+    """Area (MSH) separating the two populations of the group-area law.
+
+    The crossover of the weighted Weibull and log-normal components (ADR-011) --
+    where small fragmentation-regime objects give way to bipolar active regions --
+    rather than a round number. Step 1 measures roughly 79 MSH for RGO, 74 for
+    Debrecen and 129 for KMAS.
+    """
+    return component_crossover(load_upstream_parameters(survey))
+
+
+def split_series(survey: str, threshold: float, split_msh: float):
+    """Daily counts of the two area populations, on the shared observed grid.
+
+    Check A's two-class variant uses **observable** classes: each day's groups are
+    assigned to the small or large population by their own area, so class membership
+    is read off the data instead of being inferred. That removes the latent split
+    (and its symmetric saddle) and lets the question be asked directly -- do the two
+    populations have different visible residences?
+    """
+    status = load_day_status([survey])
+    groups = load_group_days([survey])
+    first, last = int(status["date_ord"].min()), int(status["date_ord"].max())
+    grid = np.arange(first, last + 1)
+    observed = np.zeros(grid.shape, dtype=bool)
+    observed[status.loc[status["day_status"] > 0, "date_ord"].to_numpy() - first] = True
+
+    above = groups[groups["area_corr"] > threshold]
+    series = []
+    for selected in (above[above["area_corr"] <= split_msh], above[above["area_corr"] > split_msh]):
+        counts = np.zeros(grid.shape)
+        index = selected["date_ord"].to_numpy() - first
+        np.add.at(counts, index, 1.0)
+        counts[~observed] = np.nan
+        series.append(counts)
+    return series[0], series[1], observed
 
 
 def transplant_calendar(path: np.ndarray, observed: np.ndarray) -> np.ndarray:
@@ -127,7 +174,6 @@ def run(
             if quick:
                 series, observed = series[:4000], observed[:4000]
             activity = smooth_centered(series, smoothing)
-            counts_for_fit = np.nan_to_num(series, nan=0.0).astype(int)
 
             holdout = np.zeros(len(series), dtype=bool)
             holdout[rng.random(len(series)) < float(params.get("holdout_fraction", 0.1))] = True
@@ -137,31 +183,68 @@ def run(
                 if n_classes == 2 and not two_class_here:
                     continue  # the 1-vs-2 decision is made where the go rule looks
                 print(f"  {survey} T={threshold:g} classes={n_classes}: fitting", flush=True)
-                fit = fit_immigration_death(
-                    counts_for_fit,
-                    observed,
-                    k=k,
-                    n_classes=n_classes,
-                    knot_days=int(params.get("lambda_knot_days", 27)),
-                    penalty=float(
-                        params.get("lambda_penalties", [10.0])[
-                            min(1, len(params.get("lambda_penalties", [10.0])) - 1)
-                        ]
-                    ),
-                    holdout_mask=holdout,
-                    maxiter=maxiter,
-                    k_per_class=int(params["two_class_k"]) if n_classes == 2 else None,
+                penalty = float(
+                    params.get("lambda_penalties", [10.0])[
+                        min(1, len(params.get("lambda_penalties", [10.0])) - 1)
+                    ]
                 )
+                knot_days = int(params.get("lambda_knot_days", 91))
 
-                # All replicates in one vectorized pass: one Python loop over days
-                # regardless of how many paths, and nothing to compile.
-                paths = simulate_paths(
-                    float(fit.phi[0]), fit.lam_t, k, n_paths=n_sims, seed=config.seed
+                def fit_one(
+                    counts_series, mask=observed, hold=holdout, knots=knot_days, pen=penalty
+                ):
+                    return fit_immigration_death(
+                        np.nan_to_num(counts_series, nan=0.0).astype(int),
+                        mask,
+                        k=k,
+                        n_classes=1,
+                        knot_days=knots,
+                        penalty=pen,
+                        holdout_mask=hold,
+                        maxiter=maxiter,
+                    )
+
+                if n_classes == 1:
+                    fits = [fit_one(series)]
+                    split_msh = float("nan")
+                else:
+                    # Observable classes, split at the area law's Weibull/log-normal
+                    # crossover (ADR-011).  Each population is counted directly, so
+                    # class membership is read off the data rather than inferred --
+                    # which removes the latent split and the symmetric saddle with it,
+                    # and lets the question be asked plainly: do small and large
+                    # groups have different visible residences?
+                    split_msh = class_split(survey)
+                    small, large, _ = split_series(survey, threshold, split_msh)
+                    if quick:
+                        small, large = small[: len(series)], large[: len(series)]
+                    fits = [fit_one(small), fit_one(large)]
+
+                # All replicates in one vectorized pass; the classes are independent
+                # given their own rates, so a two-class realization is the sum.
+                paths = sum(
+                    simulate_paths(
+                        float(f.phi[0]),
+                        f.lam_t,
+                        k,
+                        n_paths=n_sims,
+                        seed=config.seed + 100 * component,
+                    )
+                    for component, f in enumerate(fits)
                 )
+                paths = np.clip(paths, 0, k - 1)
                 # The lifetime prediction is a property of the fitted chain, not of any
-                # one sampled path, so the rotation model is simulated once per fit.
-                marked = simulate_marked_process(
-                    fit.lam_t, float(1.0 / (1.0 - fit.phi[0])), seed=config.seed
+                # one sampled path, so the rotation model is simulated once per fit --
+                # once per class, pooled, when there are two.
+                marked_spans = np.concatenate(
+                    [
+                        simulate_marked_process(
+                            f.lam_t,
+                            float(1.0 / (1.0 - f.phi[0])),
+                            seed=config.seed + 100 * component,
+                        ).first_apparition_spans
+                        for component, f in enumerate(fits)
+                    ]
                 )
 
                 scored = []
@@ -175,7 +258,7 @@ def run(
                         activity,
                         sim_activity,
                         spans,
-                        marked.first_apparition_spans,
+                        marked_spans,
                         k=k,
                         max_lag=max_lag,
                         n_bins=n_bins,
@@ -183,7 +266,7 @@ def run(
                     )
                     scored.append(score.as_dict() | {"aggregate": score.aggregate})
                     if index == 0:
-                        sim_keep = (simulated, sim_activity, marked)
+                        sim_keep = (simulated, sim_activity, marked_spans)
 
                 mean_scores = pd.DataFrame(scored).mean().to_dict()
                 rows.append(
@@ -191,19 +274,25 @@ def run(
                         "survey": survey,
                         "threshold_msh": threshold,
                         "n_classes": n_classes,
-                        "phi": float(fit.phi[0]),
-                        "mean_visible_days": float(fit.mean_visible_days[0]),
-                        "class_weight": fit.class_weight,
-                        "loglik": fit.loglik,
-                        "holdout_loglik": fit.holdout_loglik,
-                        "converged": fit.success,
+                        "phi": float(fits[0].phi[0]),
+                        "phi_large": float(fits[1].phi[0]) if n_classes == 2 else np.nan,
+                        "mean_visible_days": float(fits[0].mean_visible_days[0]),
+                        "mean_visible_days_large": (
+                            float(fits[1].mean_visible_days[0]) if n_classes == 2 else np.nan
+                        ),
+                        "class_split_msh": split_msh,
+                        "loglik": sum(f.loglik for f in fits),
+                        "holdout_loglik": sum(
+                            f.holdout_loglik for f in fits if f.holdout_loglik is not None
+                        ),
+                        "converged": all(f.success for f in fits),
                         "n_observed_days": int(observed.sum()),
                         **mean_scores,
                     }
                 )
 
                 if n_classes == class_counts[0] and threshold == 30.0:
-                    simulated, sim_activity, marked = sim_keep
+                    simulated, sim_activity, _ = sim_keep
                     for detrended in (False, True):
                         obs_acf = autocorrelation(series, max_lag, smoothing if detrended else None)
                         sim_acf = autocorrelation(
