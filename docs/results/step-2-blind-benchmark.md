@@ -17,8 +17,8 @@
 > **459 scored cells** plus a 405-cell structural ensemble, no stage failed.
 > It took 16 minutes on 64 cores, not the 3–6 hours planned.
 >
-> Scenario **S6** is the structural ensemble and ran on four fast methods over
-> one world (§8) — a slice, and labelled as one. Everything else is complete.
+> That includes scenario **S6**, the structural ensemble: 405 cells, three knobs
+> × five settings × three worlds × nine methods, the full planned version.
 
 ## Summary
 
@@ -299,22 +299,37 @@ exactly this direction for UEA21 — it "systematically overestimates the acuity
 the observer, thus in the end also amplifies the group numbers" — and the
 benchmark reproduces it at scale.
 
-## 8. The structural ensemble *(a slice)*
+## 8. The structural ensemble
 
 ![Bars spanning each method's yearly bias across its own free graph choices, on one S2 world.](figures/step-2/f22_structural_ensemble_light.png)
 
 **Figure f22** — The spread a method's *own* free choices produce. Each bar spans
 one baseline re-run across the overlap graph's day tolerance, minimum overlap and
-minimum distinct counts — 15 settings; the dot is their mean. Williams et al.
-(2012) ran perturbed-parameter ensembles of the PHA for exactly this reason: a
-method's structural uncertainty is not inside its parametric one. The Backbone's
-own choices move its yearly bias by **0.15 groups**, more than the gap between
-the three best methods in §4.
+minimum distinct counts — three knobs × five settings — over three S2 worlds and
+all nine methods, the full planned ensemble at **405 cells**. Williams et al.
+(2012) ran perturbed-parameter ensembles of the PHA for exactly this reason.
 
-**This is the one part of the grid that is a slice**: 405 cells over four fast
-methods and one S2 world, enough to show the machinery and the magnitude. The
-planned version is three knobs × five settings × three worlds × nine methods. The
-figure withholds the default-setting marker because §4's defaults pool all
+**The ensemble is narrower than the uncertainty the methods already report**, for
+every one of them:
+
+| method | structural spread | mean reported sd | wider? |
+|---|---|---|---|
+| HoSc98 | 0.192 | 0.645 | no |
+| Backbone | 0.221 | 0.669 | no |
+| SvSc16 | 0.153 | 0.736 | no |
+| CEA17 | 0.401 | 0.510 | no |
+| UEA21 | 0.229 | 0.713 | no |
+| GRP | 0.372 | 0.550 | no |
+| VHS24 | 0.508 | 1.084 | no |
+
+That is a sharper statement of §5 than coverage alone. These intervals are not
+too narrow because the methods ignored their own free choices — the choices move
+the answer by less than the interval already allows. They are too narrow because
+what the interval is a width *of* does not include the error that actually
+dominates. Widening an interval to admit structural choices would not fix the
+coverage; the error is elsewhere.
+
+The figure withholds the default-setting marker because §4's defaults pool all
 scenarios while this ensemble ran on S2 alone, and plotting the two together
 would compare scenarios rather than settings.
 
@@ -439,19 +454,18 @@ Stated plainly, because a benchmark that overclaims is worse than none.
 3. **Overconfidence is not decomposed.** There is no matched-model control arm,
    so §5 measures coverage under *this* generator rather than separating model
    error from data error.
-4. **The structural ensemble is a slice** — four fast methods, one world (§8).
-5. **Break-detection skill is NaN for all seven.** None of them attempts to
+4. **Break-detection skill is NaN for all seven.** None of them attempts to
    detect a career break. The metric is implemented and tested so Steps 3–4 can
    be scored on it; the absence is a result, not a gap in the scorer.
-6. **One anchoring, not two.** Every scenario here uses ADR-009's secondary
+5. **One anchoring, not two.** Every scenario here uses ADR-009's secondary
    anchor (RGO cycles 15–19). The Debrecen 21–23 anchoring is supported by the
    code and configured per scenario, but was not run, so the anchor-sensitivity
    comparison ADR-003 asks for is still owed by Steps 3–4.
-7. **Two of the five published series were not acquired** — Chatzistergos et al.
+6. **Two of the five published series were not acquired** — Chatzistergos et al.
    (2017) and Velasco Herrera et al. (2024), both at CDS/VizieR, unreachable
    from this machine. Recorded in `refresh_todo.md`. Nothing here depends on
    them.
-8. **The second, model-based generator was not written.** The replay generator
+7. **The second, model-based generator was not written.** The replay generator
    already supplies the four structural misspecifications through real data; a
    parametric sibling would have added a knob without adding a departure from
    the Step 4 model.
