@@ -193,3 +193,38 @@ def test_a_dry_run_writes_nothing():
         else []
     )
     assert before == after
+
+
+def test_progress_records_the_orchestrators_run_id(tmp_path, monkeypatch):
+    """--status tells this run's files from an earlier run's by run_id.
+
+    An mtime gap cannot do it: an early stage legitimately finishes long before
+    a late one, and treating that as staleness flagged a healthy 459-cell grid
+    as leftovers.
+    """
+    from gn_next_gen.benchmark.progress import Progress
+
+    monkeypatch.setenv("GN_RUN_ID", "20261122T173352-42")
+    first = Progress(tmp_path / "a_progress.json", total=2, label="a")
+    second = Progress(tmp_path / "b_progress.json", total=2, label="b")
+    import json as _json
+
+    assert _json.loads(first.path.read_text())["run_id"] == "20261122T173352-42"
+    assert _json.loads(second.path.read_text())["run_id"] == "20261122T173352-42"
+
+
+def test_progress_falls_back_to_its_pid_when_run_standalone(tmp_path, monkeypatch):
+    import json as _json
+    import os
+
+    from gn_next_gen.benchmark.progress import Progress
+
+    monkeypatch.delenv("GN_RUN_ID", raising=False)
+    progress = Progress(tmp_path / "c_progress.json", total=1, label="c")
+    assert _json.loads(progress.path.read_text())["run_id"] == str(os.getpid())
+
+
+def test_the_orchestrator_exports_a_run_id_before_any_stage():
+    text = ORCHESTRATOR.read_text()
+    assert "export GN_RUN_ID=" in text
+    assert text.index("export GN_RUN_ID=") < text.index("stage a157")

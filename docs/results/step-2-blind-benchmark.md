@@ -374,6 +374,11 @@ that is correct. Watch it with:
 ./scripts/run_step2_grid.sh --status
 ```
 
+Each stage stamps its progress file with the invocation's run id, so `--status`
+marks rows left by a different invocation as `other run` instead of mixing them
+into this one's. Without that, a leftover 18-cell slice read as if it were the
+459-cell grid.
+
 **Safe to re-run.** Every stage skips cells already on disk, so an interrupted
 grid resumes rather than restarting; if the machine reboots mid-run, start the
 same command again.

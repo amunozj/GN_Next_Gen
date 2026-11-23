@@ -84,12 +84,39 @@ import pathlib
 import sys
 
 logs = pathlib.Path(sys.argv[1])
-rows, failures = [], []
+import time
+
+entries = []
 for path in sorted(logs.glob("*_progress.json")):
-    d = json.loads(path.read_text())
+    entries.append((path, json.loads(path.read_text())))
+
+# Which invocation is "current" is decided by run_id, not by mtime: an early
+# stage legitimately finishes long before a late one, so a time gap cannot tell
+# a finished stage from a leftover. Rows from another invocation are labelled
+# rather than hidden -- running one script by hand is normal, and the point is
+# only that its numbers should not be read as this run's.
+current = ""
+if entries:
+    newest_path, _ = max(entries, key=lambda item: item[0].stat().st_mtime)
+    current = json.loads(newest_path.read_text()).get("run_id", "")
+
+rows, failures = [], []
+for path, d in entries:
     finished = d["done"] + d["skipped"] + d["failed"]
     eta = d.get("eta_s")
-    if finished >= d["total"]:
+    age = time.time() - path.stat().st_mtime
+    run_id = d.get("run_id")
+    if run_id is None:
+        stale = True
+        state = f"other run ({age / 60:.0f} min ago, id unknown)"
+    elif current and run_id != current:
+        stale = True
+        state = f"other run ({age / 60:.0f} min ago)"
+    else:
+        stale = False
+    if stale:
+        pass
+    elif finished >= d["total"]:
         state = "done"
     elif eta:
         state = f"~{eta / 60:.0f} min left"
@@ -102,7 +129,8 @@ for path in sorted(logs.glob("*_progress.json")):
         f'{d["elapsed_s"] / 60:.1f} min',
         state,
     ))
-    failures += [f'{d["label"]}: {f}' for f in d.get("failures", [])]
+    if not stale:
+        failures += [f'{d["label"]}: {f}' for f in d.get("failures", [])]
 
 width = [max(len(r[i]) for r in rows) for i in range(5)]
 for row in rows:
@@ -168,6 +196,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "$LOGS"
+
+# One id for every stage this invocation launches, so --status can tell this
+# run's progress files from an earlier run's leftovers. An mtime gap cannot:
+# an early stage legitimately finishes long before a late one.
+export GN_RUN_ID="${GN_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
 
 # argparse's nargs="*" keeps only the LAST occurrence of a repeated flag, so the
 # names must be emitted once as "--scenarios A B C". Collecting them first and
