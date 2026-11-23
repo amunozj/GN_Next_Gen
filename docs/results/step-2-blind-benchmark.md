@@ -279,32 +279,66 @@ python scripts/sampling_only_experiment.py         # §6
 python scripts/make_step2_figures.py
 ```
 
-The full grid, for the PI to launch detached — each stage is resumable per cell and
-writes a `progress.json` beside its log:
+The full grid, for the PI to launch. Each stage is resumable per cell and writes
+its own `progress.json` and `lineage_*.json`, so a disconnect costs minutes.
+
+**What can overlap.** Only one dependency is hard: nothing that reads a world may
+start before `generate_benchmark.py` has finished the scenarios it needs. The
+runners discover worlds by globbing for *complete* realizations, so one started
+early would quietly score a subset and look finished.
+
+| stage | needs | may overlap with | ~time |
+|---|---|---|---|
+| `validate_against_a157.py` | nothing — reads `data/raw` only | anything, including stage 1 | 16 s |
+| 1 `generate_benchmark.py` | — | the A157 validation | 30–60 min |
+| 2 `run_baselines.py` | stage 1 | 3 and 4 | 3–6 h |
+| 3 `run_baselines.py --structural` | stage 1 (S2) | 2 and 4 | 1–2 h |
+| 4 `sampling_only_experiment.py` | stage 1 (S5) | 2 and 3 | ~20 min |
+| 5 `score_benchmark.py` | 1, 2 | `--structural` scoring | ~10 min |
+| 5' `score_benchmark.py --structural` | 1, 3 | plain scoring | ~10 min |
+| 6 `make_step2_figures.py` | everything | — | < 3 min |
+
+Stages 2, 3 and 4 write to disjoint paths — the structural runner tags its output
+directories `seed-NNNN__knob=value` — and the two scoring runs write different
+CSVs, so each group is safe to run at once. This machine has 64 cores and ~1 TB of
+memory, so `--jobs 16` on each of two concurrent runners is comfortable; a worker
+holds well under 2 GB.
 
 ```bash
 cd /d0/amunozj/git_repos/GN_Next_Gen && conda activate gn-next-gen
 mkdir -p outputs/step2/logs
 
-# 1. the worlds (~30-60 min)
+# independent of everything; 16 seconds
+python scripts/validate_against_a157.py
+
+# 1. the worlds -- everything below waits for this
 nohup python scripts/generate_benchmark.py \
-      --config configs/step2_benchmark.yaml --jobs 8 \
-      > outputs/step2/logs/generate.log 2>&1 &
+      --config configs/step2_benchmark.yaml --jobs 16 \
+      > outputs/step2/logs/generate.log 2>&1
+wait
 
-# 2. the baselines (the long one, ~3-6 h)
+# 2, 3, 4 together
 nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --jobs 8 \
+      --config configs/step2_baselines.yaml --jobs 16 \
       > outputs/step2/logs/baselines.log 2>&1 &
-
-# 3. the S6 structural ensemble
 nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --structural --jobs 8 \
+      --config configs/step2_baselines.yaml --structural --jobs 16 \
       > outputs/step2/logs/structural.log 2>&1 &
+nohup python scripts/sampling_only_experiment.py \
+      > outputs/step2/logs/sampling.log 2>&1 &
+wait
 
-# 4. score, then rebuild the figures
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml --structural
+# 5 and 5' together, then the figures
+python scripts/score_benchmark.py --config configs/step2_benchmark.yaml &
+python scripts/score_benchmark.py --config configs/step2_benchmark.yaml --structural &
+wait
 python scripts/make_step2_figures.py
+```
+
+Watch progress without tailing anything:
+
+```bash
+cat outputs/step2/logs/*_progress.json
 ```
 
 Figures are committed under [`figures/step-2/`](figures/step-2/) in light and dark;

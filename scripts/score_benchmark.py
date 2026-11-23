@@ -148,7 +148,10 @@ def main() -> None:
         OUTPUTS / "step2" / "logs" / f"{label}_progress.json", total=len(cells), label=label
     )
     write_lineage(
-        config, args.out_dir, extra={"script": "score_benchmark.py", "n_cells": len(cells)}
+        config,
+        args.out_dir,
+        extra={"script": "score_benchmark.py", "n_cells": len(cells), "mode": label},
+        filename=f"lineage_{label}.json",
     )
 
     truths: dict[tuple[str, int], tuple] = {}

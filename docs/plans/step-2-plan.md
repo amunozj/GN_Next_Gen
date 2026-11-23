@@ -414,31 +414,44 @@ so a partial grid still scores and an interrupted run resumes rather than restar
 | **A157 validation (121 synthetic observers × 5 methods)** | **~30–60 min** | **PI** |
 | `make_step2_figures.py` from existing outputs | < 3 min | session |
 
-Commands for the PI, written to run detached and survive a disconnect:
+Commands for the PI, written to run detached and survive a disconnect. Only one
+dependency is hard -- nothing that reads a world may start before the generator
+has finished, because the runners glob for *complete* realizations and one
+started early would quietly process a subset. After that, the two baseline
+runners and the sampling-only experiment write to disjoint paths and run
+together, as do the two scoring passes. The A157 validation depends on nothing
+and takes 16 seconds.
 
 ```bash
 conda activate gn-next-gen
 cd /d0/amunozj/git_repos/GN_Next_Gen
+mkdir -p outputs/step2/logs
 
-# 1. Generate the worlds (~30-60 min). Resumable; re-running skips finished cells.
+python scripts/validate_against_a157.py            # independent, 16 s
+
 nohup python scripts/generate_benchmark.py \
-      --config configs/step2_benchmark.yaml --jobs 8 \
-      > outputs/step2/logs/generate.log 2>&1 &
+      --config configs/step2_benchmark.yaml --jobs 16 \
+      > outputs/step2/logs/generate.log 2>&1       # ~30-60 min
+wait
 
-# 2. Run the seven baselines over the grid (the long one, ~3-6 h).
 nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --jobs 8 \
-      > outputs/step2/logs/baselines.log 2>&1 &
+      --config configs/step2_baselines.yaml --jobs 16 \
+      > outputs/step2/logs/baselines.log 2>&1 &    # ~3-6 h
+nohup python scripts/run_baselines.py \
+      --config configs/step2_baselines.yaml --structural --jobs 16 \
+      > outputs/step2/logs/structural.log 2>&1 &
+nohup python scripts/sampling_only_experiment.py \
+      > outputs/step2/logs/sampling.log 2>&1 &
+wait
 
-# 3. Score (~10 min) and the Hay sampling-only experiment (~20 min).
-nohup sh -c 'python scripts/score_benchmark.py --config configs/step2_benchmark.yaml &&
-             python scripts/sampling_only_experiment.py' \
-      > outputs/step2/logs/score.log 2>&1 &
-
-# 4. The A157 validation, criterion A7 (~30-60 min).
-nohup python scripts/validate_against_a157.py \
-      > outputs/step2/logs/a157.log 2>&1 &
+python scripts/score_benchmark.py --config configs/step2_benchmark.yaml &
+python scripts/score_benchmark.py --config configs/step2_benchmark.yaml --structural &
+wait
+python scripts/make_step2_figures.py
 ```
+
+64 cores and ~1 TB of memory here, and a worker holds well under 2 GB, so
+`--jobs 16` on each of two concurrent runners is comfortable.
 
 Each writes `progress.json` beside its log (cells done / total / failed), so progress is readable
 without tailing. Run them in the order above; 3 needs 1 and 2, while 4 is independent and can go in

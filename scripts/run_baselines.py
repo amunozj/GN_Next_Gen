@@ -152,6 +152,15 @@ def main() -> None:
         spec = config.params["structural_ensemble"]
         source = spec["source_scenario"]
         wanted = [c for c in realizations if c[0] == source][: int(spec["n_realizations"])]
+        if not wanted:
+            # A long overnight run that silently does nothing is worse than one
+            # that fails: the structural ensemble reuses S2's worlds, so if S2
+            # has not been generated there is no work and the operator should
+            # hear about it now.
+            raise SystemExit(
+                f"the structural ensemble needs {source} worlds and none are complete "
+                f"under {args.data_root}; generate {source} first"
+            )
         for knob, values in spec["perturbations"].items():
             for value in values:
                 kwargs = {**graph_defaults, knob: value}
@@ -171,7 +180,12 @@ def main() -> None:
     log_dir = OUTPUTS / "step2" / "logs"
     label = "structural" if args.structural else "baselines"
     progress = Progress(log_dir / f"{label}_progress.json", total=len(cells), label=label)
-    write_lineage(config, log_dir, extra={"script": "run_baselines.py", "n_cells": len(cells)})
+    write_lineage(
+        config,
+        log_dir,
+        extra={"script": "run_baselines.py", "n_cells": len(cells), "mode": label},
+        filename=f"lineage_{label}.json",
+    )
 
     pending = [
         cell

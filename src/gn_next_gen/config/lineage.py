@@ -61,10 +61,22 @@ def lineage_record(config: RunConfig, *, extra: dict | None = None) -> dict:
     }
 
 
-def write_lineage(config: RunConfig, out_dir: str | Path, *, extra: dict | None = None) -> Path:
-    """Write ``lineage.json`` into a run's output directory and return its path."""
+def write_lineage(
+    config: RunConfig,
+    out_dir: str | Path,
+    *,
+    extra: dict | None = None,
+    filename: str = "lineage.json",
+) -> Path:
+    """Write a lineage record into a run's output directory and return its path.
+
+    ``filename`` exists because several scripts can share one output directory.
+    ADR-002 wants lineage **per run**, so two runs writing ``lineage.json`` side
+    by side would leave only the last one's provenance -- and if they overlap in
+    time, a torn file. Scripts that share a directory pass distinct names.
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    path = out / "lineage.json"
+    path = out / filename
     path.write_text(json.dumps(lineage_record(config, extra=extra), indent=2) + "\n")
     return path

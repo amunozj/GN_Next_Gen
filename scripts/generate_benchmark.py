@@ -81,7 +81,12 @@ def main() -> None:
 
     log_dir = OUTPUTS / "step2" / "logs"
     progress = Progress(log_dir / "generate_progress.json", total=len(jobs), label="generate")
-    write_lineage(config, log_dir, extra={"script": "generate_benchmark.py", "n_cells": len(jobs)})
+    write_lineage(
+        config,
+        log_dir,
+        extra={"script": "generate_benchmark.py", "n_cells": len(jobs)},
+        filename="lineage_generate.json",
+    )
 
     if args.check:
         _check(jobs, args.root, progress)

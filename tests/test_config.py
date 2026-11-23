@@ -31,10 +31,11 @@ SILSO_CAL = DatasetRef("silso", "calibration", "silso")
 SILSO_CMP = DatasetRef("silso", "comparison", "silso")
 
 STEP1_CONFIGS = ("step1_check_a.yaml", "step1_check_b.yaml")
+STEP2_CONFIGS = ("step2_benchmark.yaml", "step2_baselines.yaml")
 
 
 def test_committed_configs_load_and_validate():
-    for name in STEP1_CONFIGS:
+    for name in STEP1_CONFIGS + STEP2_CONFIGS:
         config = load_run_config(CONFIGS / name)
         assert config.variant == SUNSPOT_ONLY
         assert config.seed, "every run config must carry a seed"
@@ -203,3 +204,26 @@ def test_lineage_records_file_checksums_not_just_names(tmp_path):
     entry = record["inputs"][0]
     assert entry["sha256"] and entry["sha256"] != "directory"
     assert len(entry["sha256"]) == 64
+
+
+def test_two_runs_sharing_a_directory_keep_separate_lineage(tmp_path):
+    """ADR-002 wants lineage per run, and several Step 2 scripts share a log
+    directory. Writing ``lineage.json`` from each of them left only the last
+    one's provenance, and two overlapping runs could tear the file."""
+    from gn_next_gen.config import load_run_config, write_lineage
+
+    config = load_run_config(CONFIGS / "step2_benchmark.yaml")
+    first = write_lineage(config, tmp_path, extra={"script": "a"}, filename="lineage_a.json")
+    second = write_lineage(config, tmp_path, extra={"script": "b"}, filename="lineage_b.json")
+
+    assert first != second
+    assert first.is_file() and second.is_file()
+    assert json.loads(first.read_text())["script"] == "a"
+    assert json.loads(second.read_text())["script"] == "b"
+
+
+def test_lineage_still_defaults_to_the_step_1_filename(tmp_path):
+    from gn_next_gen.config import load_run_config, write_lineage
+
+    config = load_run_config(CONFIGS / "step1_check_a.yaml")
+    assert write_lineage(config, tmp_path).name == "lineage.json"
