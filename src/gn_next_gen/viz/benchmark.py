@@ -156,8 +156,9 @@ def amplitude_slope_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Fig
         )
         caption(
             fig,
-            "Positive means strong cycles are inflated relative to weak ones - the "
-            "secular bias Chatzistergos et al. (2025) attribute to the linear scalings.",
+            "Positive inflates strong cycles relative to weak ones. The two families "
+            "separate as A157 found; on the real graph the linear group sits at zero "
+            "rather than above it.",
             mode,
         )
         fig.tight_layout()
@@ -167,9 +168,18 @@ def amplitude_slope_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Fig
 # --- f20: coverage, the load-bearing metric -------------------------------
 
 
+#: S5 is the sampling-only diagnostic: detection error is switched off, so an
+#: exact method scores a coverage of 1.0 there and it is not a test of
+#: calibration. Averaging scenarios equally would let one degenerate world carry
+#: a fifth of the headline, so the coverage figure leaves it out and says so.
+COVERAGE_EXCLUDED_SCENARIOS = ("S5",)
+
+
 def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
-    """f20 -- empirical against nominal interval coverage."""
+    """f20 -- empirical against nominal interval coverage, excluding S5."""
     with figure_style(mode) as theme:
+        if "scenario" in coverage:
+            coverage = coverage[~coverage["scenario"].isin(COVERAGE_EXCLUDED_SCENARIOS)]
         methods = _order(coverage["method"].unique())
         colors = _method_colors(methods, mode)
         fig, ax = plt.subplots(figsize=(6.0, 5.2))
@@ -200,8 +210,8 @@ def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
         ax.legend(fontsize=7.5, frameon=False, ncol=2)
         caption(
             fig,
-            "Every curve below the diagonal is an overconfident method. "
-            "A157 scores four point-error metrics and never scores an interval.",
+            "Every curve below the diagonal is an overconfident method. S5 is excluded: "
+            "with detection error off it is not a test of calibration.",
             mode,
         )
         fig.tight_layout()

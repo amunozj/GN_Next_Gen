@@ -553,6 +553,20 @@ Recorded as they arise, per `CLAUDE.md`'s workflow.
    data, and a parametric second generator would have added a knob without adding a
    departure from the Step 4 model. Stated as a reduction in scope, not an omission.
 
-8. **Only a two-world S1 slice was run in session** (decision 10). The full grid, the
-   S6 structural ensemble and the scenarios S2-S4 are the PI's to launch from the
-   documented commands; the results doc marks every number that comes from the slice.
+8. **The full grid ran, launched by the PI** (decision 10 respected: the session never
+   started it). 51 worlds, 459 scored cells, no stage failed, **16 minutes** on 64 cores
+   rather than the 3-6 hours planned -- that estimate was serial. The S6 structural
+   ensemble ran as a 405-cell slice over four fast methods and one world, and the results
+   doc labels it as such.
+
+9. **Two findings moved between the provisional slice and the full grid**, and the
+   results doc says so rather than quietly presenting the final numbers. CEA17 crossed
+   from beating the random-segmentation null to losing to it, making four losers rather
+   than three. And the cycle-amplitude signature only partly reproduces A157 on the real
+   overlap graph: the *separation* between the linear and non-parametric families is
+   clear, but the linear group sits at zero rather than above it. On A157's own setup
+   (criterion A7) all five still agree in sign.
+
+10. **Coverage excludes S5.** With detection error switched off an exact method scores a
+    coverage of 1.0 there, so S5 is a pipeline check rather than a calibration test;
+    including it would let one degenerate world carry a fifth of the headline.

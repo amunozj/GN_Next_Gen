@@ -11,28 +11,25 @@
   acquired; ten named case-study observers; **no run over ~15 minutes launched
   from a Claude Code session**
 
-> ### ⚠ What is measured here, and what is not
+> ### Scope of what follows
 >
-> The benchmark, the seven baselines, the scorer and the figures are built and
-> tested, and **all 51 worlds are generated**. What has *not* run is the long
-> stage: the baselines over scenarios S2–S5 and the full S6 ensemble. By PI
-> decision 10 this session never launches a job over ~15 minutes, so that is
-> the PI's to start — one command, §8.
+> **The full grid has run**: 51 worlds across five scenarios, nine methods,
+> **459 scored cells** plus a 405-cell structural ensemble, no stage failed.
+> It took 16 minutes on 64 cores, not the 3–6 hours planned.
 >
-> Every score below comes from a **two-world S1 slice** (1874–2026, 363 observers,
-> 18 cells) unless it says otherwise. The **A157 validation (§3) and the
-> sampling-only experiment (§6) are complete** — both run in well under 15 minutes
-> and are reported in full. Treat the §4 ranking as provisional; treat §3 as done.
+> Scenario **S6** is the structural ensemble and ran on four fast methods over
+> one world (§8) — a slice, and labelled as one. Everything else is complete.
 
 ## Summary
 
 | Question | Answer |
 |---|---|
-| Do the ports behave as the published assessment says? | **Yes in sign, all five.** HoSc98 and SvSc16 underestimate more as acuity rises; CEA17, UEA21 and VHS24 stay near zero — Chatzistergos et al. (2025) Fig. 3b, reproduced (§3). Their *exclusion limits* differ, for a measured reason: our renovated RGO carries fewer small groups |
-| Are any method's uncertainties calibrated? | **No. Not one.** At a nominal 50% the seven baselines deliver **0.003 to 0.124**; at 90% they deliver 0.003 to 0.230. Every curve in `f20` lies far below the diagonal (§5) |
-| Does the benchmark separate skill from noise? | **Yes, and three methods fail it.** VHS24, GRP and UEA21 score *worse* on yearly centred RMSE than a random segmentation of the same data (§4) |
-| What does the observing calendar alone cost? | **About 5% of the trend** — +0.014 against a true 0.287 groups/century, with the scatter levelling off as the network grows (§6). The large biases in this problem are detection and reporting, not sampling |
-| Which observers break a method? | The copier, the leaf node and the poor instrument, each visibly (§7). No method handles the blanket-statement observer at all |
+| Do the ports behave as the published assessment says? | **Yes in sign, all five**, on that paper's own setup — HoSc98 and SvSc16 underestimate more as acuity rises, CEA17, UEA21 and VHS24 stay near zero (§3). Their *exclusion limits* differ, for a measured reason: our renovated RGO carries fewer small groups |
+| Are any method's uncertainties calibrated? | **No. Not one, in any scenario.** At a nominal 50% the seven deliver **0.009 to 0.159**; at 90%, 0.025 to 0.272 (§5) |
+| Can the published methods reach the Maunder Minimum at all? | **Five of seven cannot.** Every overlap-based method stops at **1774** and covers 46% of the record. The two that need no overlap reach 1660–1672 and overestimate the Maunder level by **23–25×** (§6) |
+| Does the benchmark separate skill from noise? | **Yes, and four methods fail it.** VHS24, CEA17, UEA21 and GRP all score worse on yearly centred RMSE than a random segmentation of the same data (§4) |
+| Which observers break a method? | **Slow drift breaks all seven.** A documented break costs 40.1 MSH of acuity error against 111.5 for the same break undocumented — the metadata is worth a factor of 2.5 (§7) |
+| What does the observing calendar alone cost? | **About 5% of the trend** — +0.014 against a true 0.287 groups/century (§9). The large biases here are detection and reporting, not sampling |
 
 ## 1. What the benchmark is
 
@@ -142,149 +139,216 @@ Units are the trap here and are worth stating: A157 quotes acuity in millionths 
 the solar *disc*, this project works in millionths of the *hemisphere*, and the
 disc is half the hemisphere, so MSH = msd / 2 (D4).
 
-## 4. Baseline scores *(two-world S1 slice — provisional)*
+## 4. Baseline scores *(full grid: 459 cells)*
 
 ![Bias as dots and centred RMSE as bars, at daily, monthly and yearly scales, for nine methods.](figures/step-2/f18_baseline_scores_light.png)
 
-**Figure f18** — Point error at three averaging scales. A method can be unbiased
-daily and wrong per cycle, which is why HOME scores at several scales and so does
-this.
+**Figure f18** — Point error at three averaging scales, pooled over all 51 worlds.
+A method can be unbiased daily and wrong per cycle, which is why HOME scores at
+several scales and so does this.
 
-| method | yearly bias | yearly cRMSE | daily cRMSE | CRPS |
+| method | yearly bias | yearly cRMSE | CRPS | beats the null? |
 |---|---|---|---|---|
-| HoSc98 | −0.227 | **0.263** | 0.684 | 0.230 |
-| SvSc16 | −0.232 | 0.270 | 0.686 | 0.230 |
-| Backbone | −0.239 | 0.271 | **0.681** | 0.240 |
-| CEA17 | **−0.090** | 0.504 | 0.747 | 0.288 |
-| VHS24 | −0.280 | 0.641 | 0.990 | 0.422 |
-| GRP | 0.140 | 0.709 | 0.913 | 0.492 |
-| UEA21 | 0.861 | 0.824 | 1.519 | 0.996 |
-| *null-segmentation* | *0.248* | *0.597* | *0.895* | *0.297* |
-| *null-prior* | *0.263* | *2.667* | *3.206* | *2.098* |
+| HoSc98 | −0.234 | **0.312** | 0.248 | yes |
+| Backbone | −0.194 | 0.373 | 0.265 | yes |
+| SvSc16 | −0.254 | 0.379 | 0.285 | yes |
+| *null-segmentation* | *0.145* | *0.749* | *0.415* | — |
+| VHS24 | **0.013** | 0.787 | 0.542 | **no** |
+| CEA17 | 0.008 | 0.791 | 0.470 | **no** |
+| UEA21 | 1.145 | 0.865 | 1.188 | **no** |
+| GRP | 0.654 | 0.945 | 0.868 | **no** |
+| *null-prior* | *0.274* | *2.447* | *1.907* | — |
 
-**Three methods are beaten by a random segmentation.** VHS24 (0.641), GRP (0.709)
-and UEA21 (0.824) all score worse on yearly centred RMSE than cutting careers at
-arbitrary points and applying arbitrary scalings (0.597). Lindau & Venema (2018)
-found that at realistic signal-to-noise a random segmentation explains about half
-the break variance, which is exactly why the null is in the table. A ranking
-without it would have presented three methods as working.
+**Four of the seven are beaten by a random segmentation.** Cutting careers at
+arbitrary points and applying arbitrary scalings scores 0.749; VHS24, CEA17,
+UEA21 and GRP are all worse. On the provisional two-world slice this was three
+methods and CEA17 was ahead of the null — the full grid moves it the other way.
+Lindau & Venema (2018) found that at realistic signal-to-noise a random
+segmentation explains about half the break variance, which is exactly why the
+null is in the table. A ranking without it would have presented four methods as
+working.
 
-**UEA21's +0.861 bias is the published behaviour.** A157 finds it "systematically
-overestimates the acuity of the observer, thus in the end also amplifies the group
-numbers". Measured here, its recovered acuities are biased **+84.5 MSH** with an
-RMSE of 122 MSH, and pile up at the grid cap — which A157 also describes as an
-artefact of their 300 msd ceiling.
+Note the two columns disagree about who is good. VHS24 and CEA17 have the
+*smallest* yearly bias of any method (+0.013, +0.008) and among the worst
+scatter. A method can be centred and useless.
 
 ![Horizontal bars of the slope of estimated-minus-true cycle amplitude against true amplitude, per method.](figures/step-2/f19_cycle_amplitude_light.png)
 
-**Figure f19** — The secular-bias signature, on a real overlap graph. Positive
-means strong cycles are inflated relative to weak ones. HoSc98 (+0.012),
-SvSc16 (+0.013) and the Backbone (+0.022) sit on one side; VHS24 (−0.296),
-CEA17 (−0.191), UEA21 (−0.358) and GRP (−0.304) on the other. **That is A157's two
-groupings exactly**, now measured through daisy-chaining rather than against a
-directly-overlapping reference.
+**Figure f19** — The secular-bias signature on the real overlap graph. The two
+families separate cleanly: the linear scalings and the Backbone sit at
+**−0.006 to −0.017**, effectively flat, while CEA17, UEA21, VHS24 and GRP run
+**−0.21 to −0.38**.
+
+**This is a partial reproduction, and the part that moved should be said
+plainly.** On their own setup (§3) all five methods agree in sign with the
+published Fig. 3b. On the *real overlap graph* the separation survives but the
+linear group's sign does not: A157 finds HoSc98 and SvSc16 amplifying strong
+cycles, and here they are flat to very slightly negative. The two-world slice
+reported in an earlier draft of this document gave them +0.008 and +0.001, which
+the full grid does not support either. What reproduces robustly is the
+*separation* between the families, not the sign of the linear one.
 
 ## 5. Coverage — the finding this step exists for
 
 ![Empirical against nominal coverage at 50, 68, 90 and 95 percent; every method far below the diagonal.](figures/step-2/f20_interval_coverage_light.png)
 
-**Figure f20** — Nominal against empirical interval coverage. **Every curve lies
-far below the diagonal.** At a nominal 50% the best of the seven delivers 0.124
-and the worst 0.003; at 90%, 0.230 and 0.003. The assessment's charge — "no
-evidence that any method's uncertainties are calibrated" — is not merely
-unaddressed in the literature; on this benchmark it is false in the strongest
-possible direction for all seven.
+**Figure f20** — Nominal against empirical interval coverage, over the 450
+calibration cells. **Every curve lies far below the diagonal.**
+
+| nominal | best of the seven | worst of the seven |
+|---|---|---|
+| 50% | 0.159 (Backbone) | 0.009 (UEA21) |
+| 68% | 0.199 (SvSc16) | 0.014 (UEA21) |
+| 90% | 0.272 (Backbone) | 0.025 (UEA21) |
+| 95% | 0.301 (Backbone) | 0.030 (UEA21) |
+
+S5 is excluded from this figure and table. With detection error switched off an
+exact method scores a coverage of 1.0 there, so it is a check on the pipeline
+(§9) rather than a test of calibration, and letting one degenerate world carry a
+fifth of the headline would flatter the two scaling methods.
+
+The assessment's charge — "no evidence that any method's uncertainties are
+calibrated" — is not merely unaddressed in the literature. On this benchmark it
+is false in the strongest possible direction, for every method, in every
+scenario. The numbers barely move between S1, S2, S3 and S4 (0.13–0.18 at
+nominal 0.50 for HoSc98 across S1–S4), so this is not a quirk of one world or
+one era.
 
 This is the axis on which the comparison is new. A157 scores RMS, mean, relative
 and maximum-absolute difference, and scores no interval at all. CEA17 is the only
-baseline whose construction yields a native distribution — "the calibration returns
-a PMF series, which also includes information about the uncertainty" — and even its
-interval covers 0.033 of truth at a nominal 0.50.
+baseline whose construction yields a native distribution — "the calibration
+returns a PMF series, which also includes information about the uncertainty" —
+and its interval covers 0.050 of truth at a nominal 0.50.
 
-Two caveats, both real. The nulls are also badly calibrated, so this figure does
-not separate "overconfident" from "wrongly centred"; the PIT statistics in
-`scores.csv` do, and they are large (0.43–0.91) for every method. And a two-world
-slice gives a coarse coverage estimate — the full grid is what the published
-number should come from.
+One honest caveat: the nulls are badly calibrated too, so this figure alone does
+not separate "overconfident" from "wrongly centred". The PIT statistics in
+`scores.csv` do, and they are large (0.43–0.91) for every method.
 
-### The structural ensemble
+## 6. Reach: five of seven methods cannot see the Maunder Minimum
+
+The result the two-world S1 slice could not show, because S1 begins in 1874.
+
+| method | earliest year reached | share of the 1610–2026 record |
+|---|---|---|
+| HoSc98, SvSc16, VHS24, CEA17, Backbone | **1774** | **46%** |
+| UEA21 | 1672 | 56% |
+| GRP | 1660 | 58% |
+
+Every method that calibrates through observer **overlap** stops at 1774. The
+reference observer sees only its anchored epoch (ADR-009: RGO cycles 15–19,
+1912–1969), and the chain from there does not reach the 17th century: the graph
+is too sparse. These methods do not produce a wrong Maunder Minimum — they
+produce **none at all**, over more than half the record the series is supposed
+to cover.
+
+The two methods that need no overlap do reach it, and are wrong by more than an
+order of magnitude. On S3, where a grand minimum is inserted by deleting whole
+groups:
+
+| method | true Maunder level | estimated | ratio |
+|---|---|---|---|
+| UEA21 | 0.088 | 2.165 | **24.5×** |
+| GRP | 0.094 | 2.135 | **22.8×** |
+| *null-segmentation* | *0.090* | *0.109* | *1.2×* |
+
+**A random segmentation gets the Maunder level right to 20% while both real
+methods overestimate it twenty-fold.** That is not because the null is clever: it
+rescales raw counts, which in a grand minimum are near zero, so it inherits the
+right answer. It is in the table because on the single number that decides the
+Maunder Minimum, neither method that can reach the era beats it.
+
+Taken together these two findings are the quantitative case for this project:
+the published methods either cannot speak about the Maunder Minimum, or speak
+about it wrongly by a factor of twenty.
+
+## 7. The ten case-study observers
+
+An aggregate score says which method wins and hides the observers that break one.
+Ten observers are fixed by name and seed, each isolating a failure mode; 3,500
+case-study rows across S1–S4.
+
+![Panels for case studies 1 to 5: acuity recovered against true, and recovered-over-implied scale factor.](figures/step-2/f25_case_studies_easy_light.png)
+
+**Figure f25** — Case studies 1–5. **`slow-drift` defeats all seven methods**: a
+random walk in acuity over a long career puts every one of them more than 2×
+away from the implied scale. `clean-modern` — the case every method should get
+right — defeats four of seven, the worst by 10.7×, and its acuity is recovered as
+209 MSH against a true 10.
+
+The paired breaks price the metadata exactly, which is what the pair was built
+for: the **same** break recovered as **40.1 MSH when documented** and **111.5
+when not**, against a true 45. Documentation is worth a factor of 2.5 here.
+
+![Five panels for the hard cases: poor-instrument, leaf-node, copier, zero-omitter and blanket-statements.](figures/step-2/f26_case_studies_hard_light.png)
+
+**Figure f26** — Case studies 6–10. `copier`, whose record duplicates a
+neighbour's, defeats four methods and has its acuity recovered as 161 MSH against
+a true 30 — correlated observer error, which nothing under test models.
+`leaf-node`, with one overlap partner, defeats three. `zero-omitter` is the one
+clear success: 26.1 MSH recovered against a true 30, so activity-dependent
+omission of blank days is the failure mode these methods *do* survive.
+`blanket-statements` produces nothing from any method, because the record is
+sentences rather than counts.
+
+![Recovered against true acuity threshold, for the two methods that estimate one.](figures/step-2/f23_acuity_recovery_light.png)
+
+**Figure f23** — Acuity recovery, for the only two methods that attempt it.
+Nearly every point sits above the diagonal: observers are judged worse than they
+were, by **+89 MSH (UEA21)** and **+87 MSH (GRP)** on average. A157 reports
+exactly this direction for UEA21 — it "systematically overestimates the acuity of
+the observer, thus in the end also amplifies the group numbers" — and the
+benchmark reproduces it at scale.
+
+## 8. The structural ensemble *(a slice)*
 
 ![Bars spanning each method's yearly bias across its own free graph choices, on one S2 world.](figures/step-2/f22_structural_ensemble_light.png)
 
 **Figure f22** — The spread a method's *own* free choices produce. Each bar spans
 one baseline re-run across the overlap graph's day tolerance, minimum overlap and
-minimum distinct counts — 15 settings — on a single S2 world; the dot is their
-mean. Williams et al. (2012) ran perturbed-parameter ensembles of the PHA for
-exactly this reason: a method's structural uncertainty is not inside its
-parametric one. The Backbone's choices move its yearly bias by **0.15 groups**,
-more than the gap between the three best methods in §4.
+minimum distinct counts — 15 settings; the dot is their mean. Williams et al.
+(2012) ran perturbed-parameter ensembles of the PHA for exactly this reason: a
+method's structural uncertainty is not inside its parametric one. The Backbone's
+own choices move its yearly bias by **0.15 groups**, more than the gap between
+the three best methods in §4.
 
-**This is a 60-cell slice, not the planned ensemble** — four fast methods on one
-world, enough to show the machinery works. The full version is three knobs × five
-settings × three worlds × nine methods and runs alongside the main grid. The
-figure says "no default-setting run on these worlds yet" because §4's defaults
-were measured on S1 and this ensemble ran on S2; comparing the two would compare
-scenarios, not settings, so the marker is withheld until the grid supplies the
-matching run.
+**This is the one part of the grid that is a slice**: 405 cells over four fast
+methods and one S2 world, enough to show the machinery and the magnitude. The
+planned version is three knobs × five settings × three worlds × nine methods. The
+figure withholds the default-setting marker because §4's defaults pool all
+scenarios while this ensemble ran on S2 alone, and plotting the two together
+would compare scenarios rather than settings.
 
-## 6. The Hay sampling-only experiment *(complete)*
+## 9. The Hay sampling-only experiment
 
 Scenario S5 puts **perfect** observers — no threshold, no drift, no noise, no MNAR
-omission — on the real calendars. Every observer then reports the estimand exactly
-on the days it looked, so any residual error is the sampling pattern and nothing
-else. That isolates sampling from calibration, which no comparison of calibration
-methods can do.
+omission — on the real calendars. Every observer reports the estimand exactly on
+the days it looked, so any residual error is the sampling pattern and nothing
+else.
+
+S5 also turns out to be a correctness check on the whole pipeline: on it,
+**HoSc98 and the Backbone score a centred RMSE of exactly 0.000 and a coverage of
+1.000**. When there is nothing to calibrate, the calibrators return the truth.
+That the two scaling methods do and the four non-parametric ones do not (0.86 to
+1.22) is itself informative about where their error comes from.
 
 ![Left: induced trend bias against network size, with scatter narrowing. Right: the induced bias in three windows.](figures/step-2/f21_sampling_only_light.png)
 
 **Figure f21** — What the calendar alone costs. The induced trend bias is
 **+0.014 groups per century against a true 0.287** over 1610–present — about 5% —
-falling to +0.0001 over 1850–present where the network is dense. Bootstrapping over
-5 to 400 observers, the scatter narrows from ±0.24 to ±0.009 while the mean bias
-stays near +0.01 to +0.03.
+falling to +0.0001 over 1850–present where the network is dense. Bootstrapping
+over 5 to 400 observers, the scatter narrows from ±0.21 to ±0.008 while the mean
+bias stays near +0.01 to +0.02.
 
-**This differs from the sea-level precedent, and the difference is the point.** Hay
-et al. found sparse, gappy sampling moved the 20th-century trend by about 30%;
-here the calendar alone moves it by 5%. The reason is visible in the construction:
-S5 has no *preferential* sampling, because MNAR omission is switched off. The large
+**This differs from the sea-level precedent, and the difference is the point.**
+Hay et al. found sparse, gappy sampling moved the 20th-century trend by about
+30%; here the calendar alone moves it by 5%. S5 has no *preferential* sampling by
+construction — MNAR omission is switched off — so the comparison says the large
 biases in the GN problem come from detection and reporting, not from who looked
-when — and a scenario with MNAR on (S2–S4) is where the preferential-sampling
-effect appears. That comparison needs the full grid.
+when.
 
-## 7. The ten case-study observers
+## 10. Reproducing this
 
-An aggregate score says which method wins and hides the observers that break one.
-Ten observers are fixed by name and seed, chosen to isolate a failure mode.
-
-![Ten panels: acuity recovered against true, and recovered-over-implied scale factor, for case studies 1 to 5.](figures/step-2/f25_case_studies_easy_light.png)
-
-**Figure f25** — Case studies 1–5. `clean-modern` is the case every method should
-get right, and three methods are still off its scale factor by more than 2×.
-`break-undocumented` and `break-documented` are the same break with and without
-metadata, so the pair prices what the documentation is worth.
-
-![Five panels for the hard cases: poor-instrument, leaf-node, copier, zero-omitter and blanket-statements.](figures/step-2/f26_case_studies_hard_light.png)
-
-**Figure f26** — Case studies 6–10, where methods break. `poor-instrument`: VHS24,
-UEA21 and GRP all overshoot the scale by 2.7–2.8× and both acuity estimates pin at
-the 300 MSH cap against a true 100. `leaf-node`, with one overlap partner: GRP is
-3.2× high. `copier`, whose record duplicates a neighbour's: UEA21 recovers an
-acuity of 260 MSH against a true 30 — correlated observer error, which no method
-under test models. `blanket-statements`: **no method produces anything at all**,
-because the record is sentences rather than counts.
-
-![Recovered against true acuity threshold, for the two methods that estimate one.](figures/step-2/f23_acuity_recovery_light.png)
-
-**Figure f23** — Acuity recovery, for the only two methods that attempt it. Points
-above the diagonal are observers judged worse than they were, which is where nearly
-all of them sit. Recovery improves with coverage — correlation with the truth rises
-from 0.27 over all observers to 0.68 for those with 6,000+ observing days — while
-the **bias stays put at +65 to +80 MSH** regardless. Coverage controls the scatter;
-the bias is the method's.
-
-## 8. Reproducing this
-
-In session (all under 15 minutes):
+Checks, all quick:
 
 ```bash
 conda activate gn-next-gen
@@ -292,15 +356,11 @@ pytest && pytest -m slow
 ruff check . && ruff format --check .
 python scripts/fetch_published_gn_series.py --check
 python scripts/generate_benchmark.py --config configs/step2_benchmark.yaml \
-       --scenarios S1 --realizations 2
-python scripts/generate_benchmark.py --config configs/step2_benchmark.yaml \
        --scenarios S1 --realizations 2 --check     # determinism: digests match
 python scripts/validate_against_a157.py            # §3, 16 s
-python scripts/sampling_only_experiment.py         # §6
-python scripts/make_step2_figures.py
 ```
 
-The full grid is **one command**, and it is the PI's to launch:
+The grid itself is **one command**:
 
 ```bash
 cd /d0/amunozj/git_repos/GN_Next_Gen
@@ -318,10 +378,11 @@ that is correct. Watch it with:
 grid resumes rather than restarting; if the machine reboots mid-run, start the
 same command again.
 
-**The barrier stage is already done.** Testing the orchestrator generated all
-**51 worlds** — S1×20, S2×10, S3×10, S4×10, S5×1, 900 MB under git-ignored
-`outputs/benchmark/` — so a run started now skips straight to the baselines.
-That is the long stage, and the only one of consequence still outstanding.
+**Measured, not estimated.** The full grid ran on 2026-11-22 in **16 minutes**
+with `--jobs 16` on 64 cores: the 51 worlds were already on disk and skipped, the
+459 baseline cells took 15.4 minutes and the 405-cell structural ensemble 14.4,
+concurrently. The 3–6 hour figure in earlier drafts was a serial estimate and was
+far too pessimistic.
 
 **What it does, and why in that order.** One dependency is hard: nothing that
 reads a world may start before `generate_benchmark.py` finishes, because the
@@ -356,42 +417,51 @@ scripts can still be run individually — the orchestrator only sequences them.
 Figures are committed under [`figures/step-2/`](figures/step-2/) in light and dark;
 the CSVs behind every number are in git-ignored `outputs/step2/`.
 
-## 9. What this step does not establish
+## 11. What this step does not establish
 
 Stated plainly, because a benchmark that overclaims is worse than none.
 
-1. **The grid has not run.** §4, §5 and §7 come from two S1 worlds. The ranking may
-   move; the coverage conclusion is so far from nominal that it is unlikely to.
-2. **This is not blind in the HOME sense.** HOME had 25 outside groups submit before
-   the inserted inhomogeneities were revealed. One developer wrote both sides here.
-   Blindness is enforced by API and audited by a static import test, and the
-   baselines are frozen by commit before the scoring run. That is weaker than HOME
-   and stronger than nothing.
-3. **Grand-minimum truths are thinned modern groups, not a regime change.** No source
-   was found for generating grand-minimum synthetic truths; the thinning is this
-   project's choice. S3's scores are conditional on it.
-4. **Overconfidence is not decomposed.** There is no matched-model control arm, so
-   §5 measures coverage under *this* generator rather than separating model error
-   from data error.
-5. **Break-detection skill is NaN for all seven.** None of them attempts to detect a
-   career break. The metric is implemented and tested so Steps 3–4 can be scored on
-   it; the absence is a result, not a gap in the scorer.
-6. **Two of the five published series were not acquired** — Chatzistergos et al.
-   (2017) and Velasco Herrera et al. (2024), both at CDS/VizieR, unreachable from
-   this machine. Recorded in `refresh_todo.md`. Nothing here depends on them.
-7. **The second, model-based generator was not written.** The replay generator
+1. **This is not blind in the HOME sense.** HOME had 25 outside groups submit
+   before the inserted inhomogeneities were revealed. One developer wrote both
+   sides here. Blindness is enforced by API and audited by a static import test,
+   and the baselines were frozen by commit before the scoring run. That is
+   weaker than HOME and stronger than nothing.
+2. **Grand-minimum truths are thinned modern groups, not a regime change.** No
+   source was found for generating grand-minimum synthetic truths; the thinning
+   is this project's choice. §6's 23–25× overestimate is conditional on it —
+   though the *reach* result, that five methods never arrive at all, does not
+   depend on what the truth looks like once you get there.
+3. **Overconfidence is not decomposed.** There is no matched-model control arm,
+   so §5 measures coverage under *this* generator rather than separating model
+   error from data error.
+4. **The structural ensemble is a slice** — four fast methods, one world (§8).
+5. **Break-detection skill is NaN for all seven.** None of them attempts to
+   detect a career break. The metric is implemented and tested so Steps 3–4 can
+   be scored on it; the absence is a result, not a gap in the scorer.
+6. **One anchoring, not two.** Every scenario here uses ADR-009's secondary
+   anchor (RGO cycles 15–19). The Debrecen 21–23 anchoring is supported by the
+   code and configured per scenario, but was not run, so the anchor-sensitivity
+   comparison ADR-003 asks for is still owed by Steps 3–4.
+7. **Two of the five published series were not acquired** — Chatzistergos et al.
+   (2017) and Velasco Herrera et al. (2024), both at CDS/VizieR, unreachable
+   from this machine. Recorded in `refresh_todo.md`. Nothing here depends on
+   them.
+8. **The second, model-based generator was not written.** The replay generator
    already supplies the four structural misspecifications through real data; a
-   parametric sibling would have added a knob without adding a departure from the
-   Step 4 model.
+   parametric sibling would have added a knob without adding a departure from
+   the Step 4 model.
 
-## 10. What Steps 3–4 inherit
+## 12. What Steps 3–4 inherit
 
 | Setting | Value | Why |
 |---|---|---|
-| Benchmark API | `gn_next_gen.benchmark` + `gn_next_gen.baselines`; one `calibrate(...) -> CalibrationResult` signature | Any Step 3 or 4 method is scored by registering it in `BASELINES` |
-| The bar to clear | yearly cRMSE **0.263** (HoSc98) and a 50% coverage of **0.124** (Backbone) | The best point error and the best coverage among the seven, on the S1 slice |
-| The floor | a random segmentation scores **0.597** | Three published methods are below it; a new method that is not has demonstrated nothing |
-| Coverage levels | 50 / 68 / 90 / 95, stratified by era | Reconciles the spec's 50-90 with the research notes' 68-95 at no cost |
+| Benchmark API | `gn_next_gen.benchmark` + `gn_next_gen.baselines`; one `calibrate(...) -> CalibrationResult` signature | A Step 3 or 4 method is scored by registering it in `BASELINES` |
+| One command | `./scripts/run_step2_grid.sh --detach` | 51 worlds, 459 cells, 16 min on 64 cores; resumable |
+| The bar to clear | yearly cRMSE **0.312** (HoSc98) and a 50% coverage of **0.159** (Backbone) | The best point error and the best coverage among the seven |
+| The floor | a random segmentation scores **0.749** | Four published methods are below it; a method that is not has demonstrated nothing |
+| The open goal | **no method reaches before 1774**, and the two that do overestimate the Maunder level 23–25× | This is the gap a joint model exists to close, now measured rather than asserted |
+| Hardest observer | `slow-drift` — beats all seven | A drift prior is not optional |
+| Coverage levels | 50 / 68 / 90 / 95, stratified by era | Reconciles the spec's 50–90 with the research notes' 68–95 at no cost |
 | Overlap graph | `graph.overlap`, day tolerance 2, min overlap 60 days, min 4 distinct counts | 507 usable stations, 19,655 edges, one 422-node giant component, 26 bridges |
 | Estimand | the anchor survey's own completeness threshold, declared per scenario | ADR-003 and ADR-009; the scorer never compares two anchorings |
 | Known trap | composing PMF matrices leaks mass and biases the chained mean **low** | `pmf.compose` renormalises; any later matrix chaining must too |

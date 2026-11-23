@@ -28,7 +28,7 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 |---|---|---|---|---|
 | 0 | Clean slate (this repository's initial content) | — | Done (2026-10-28) | — |
 | 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | **Pass with caveats** (verified 2026-11-22) | [results](../results/step-1-data-foundation.md) · [verification](../results/step-1-verification.md) |
-| 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | [step-2-plan.md](../plans/step-2-plan.md) | **Implemented** (2026-11-22); full grid pending the PI's run | [results](../results/step-2-blind-benchmark.md) |
+| 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | [step-2-plan.md](../plans/step-2-plan.md) | **Implemented** (2026-11-22); full grid run, 459 cells | [results](../results/step-2-blind-benchmark.md) |
 | 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | — | Not started | — |
 | 4 | [step-4-joint-latent-population-model.md](step-4-joint-latent-population-model.md) | — | Not started | — |
 | 5 | [step-5-neural-emission-calibrator.md](step-5-neural-emission-calibrator.md) | — | Not started (conditional) | — |
@@ -92,8 +92,12 @@ Running list of paper items (add as steps produce them):
       methods ported and reproducing their Fig. 3b sign pattern, then extended to the
       real overlap graph, to daisy-chaining they did not evaluate, and to interval
       coverage they did not score (Step 2 §2-§3)
-- [x] No method's uncertainties are calibrated: 0.003-0.124 empirical against a nominal
-      50%, for all seven baselines (Step 2 §5) — the evidence ADR-007 asks for
+- [x] No method's uncertainties are calibrated: 0.009-0.159 empirical against a nominal
+      50%, for all seven baselines over 450 cells (Step 2 §5) — the evidence ADR-007 asks for
+- [x] **Five of seven published methods cannot reach the Maunder Minimum at all** — every
+      overlap-based method stops at 1774 and covers 46% of the record — and the two that
+      do reach it overestimate the Maunder level 23-25x (Step 2 §6)
+- [x] Four of seven score worse than a random segmentation of the same data (Step 2 §4)
 - [ ] Overlap-graph diagnostics through time (Step 3)
 - [ ] Benchmark comparison of all methods incl. coverage (Steps 3–4)
 - [ ] GN posterior ensemble 1610–present, sunspot-only (Step 4)
