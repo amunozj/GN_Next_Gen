@@ -411,51 +411,26 @@ so a partial grid still scores and an interrupted run resumes rather than restar
 | `fetch_published_gn_series.py` | < 2 min | session |
 | S1 only (`--scenarios S1`), 2 realizations | ~10 min | session, as the end-to-end check |
 | **Full generate + baselines + score** | **4–8 h** | **PI** |
-| **A157 validation (121 synthetic observers × 5 methods)** | **~30–60 min** | **PI** |
+| A157 validation (121 synthetic observers × 5 methods) | **16 s** (the 30–60 min estimate was wrong) | session |
 | `make_step2_figures.py` from existing outputs | < 3 min | session |
 
-Commands for the PI, written to run detached and survive a disconnect. Only one
-dependency is hard -- nothing that reads a world may start before the generator
-has finished, because the runners glob for *complete* realizations and one
-started early would quietly process a subset. After that, the two baseline
-runners and the sampling-only experiment write to disjoint paths and run
-together, as do the two scoring passes. The A157 validation depends on nothing
-and takes 16 seconds.
+The grid is **one command**, `scripts/run_step2_grid.sh`, which the PI launches:
 
 ```bash
-conda activate gn-next-gen
-cd /d0/amunozj/git_repos/GN_Next_Gen
-mkdir -p outputs/step2/logs
-
-python scripts/validate_against_a157.py            # independent, 16 s
-
-nohup python scripts/generate_benchmark.py \
-      --config configs/step2_benchmark.yaml --jobs 16 \
-      > outputs/step2/logs/generate.log 2>&1       # ~30-60 min
-wait
-
-nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --jobs 16 \
-      > outputs/step2/logs/baselines.log 2>&1 &    # ~3-6 h
-nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --structural --jobs 16 \
-      > outputs/step2/logs/structural.log 2>&1 &
-nohup python scripts/sampling_only_experiment.py \
-      > outputs/step2/logs/sampling.log 2>&1 &
-wait
-
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml &
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml --structural &
-wait
-python scripts/make_step2_figures.py
+./scripts/run_step2_grid.sh --detach     # returns at once, survives logout
+./scripts/run_step2_grid.sh --status     # how far has it got
 ```
 
-64 cores and ~1 TB of memory here, and a worker holds well under 2 GB, so
-`--jobs 16` on each of two concurrent runners is comfortable.
+It sequences the stages, enforces the one hard barrier (nothing that reads a
+world may start before generation finishes, because the runners glob for
+*complete* realizations), runs the three independent middle stages and the two
+scoring passes in parallel, and aborts if generation fails. Re-running it
+resumes. A failing stage does not abort the stages that do not depend on it, and
+the run ends with a summary and a non-zero exit code.
 
-Each writes `progress.json` beside its log (cells done / total / failed), so progress is readable
-without tailing. Run them in the order above; 3 needs 1 and 2, while 4 is independent and can go in
-parallel. `tmux` or `screen` works equally well in place of `nohup` if preferred.
+Each stage writes its own `progress.json` and `lineage_*.json` beside its log, so progress and
+provenance are readable without tailing anything, and two concurrent stages cannot overwrite each
+other's record.
 
 ## Risks
 

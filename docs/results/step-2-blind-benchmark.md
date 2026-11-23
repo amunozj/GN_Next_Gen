@@ -14,9 +14,10 @@
 > ### ⚠ What is measured here, and what is not
 >
 > The benchmark, the seven baselines, the scorer and the figures are built and
-> tested. **The full grid has not been run.** By PI decision 10 this session
-> never launches a job over ~15 minutes, so scenarios S2–S5 and the S6 structural
-> ensemble are the PI's to launch from the commands in §8.
+> tested, and **all 51 worlds are generated**. What has *not* run is the long
+> stage: the baselines over scenarios S2–S5 and the full S6 ensemble. By PI
+> decision 10 this session never launches a job over ~15 minutes, so that is
+> the PI's to start — one command, §8.
 >
 > Every score below comes from a **two-world S1 slice** (1874–2026, 363 observers,
 > 18 cells) unless it says otherwise. The **A157 validation (§3) and the
@@ -206,6 +207,26 @@ not separate "overconfident" from "wrongly centred"; the PIT statistics in
 slice gives a coarse coverage estimate — the full grid is what the published
 number should come from.
 
+### The structural ensemble
+
+![Bars spanning each method's yearly bias across its own free graph choices, on one S2 world.](figures/step-2/f22_structural_ensemble_light.png)
+
+**Figure f22** — The spread a method's *own* free choices produce. Each bar spans
+one baseline re-run across the overlap graph's day tolerance, minimum overlap and
+minimum distinct counts — 15 settings — on a single S2 world; the dot is their
+mean. Williams et al. (2012) ran perturbed-parameter ensembles of the PHA for
+exactly this reason: a method's structural uncertainty is not inside its
+parametric one. The Backbone's choices move its yearly bias by **0.15 groups**,
+more than the gap between the three best methods in §4.
+
+**This is a 60-cell slice, not the planned ensemble** — four fast methods on one
+world, enough to show the machinery works. The full version is three knobs × five
+settings × three worlds × nine methods and runs alongside the main grid. The
+figure says "no default-setting run on these worlds yet" because §4's defaults
+were measured on S1 and this ensemble ran on S2; comparing the two would compare
+scenarios, not settings, so the marker is withheld until the grid supplies the
+matching run.
+
 ## 6. The Hay sampling-only experiment *(complete)*
 
 Scenario S5 puts **perfect** observers — no threshold, no drift, no noise, no MNAR
@@ -279,67 +300,58 @@ python scripts/sampling_only_experiment.py         # §6
 python scripts/make_step2_figures.py
 ```
 
-The full grid, for the PI to launch. Each stage is resumable per cell and writes
-its own `progress.json` and `lineage_*.json`, so a disconnect costs minutes.
+The full grid is **one command**, and it is the PI's to launch:
 
-**What can overlap.** Only one dependency is hard: nothing that reads a world may
-start before `generate_benchmark.py` has finished the scenarios it needs. The
-runners discover worlds by globbing for *complete* realizations, so one started
-early would quietly score a subset and look finished.
+```bash
+cd /d0/amunozj/git_repos/GN_Next_Gen
+./scripts/run_step2_grid.sh --detach
+```
 
-| stage | needs | may overlap with | ~time |
+It returns immediately, survives logout, and does the stages in the only order
+that is correct. Watch it with:
+
+```bash
+./scripts/run_step2_grid.sh --status
+```
+
+**Safe to re-run.** Every stage skips cells already on disk, so an interrupted
+grid resumes rather than restarting; if the machine reboots mid-run, start the
+same command again.
+
+**The barrier stage is already done.** Testing the orchestrator generated all
+**51 worlds** — S1×20, S2×10, S3×10, S4×10, S5×1, 900 MB under git-ignored
+`outputs/benchmark/` — so a run started now skips straight to the baselines.
+That is the long stage, and the only one of consequence still outstanding.
+
+**What it does, and why in that order.** One dependency is hard: nothing that
+reads a world may start before `generate_benchmark.py` finishes, because the
+runners discover work by globbing for *complete* realizations and one started
+early would quietly process a subset and look finished. The script enforces that
+barrier and aborts if generation fails, since everything downstream would
+otherwise produce confident nonsense.
+
+| stage | needs | runs with | ~time |
 |---|---|---|---|
-| `validate_against_a157.py` | nothing — reads `data/raw` only | anything, including stage 1 | 16 s |
-| 1 `generate_benchmark.py` | — | the A157 validation | 30–60 min |
-| 2 `run_baselines.py` | stage 1 | 3 and 4 | 3–6 h |
-| 3 `run_baselines.py --structural` | stage 1 (S2) | 2 and 4 | 1–2 h |
-| 4 `sampling_only_experiment.py` | stage 1 (S5) | 2 and 3 | ~20 min |
-| 5 `score_benchmark.py` | 1, 2 | `--structural` scoring | ~10 min |
-| 5' `score_benchmark.py --structural` | 1, 3 | plain scoring | ~10 min |
-| 6 `make_step2_figures.py` | everything | — | < 3 min |
+| `validate_against_a157` | nothing — reads `data/raw` only | — | 16 s |
+| `generate_benchmark` | — | — **barrier** | 30–60 min |
+| `run_baselines` | generation | the next two | 3–6 h |
+| `run_baselines --structural` | generation (S2) | the other two | 1–2 h |
+| `sampling_only_experiment` | generation (S5) | the other two | ~20 min |
+| `score_benchmark` | baselines | `--structural` scoring | ~10 min |
+| `score_benchmark --structural` | the ensemble | plain scoring | ~10 min |
+| `make_step2_figures` | everything | — | < 3 min |
 
-Stages 2, 3 and 4 write to disjoint paths — the structural runner tags its output
-directories `seed-NNNN__knob=value` — and the two scoring runs write different
-CSVs, so each group is safe to run at once. This machine has 64 cores and ~1 TB of
-memory, so `--jobs 16` on each of two concurrent runners is comfortable; a worker
-holds well under 2 GB.
+The three middle stages write to disjoint paths — the structural runner tags its
+directories `seed-NNNN__knob=value` — and the two scoring passes write different
+CSVs, so each group is safe to run at once. Defaults to `--jobs 16` per runner,
+comfortable on this machine's 64 cores; a worker holds well under 2 GB.
 
-```bash
-cd /d0/amunozj/git_repos/GN_Next_Gen && conda activate gn-next-gen
-mkdir -p outputs/step2/logs
+A stage that fails does not abort the ones that do not depend on it. The run ends
+with a summary naming every failure and a non-zero exit code.
 
-# independent of everything; 16 seconds
-python scripts/validate_against_a157.py
-
-# 1. the worlds -- everything below waits for this
-nohup python scripts/generate_benchmark.py \
-      --config configs/step2_benchmark.yaml --jobs 16 \
-      > outputs/step2/logs/generate.log 2>&1
-wait
-
-# 2, 3, 4 together
-nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --jobs 16 \
-      > outputs/step2/logs/baselines.log 2>&1 &
-nohup python scripts/run_baselines.py \
-      --config configs/step2_baselines.yaml --structural --jobs 16 \
-      > outputs/step2/logs/structural.log 2>&1 &
-nohup python scripts/sampling_only_experiment.py \
-      > outputs/step2/logs/sampling.log 2>&1 &
-wait
-
-# 5 and 5' together, then the figures
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml &
-python scripts/score_benchmark.py --config configs/step2_benchmark.yaml --structural &
-wait
-python scripts/make_step2_figures.py
-```
-
-Watch progress without tailing anything:
-
-```bash
-cat outputs/step2/logs/*_progress.json
-```
+Useful flags: `--jobs N`, `--scenarios S1 S2`, `--realizations N` and
+`--methods HoSc98 CEA17` for a smoke run; `--help` for the rest. The underlying
+scripts can still be run individually — the orchestrator only sequences them.
 
 Figures are committed under [`figures/step-2/`](figures/step-2/) in light and dark;
 the CSVs behind every number are in git-ignored `outputs/step2/`.

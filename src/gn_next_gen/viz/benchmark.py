@@ -699,12 +699,27 @@ def observer_population_figure(parameters: pd.DataFrame, mode: str = "light") ->
 
 
 def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="light") -> plt.Figure:
-    """f22 -- the spread a method's own free choices produce."""
+    """f22 -- the spread a method's own free choices produce.
+
+    The default-setting marker is taken from the **same worlds** the ensemble
+    ran on. An earlier version drew the ensemble's S2 bars against the default
+    run's S1 bias, which compared two different scenarios and made every method
+    look as though its structural choices had moved it.
+    """
     with figure_style(mode) as theme:
         methods = _order(structural["method"].unique())
         colors = _method_colors(methods, mode)
+
+        matched = scores
+        if not scores.empty and {"scenario", "seed"} <= set(scores.columns):
+            matched = scores[
+                scores["scenario"].isin(set(structural["scenario"]))
+                & scores["seed"].isin(set(structural["seed"]))
+            ]
+
         fig, ax = plt.subplots(figsize=(7.4, 3.6))
         positions = np.arange(len(methods))
+        drew_default = False
         for index, method in enumerate(methods):
             block = structural[structural["method"] == method]["bias_yearly"].dropna()
             if block.empty:
@@ -718,24 +733,36 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
                 solid_capstyle="round",
             )
             ax.scatter(block.mean(), index, s=28, color=colors[method], zorder=3)
-            parametric = scores[scores["method"] == method]["bias_yearly"].dropna()
-            if not parametric.empty:
+            default = matched[matched["method"] == method]["bias_yearly"].dropna()
+            if not default.empty:
                 ax.scatter(
-                    parametric.mean(),
+                    default.mean(),
                     index,
-                    s=28,
+                    s=34,
                     marker="x",
                     color=theme["text_secondary"],
                     zorder=4,
                 )
+                drew_default = True
+
         ax.axvline(0.0, color=theme["text_secondary"], linewidth=1.0)
         ax.set_yticks(positions)
         ax.set_yticklabels(methods)
         ax.set_xlabel("yearly bias (groups)")
+        if not drew_default:
+            ax.annotate(
+                "no default-setting run on these worlds yet",
+                xy=(0.5, 1.02),
+                xycoords="axes fraction",
+                ha="center",
+                fontsize=7.5,
+                color=theme["text_secondary"],
+            )
         caption(
             fig,
-            "Bars span the method's own free choices (graph tolerance, minimum overlap); "
-            "crosses are the default setting. Structural spread sits beside the parametric one.",
+            "Bars span the method's own free choices (graph tolerance, minimum overlap, "
+            "minimum distinct counts); dots are their mean and crosses the default, on the "
+            "same worlds.",
             mode,
         )
         fig.tight_layout()

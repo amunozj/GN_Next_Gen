@@ -128,6 +128,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=Path("configs/step2_baselines.yaml"))
     parser.add_argument("--scenarios", nargs="*", default=None)
+    parser.add_argument(
+        "--seeds",
+        nargs="*",
+        type=int,
+        default=None,
+        help="restrict to these realizations; the scorer reads whatever is on disk, "
+        "so this is how a deliberate slice is kept from mixing with a wider run",
+    )
     parser.add_argument("--methods", nargs="*", default=None)
     parser.add_argument("--data-root", type=Path, default=BENCHMARK_ROOT)
     parser.add_argument("--out-root", type=Path, default=BASELINE_ROOT)
@@ -144,6 +152,8 @@ def main() -> None:
 
     graph_defaults = dict(config.params.get("graph", {}))
     realizations = _discover(args.data_root, args.scenarios)
+    if args.seeds:
+        realizations = [cell for cell in realizations if cell[1] in set(args.seeds)]
     if not realizations:
         raise SystemExit(f"no complete realization under {args.data_root}; generate first")
 
@@ -194,21 +204,31 @@ def main() -> None:
     ]
     progress.record(skipped=len(cells) - len(pending))
 
-    def submit(cell):
-        scenario, seed, method, kwargs, tag = cell
-        return run_cell(
-            scenario, seed, method, str(args.data_root), str(args.out_root), kwargs, tag
-        )
+    data_root, out_root = str(args.data_root), str(args.out_root)
 
     if args.jobs > 1:
+        # run_cell must be submitted directly, not through a closure: a nested
+        # function cannot be pickled, so a ProcessPoolExecutor rejects every
+        # task with "Can't get local object". That failed all 189 cells of a
+        # trial grid while reporting each one as an ordinary cell failure.
         with ProcessPoolExecutor(max_workers=args.jobs) as pool:
-            futures = {pool.submit(submit, cell): cell for cell in pending}
+            futures = {
+                pool.submit(run_cell, scenario, seed, method, data_root, out_root, kwargs, tag): (
+                    scenario,
+                    seed,
+                    method,
+                    kwargs,
+                    tag,
+                )
+                for scenario, seed, method, kwargs, tag in pending
+            }
             for future in as_completed(futures):
                 _report(future, futures[future], progress)
     else:
         for cell in pending:
+            scenario, seed, method, kwargs, tag = cell
             try:
-                submit(cell)
+                run_cell(scenario, seed, method, data_root, out_root, kwargs, tag)
             except Exception as error:  # noqa: BLE001 - one cell must not kill the grid
                 progress.record(failure=f"{cell[:3]}: {error!r}")
                 print(f"FAILED {cell[:3]}: {error!r}", flush=True)
