@@ -1,0 +1,108 @@
+J/A+A/602/A69      Group sunspot number series since 1739 (Chatzistergos+, 2017)
+================================================================================
+New reconstruction of the sunspot group numbers since 1739 using direct
+calibration and 'backbone' methods.
+    Chatzistergos T., Usoskin I.G., Kovaltsov G.A., Krivova N.A., Solanki S.K
+    <Astron. Astrophys. 602, A69 (2017)>
+    =2017A&A...602A..69C        (SIMBAD/NED BibCode)
+================================================================================
+ADC_Keywords: Sun
+Keywords: Sun: activity - Sun: sunspots - methods: statistical
+
+Abstract:
+    The group sunspot number (GSN) series constitute the longest
+    instrumental astronomical database providing information on solar
+    activity. This database is a compilation of observations by many
+    individual observers, and their inter-calibration has usually been
+    performed using linear rescaling. There are multiple published series
+    that show different long-term trends for solar activity.
+
+    We aim at producing a GSN series, with a non-linear non-parametric
+    calibration. The only underlying assumptions are that the differences
+    between the various series are due to different acuity thresholds of
+    the observers, and that the threshold of each observer remains
+    constant throughout the observing period.
+
+    We used a daisy chain process with backbone (BB) observers and
+    calibrated all overlapping observers to them. We performed the
+    calibration of each individual observer with a probability
+    distribution function (PDF) matrix constructed considering all daily
+    values for the overlapping period with the BB. The calibration of the
+    BBs was carried out in a similar manner. The final series was
+    constructed by merging different BB series. We modelled the
+    propagation of errors straightforwardly with Monte Carlo simulations.
+    A potential bias due to the selection of BBs was investigated and the
+    effect was shown to lie within the 1{sigma} interval of the produced
+    series. The exact selection of the reference period was shown to have
+    a rather small effect on our calibration as well.
+
+    The final series extends back to 1739 and includes data from 314
+    observers. This series suggests moderate activity during the 18th and
+    19th century, which is significantly lower than the high level of
+    solar activity predicted by other recent reconstructions applying
+    linear regressions.
+
+    The new series provides a robust reconstruction, based on modern and
+    non-parametric methods, of sunspot group numbers since 1739, and it
+    confirms the existence of the modern grand maximum of solar activity
+    in the second half of the 20th century.
+
+Description:
+    Annual, monthly, and daily values of the Group sunspot number series
+    produced in the paper.
+
+File Summary:
+--------------------------------------------------------------------------------
+ FileName      Lrecl  Records   Explanations
+--------------------------------------------------------------------------------
+ReadMe            80        .   This file
+ch_gsn_y.dat      27      272   GSN series, annual values
+ch_gsn_m.dat      29     3264   GSN series, monthly values
+ch_gsn_d.dat      31   101184   GSN series, daily values
+--------------------------------------------------------------------------------
+
+See also:
+        VI/138  : Sunspots catalogues, 1853-1870 (Casas+, 2013)
+ J/A+A/390/707  : Hemispheric Sunspot Numbers 1975-2000 (Temmer+, 2002)
+ J/A+A/447/735  : Hemispheric Sunspot Numbers 1945-2004 (Temmer+, 2006)
+ J/A+A/584/A73  : Sunspot areas and tilt angles (Senthamizh Pavai+, 2015)
+ J/A+A/595/A104 : Scheiner drawing sunspot areas and tilt angles (Arlt+, 2016)
+
+Byte-by-byte Description of file: ch_gsn_y.dat
+--------------------------------------------------------------------------------
+   Bytes Format Units   Label     Explanations
+--------------------------------------------------------------------------------
+   1-  6  F6.1  yr      Date      Observation date
+   8- 13  F6.2  ---     Rg        ?=-99 Group sunspot number
+  15- 20  F6.2  ---     sigmaU    ?=-99 Upper limit of standard deviation
+  22- 27  F6.2  ---     sigmaL    ?=-99 Lower limit of standard deviation
+--------------------------------------------------------------------------------
+
+Byte-by-byte Description of file: ch_gsn_m.dat
+--------------------------------------------------------------------------------
+   Bytes Format Units   Label     Explanations
+--------------------------------------------------------------------------------
+   1-  4  I4    yr      Obs.year  Year of observation
+   6-  7  I2    ---     Obs.month Month of observation
+  10- 15  F6.2  ---     Rg        ?=-99 Group sunspot number
+  17- 22  F6.2  ---     sigmaU    ?=-99 Upper limit of standard deviation
+  24- 29  F6.2  ---     sigmaL    ?=-99 Lower limit of standard deviation
+--------------------------------------------------------------------------------
+
+Byte-by-byte Description of file: ch_gsn_d.dat
+--------------------------------------------------------------------------------
+   Bytes Format Units   Label     Explanations
+--------------------------------------------------------------------------------
+   1-  4  I4    yr      Obs.year  Year of observation
+   6-  7  I2    ---     Obs.month Month of observation
+   9- 10  I2    d       Obs.day   Day of observation
+  12- 17  F6.2  ---     Rg        ?=-99 Group sunspot number
+  19- 24  F6.2  ---     sigmaU    ?=-99 Upper limit of standard deviation
+  26- 31  F6.2  ---     sigmaL    ?=-99 Lower limit of standard deviation
+--------------------------------------------------------------------------------
+
+Acknowledgements:
+    Theodosios Chatzistergos, chatzistergos(at)mps.mpg.de
+
+================================================================================
+(End)    Theodosios Chatzistergos [MPS], Patricia Vannier [CDS]      27-Feb-2017

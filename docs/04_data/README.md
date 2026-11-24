@@ -3,7 +3,7 @@
 | Doc | Content |
 |---|---|
 | [data_dictionary.md](data_dictionary.md) | Every file in `data/raw/`: columns, units, sentinels, coverage, sources, licensing |
-| [known_issues.md](known_issues.md) | Issues **D1–D22**, each with a status. D1–D9 are the original set (most now resolved or moot after the 2026-10 renovation); D10–D22 came with the current inputs. **Four are still open and bite in Step 1: D16, D17, D22 and the KMAS single-use rule** |
+| [known_issues.md](known_issues.md) | Issues **D1–D25**, each with a status. D1–D9 are the original set (most now resolved or moot after the 2026-10 renovation); D10–D23 came with the current inputs; D24–D25 came with the two published series added on 2026-11-23. **Four are still open and bite in Step 1: D16, D17, D22 and the KMAS single-use rule** |
 | [refresh_todo.md](refresh_todo.md) | What has been acquired and what is still outstanding (SILSO SN, published GN comparison series) |
 
 The raw inputs were renovated in 2026-10: see [`../plans/raw-data-renovation-plan.md`](../plans/raw-data-renovation-plan.md),
