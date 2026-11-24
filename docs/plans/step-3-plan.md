@@ -507,6 +507,58 @@ above). Nothing is blocking. Three items are flagged for awareness rather than d
    PI may want to say now whether such a result changes Step 4's priority on the fingerprint/emission
    side; the plan assumes it does not.
 
+## Deviations from the approved plan
+
+Recorded as they are taken, with the PI's decision and the measurement that
+prompted it.
+
+### D1 — the detection ratio is measured, not predicted (PI, 2026-11-24)
+
+**Planned:** `k_o(t) = fraction_above(T_o; law(AL_t)) / fraction_above(T_ref; law(AL_t))`,
+the parametric area law everywhere.
+
+**Taken:** the ratio is counted directly in the frozen reference catalogue, binned
+by activity level, wherever the catalogue has coverage; the parametric law is used
+**only to extrapolate** below and above that coverage, offset per threshold so the
+two branches agree at the edge. `source="parametric"` is retained and is what the
+`S-tilt` sensitivity perturbs.
+
+**Why.** The parametric law was checked against the catalogue's own count ratio on
+RGO over 37,059 active days and is biased in one direction — it under-predicts
+`k` for observers coarser than the anchor:
+
+| `T_o` (MSH) | empirical `k` | law `k` | law/empirical |
+|---|---|---|---|
+| 10.0 | 1.2107 | 1.3879 | 1.146 |
+| 20.0 | 1.0774 | 1.1170 | 1.037 |
+| **28.08** (`T_ref`) | 1.0000 | 1.0000 | 1.000 |
+| 40.0 | 0.9181 | 0.8852 | 0.964 |
+| 60.0 | 0.8172 | 0.7590 | 0.929 |
+| 100.0 | 0.6624 | 0.5924 | 0.894 |
+| 200.0 | 0.4017 | 0.3490 | 0.869 |
+
+Typical observers sit at 1–3× the anchor threshold, so the typical error was
+4–10%. `k_o` multiplies every one of that observer's counts, so this is a 4–10%
+error in that observer's whole contribution to the series — larger than the
+differences between published methods that Step 3 exists to resolve. After the
+change the grid reproduces the count ratio to 0.1–0.8% out to 100 MSH.
+
+**Consequences.** Three, all simplifications:
+
+- the per-group → per-group-day `μ` shift (Step 1 §2.4) **does not apply to the
+  empirical branch**: counting rows above a threshold is already at
+  per-group-day grain, so there is no conversion to make. It still steers the
+  extrapolation branch.
+- the activity dependence inside coverage now comes from the data rather than
+  from the published exponents, which is strictly closer to ADR-011's intent
+  (upstream's calibration is used, never refitted).
+- `meta` records which branch spoke for every run: `empirical_fraction` is 0.906
+  on RGO, so 9.4% of the activity grid — the low-activity end, i.e. the Maunder
+  regime — is the rescaled law. That is reported, not hidden.
+
+**Not a change to:** the estimand, the anchor identity (`k(T_ref) ≡ 1`, now exact
+to 1e-12 rather than 0.9988), the firewall lineage, or any acceptance criterion.
+
 ## Approval
 
 **Approved 2026-11-24** by the PI, in session, together with the eight decisions in the table above.

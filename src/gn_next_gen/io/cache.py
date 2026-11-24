@@ -15,6 +15,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from gn_next_gen.paths import DATA_INTERIM, DATA_RAW, MANIFEST
@@ -79,3 +80,40 @@ def cached_frame(
     path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(path, index=False)
     return frame
+
+
+def cached_arrays(
+    name: str,
+    inputs: list[Path],
+    options: dict,
+    build: Callable[[], dict],
+    *,
+    use_cache: bool = True,
+    force: bool = False,
+) -> dict:
+    """The array-valued sibling of :func:`cached_frame`, backed by ``.npz``.
+
+    Same keying, same guarantees: a cache built from another release or another
+    set of options cannot be read by mistake.  Scalars and short strings survive
+    the round trip, so a grid's metadata travels with its arrays rather than
+    having to be rebuilt to be trusted.
+    """
+    if not use_cache:
+        return build()
+
+    path = DATA_INTERIM / f"{name}__{cache_key(inputs, options)}.npz"
+    if path.is_file() and not force:
+        with np.load(path, allow_pickle=False) as handle:
+            out = {key: handle[key] for key in handle.files}
+        meta = out.pop("__meta__", None)
+        if meta is not None:
+            out["meta"] = json.loads(str(meta))
+        return out
+
+    built = build()
+    payload = {k: np.asarray(v) for k, v in built.items() if k != "meta"}
+    if "meta" in built:
+        payload["__meta__"] = np.asarray(json.dumps(built["meta"], default=str))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, **payload)
+    return built
