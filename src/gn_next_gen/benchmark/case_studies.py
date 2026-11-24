@@ -17,6 +17,13 @@ import numpy as np
 
 from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS, ObserverParams
 
+#: Observing days a ``clean-modern`` candidate must have.  `acuity.py` measures
+#: UEA21's recovery correlation rising from 0.27 over all observers to 0.61 for
+#: those with 3,000+ observing days, so this is where the method's own statistic
+#: starts to exist rather than an arbitrary round number.
+MIN_CLEAN_MODERN_DAYS = 3_000
+
+
 #: How each case study differs from a population draw.  Everything not named here
 #: is left at the population value, so a panel isolates one effect at a time.
 CASE_STUDY_OVERRIDES: dict[str, dict] = {
@@ -95,6 +102,7 @@ def _pick_stations(
         raise ValueError("no calendars to choose case-study observers from")
 
     density = {s: len(calendars[s]) / _span_years(calendars[s]) for s in stations}
+    n_days = {s: len(calendars[s]) for s in stations}
     span = {s: _span_years(calendars[s]) for s in stations}
     start = {s: int(calendars[s][0]) for s in stations}
     taken: set[int] = set()
@@ -117,9 +125,19 @@ def _pick_stations(
     else:
         by_degree = sparse_first
 
+    modern = [s for s in by_density if start[s] > 715_000]
     chosen = {
-        # Dense, late, long: the case every method should get right.
-        "clean-modern": take([s for s in by_density if start[s] > 715_000] or by_density),
+        # Dense, late and -- the part the first version of this left out -- *long*.
+        # Density alone picked a 517-day career, which is ~17 of the fixed months
+        # UEA21's statistic is defined on, against its own floor of 12.  A record
+        # that short does not have a distribution, and what the acuity methods then
+        # recovered was the activity of whichever 17 months the replay had put under
+        # it, not the observer's acuity: Spearman -0.93 against the window's true
+        # mean count, across the ten S2 worlds.  The case every method should get
+        # right has to be a clean *record*, not merely a dense one.
+        "clean-modern": take(
+            [s for s in modern if n_days[s] >= MIN_CLEAN_MODERN_DAYS] or modern or by_density
+        ),
         # Earliest and thinnest calendar available.
         "sparse-maunder": take([s for s in by_start if density[s] < 60] or by_start),
         "break-undocumented": take(by_span),

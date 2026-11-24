@@ -278,7 +278,9 @@ def test_a_method_keeps_its_colour_when_the_others_are_absent():
     subset = benchmark._method_colors(["UEA21", "GRP"], "light")
     assert subset["UEA21"] == full["UEA21"]
     assert subset["GRP"] == full["GRP"]
-    coloured = [m for m in benchmark.METHOD_ORDER if not m.startswith("null-")]
+    # The floors share one recessive grey by design, so what this pins is that the
+    # *methods* never collide.
+    coloured = [m for m in benchmark.METHOD_ORDER if not benchmark.is_floor(m)]
     assert len({full[m] for m in coloured}) == len(coloured)
 
 

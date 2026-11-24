@@ -15,6 +15,8 @@ from gn_next_gen.baselines.acuity import (
 from gn_next_gen.baselines.base import (
     PairEstimate,
     chain_from_reference,
+    combine_observers,
+    inverse_variance_daily,
     matched_counts,
     station_series,
 )
@@ -284,3 +286,79 @@ def test_every_registered_baseline_has_the_same_signature():
         parameters = inspect.signature(function).parameters
         assert "observations" in parameters, name
         assert any(p.kind == p.VAR_KEYWORD for p in parameters.values()), name
+
+
+def test_the_naive_floors_take_a_statistic_of_the_raw_counts():
+    """The hard floor: no graph, no reference, no calibration at all."""
+    observations, _latent = _chain_observations({1: 1.0, 2: 2.0})
+    for how, statistic in (("mean", "mean"), ("median", "median")):
+        result = NULLS[f"naive-{how}"](observations)
+        expected = observations.groupby("date_ord")["groups"].agg(statistic)
+        assert result.series["gn"].to_numpy() == pytest.approx(expected.to_numpy())
+        # No claim about its own uncertainty, so it stays out of the coverage table.
+        assert result.series["gn_sd"].isna().all()
+        assert result.observers.empty
+
+
+def test_the_naive_floors_need_neither_graph_nor_reference():
+    """They are called with the same signature as everything else and ignore it."""
+    observations, _latent = _chain_observations({1: 1.0})
+    for how in ("mean", "median"):
+        result = NULLS[f"naive-{how}"](observations, graph=None, reference=None, seed=7)
+        assert not result.series.empty
+
+
+def test_the_prior_nulls_uncertainty_is_entirely_correlated_in_time():
+    """One interval for the whole record cannot average down."""
+    observations, _latent = _chain_observations({1: 1.0, 2: 2.0})
+    result = NULLS["null-prior"](observations)
+    assert (result.series["gn_sd_factor"] == result.series["gn_sd"]).all()
+    assert (result.series["gn_sd_spread"] == 0).all()
+
+
+def test_the_segmentation_nulls_uncertainty_is_entirely_day_level():
+    observations, _latent = _chain_observations({1: 1.0, 2: 1.0})
+    result = NULLS["null-segmentation"](observations, seed=3)
+    assert (result.series["gn_sd_factor"] == 0).all()
+    assert (result.series["gn_sd_spread"] == result.series["gn_sd"]).all()
+
+
+def test_combining_observers_decomposes_without_changing_the_total():
+    """The decomposition is additional information, not a different interval."""
+    observations, _latent = _chain_observations({1: 1.0, 2: 2.0, 3: 0.5})
+    scales = pd.DataFrame(
+        {
+            "station": [1, 2, 3],
+            "factor": [1.0, 0.5, 2.0],
+            "factor_sd": [0.05, 0.10, 0.20],
+            "reached": True,
+        }
+    )
+    daily = combine_observers(observations, scales)
+    assert {"gn_sd", "gn_sd_factor", "gn_sd_spread"} <= set(daily.columns)
+    # `gn_sd` is still max(spread, propagated), exactly as before.
+    expected = np.where(
+        daily["n_observers"] > 1,
+        np.maximum(daily["gn_sd_spread"], daily["gn_sd_factor"]),
+        daily["gn_sd_factor"],
+    )
+    assert daily["gn_sd"].to_numpy() == pytest.approx(expected)
+    assert (daily["gn_sd_factor"] > 0).all()
+
+
+def test_the_inverse_variance_helper_calls_its_whole_interval_correlated():
+    """CEA17, UEA21, GRP and Pathfinding report a propagated factor error only."""
+    frame = pd.DataFrame(
+        {
+            "date_ord": [1, 1, 2],
+            "value": [3.0, 5.0, 4.0],
+            "sd": [1.0, 1.0, 2.0],
+        }
+    )
+    out = inverse_variance_daily(frame, value="value", sd="sd", sd_floor=0.25)
+    assert out["gn_sd"].to_numpy() == pytest.approx(out["gn_sd_factor"].to_numpy())
+    assert (out["gn_sd_spread"] == 0).all()
+    # Two observers one sd apart pool to sd / sqrt(2), and the day's disagreement is
+    # reported beside it rather than inside it.
+    assert out.loc[0, "gn_sd"] == pytest.approx(1.0 / np.sqrt(2))
+    assert out.loc[0, "day_spread"] == pytest.approx(np.std([3.0, 5.0], ddof=1))

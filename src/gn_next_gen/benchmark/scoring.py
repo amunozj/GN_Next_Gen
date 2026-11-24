@@ -19,7 +19,9 @@ Metrics, per (scenario, realization, method):
 * **secular trend error** over 1610-, 1700- and 1850-present;
 * **Maunder-Minimum mean level**, for S3;
 * **CRPS** and **PIT** on yearly means, and empirical **interval coverage** at
-  50/68/90/95%;
+  50/68/90/95%, aggregated by :func:`_yearly_sd`, which keeps the correlated and
+  day-level parts of a method's uncertainty apart -- the single choice that decides
+  whether the coverage figure is a measurement or an artifact;
 * **observer acuity recovery**, where a method estimates one.
 
 Coverage is reported at four levels because the sources disagree -- the spec says
@@ -67,6 +69,12 @@ def align(truth: Truth, result: CalibrationResult) -> pd.DataFrame:
             "sd": frame.loc[common, "gn_sd"].to_numpy(dtype=float),
         }
     )
+    # The decomposition, when the method supplies it.  A series written before the
+    # columns existed falls back to the old independent-days rule, which
+    # `uncertainty_scores` states in its own output as `sd_decomposed = 0`.
+    for column in ("gn_sd_factor", "gn_sd_spread"):
+        if column in frame.columns:
+            out[column.removeprefix("gn_")] = frame.loc[common, column].to_numpy(dtype=float)
     calendar = _calendar(out["date_ord"].to_numpy())
     out["year"] = calendar.year
     out["month"] = calendar.year * 12 + calendar.month
@@ -204,19 +212,60 @@ def crps_gaussian(truth: np.ndarray, mean: np.ndarray, sd: np.ndarray) -> np.nda
     return sd * (z * (2 * norm.cdf(z) - 1) + 2 * norm.pdf(z) - 1.0 / np.sqrt(np.pi))
 
 
+def _yearly_sd(block: pd.DataFrame) -> float:
+    r"""The sd of a year's *mean*, respecting which part of the error averages down.
+
+    A year's daily errors are not independent.  The dominant term in a chained
+    method's uncertainty is the observer's calibration factor, which is the same on
+    every day of that observer's career: averaging 300 days of it removes none of
+    it.  Pooling the whole daily ``sd`` as ``sqrt(mean(sd^2) / n_days)`` -- which is
+    what this scorer did until 2026-11-24 -- therefore shrinks a yearly interval by
+    up to ``sqrt(365) ~ 19`` and reports an overconfidence the method never claimed.
+
+    So the two parts are pooled differently.  The correlated part carries at its
+    mean, because a constant error survives averaging unchanged; the day-level part
+    divides by ``sqrt(n_days)``, because that part genuinely is independent:
+
+    .. math::
+
+        \sigma_{\rm year} = \sqrt{\langle\sigma_{\rm factor}\rangle^2
+                                  + \langle\sigma_{\rm spread}^2\rangle / n}
+
+    A method that supplies no decomposition keeps the old rule, so its number stays
+    comparable with what was published, and ``sd_decomposed`` records which of the
+    two was used.
+    """
+    n = max(len(block), 1)
+    if not np.isfinite(block["sd"]).any() and not (
+        "sd_factor" in block and np.isfinite(block["sd_factor"]).any()
+    ):
+        # A method that reports no uncertainty at all -- the naive floors, by
+        # design.  NaN keeps it out of the coverage table instead of warning.
+        return float("nan")
+    if "sd_factor" in block and np.isfinite(block["sd_factor"]).any():
+        factor = float(np.nanmean(block["sd_factor"]))
+        spread = float(np.nanmean(np.square(block["sd_spread"])))
+        return float(np.sqrt(factor**2 + spread / n))
+    return float(np.sqrt(np.nanmean(np.square(block["sd"])) / n))
+
+
 def uncertainty_scores(aligned: pd.DataFrame) -> dict[str, float]:
     """Coverage, CRPS and PIT on yearly means.
 
     Yearly rather than daily because that is the scale the series is used at, and
     because daily counts are integers whose Gaussian intervals would be scored
-    against a discreteness the methods never claimed to model.
+    against a discreteness the methods never claimed to model.  :func:`_yearly_sd`
+    is where the aggregation lives, and it is the load-bearing choice in this
+    module.
     """
+    decomposed = "sd_factor" in aligned.columns and bool(np.isfinite(aligned["sd_factor"]).any())
+    columns = ["sd"] + [c for c in ("sd_factor", "sd_spread") if c in aligned.columns]
     yearly = aligned.groupby("year").agg(
         truth=("truth", "mean"),
         estimate=("estimate", "mean"),
-        sd=("sd", lambda block: float(np.sqrt(np.nanmean(np.square(block)) / max(len(block), 1)))),
     )
-    out: dict[str, float] = {"n_years": int(len(yearly))}
+    yearly["sd"] = aligned.groupby("year")[columns].apply(_yearly_sd)
+    out: dict[str, float] = {"n_years": int(len(yearly)), "sd_decomposed": int(decomposed)}
 
     valid = yearly[np.isfinite(yearly["sd"]) & (yearly["sd"] > 0)]
     if valid.empty:

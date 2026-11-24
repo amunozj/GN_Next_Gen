@@ -15,6 +15,15 @@
 
 ## Verdict: **Pass with caveats**
 
+> **Superseded in part, 2026-11-24.** Three defects found after this verification
+> are fixed in code and await a re-run of the grid: the yearly coverage aggregation,
+> the missing naive floor, and the `clean-modern` case study. They change A1, A5 and
+> the case-study criteria, so **this document's measured numbers are the 2026-11-23
+> ones** and the sections that quote them are stale until the re-run. The criteria
+> themselves and the verdict's reasoning are unaffected. See the status box at the
+> top of [the results doc](step-2-blind-benchmark.md) and
+> [`docs/plans/step-2-scorer-followups.md`](../plans/step-2-scorer-followups.md).
+
 The benchmark works, the grid is complete and reproducible, and its central
 claims hold on re-measurement. Three acceptance criteria do not pass as written.
 
@@ -101,7 +110,7 @@ implementation session had run a four-method slice by hand earlier and then
 described the orchestrator's full run in the slice's terms.
 
 Corrected in place, and the limitation "the structural ensemble is a slice" is
-removed from §11.
+removed from the limitations list (§12 since the 2026-11-24 restructure).
 
 ### F2 — A10's actual answer was never given, and it sharpens §5
 
@@ -268,7 +277,7 @@ Two defects surfaced while adding them, both now fixed and pinned by tests:
 **D25**, the snapshot's `gn = -1` no-data sentinel being carried into the table
 as a negative group count (seven rows), and **D24**, the 12.08 scale trap in the
 Velasco Herrera supplement. Details and the figure are in
-[§11a of the results doc](step-2-blind-benchmark.md).
+[§10 of the results doc](step-2-blind-benchmark.md).
 
 A third was a rule that was documented but unenforced: `validate_run_config` now
 refuses a `kind: published_series` dataset in role `calibration` in **either**

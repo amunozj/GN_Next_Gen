@@ -20,6 +20,31 @@
 > That includes scenario **S6**, the structural ensemble: 405 cells, three knobs
 > × five settings × three worlds × nine methods, the full planned version.
 
+> ### ⚠ Status, 2026-11-24 — §§4–9 are awaiting a re-run
+>
+> Three defects found while answering questions about this document are **fixed in
+> code but not yet in these numbers**: the yearly coverage aggregation (§12.7), the
+> missing hard floor (§12.8), and the `clean-modern` case study (§12.9). All three
+> change what the grid produces, so every number in **§§4–9, and f18–f23, f25 and
+> f26, is the 2026-11-23 run** and is superseded. What is *not* affected: §3 (the
+> A157 validation reads RGO directly, not the worlds), §10 (the published series
+> are frozen raw data), and §11.
+>
+> The re-run is one command and about 20 minutes on 64 cores. It is **not launched
+> from a Claude Code session** (plan decision A13), and it regenerates rather than
+> resumes, because `clean-modern` moving reshuffles every world's draws:
+>
+> ```bash
+> ./scripts/run_step2_grid.sh --detach          # regenerates, re-fits, re-scores, redraws
+> ```
+>
+> Staleness is enforced rather than trusted: `config.json` now carries a
+> `generator_version`, and `is_complete` refuses a world written by an older
+> generator, while `cell_done` refuses a fit whose parquet lacks the new
+> uncertainty columns. Nothing silently reuses the old grid. The plan behind all
+> three is
+> [`docs/plans/step-2-scorer-followups.md`](../plans/step-2-scorer-followups.md).
+
 ## Summary
 
 | Question | Answer |
@@ -224,6 +249,10 @@ the full grid does not support either. What reproduces robustly is the
 
 **Figure f20** — Nominal against empirical interval coverage, over the 450
 calibration cells. **Every curve lies far below the diagonal.**
+
+**Read these levels as a lower bound**: the yearly aggregation behind them treats a
+year's daily errors as independent, which they are not, and §12.7 gives the size of
+that effect and which rows survive it.
 
 | nominal | best of the seven | worst of the seven |
 |---|---|---|
@@ -430,7 +459,91 @@ construction — MNAR omission is switched off — so the comparison says the la
 biases in the GN problem come from detection and reporting, not from who looked
 when.
 
-## 10. Reproducing this
+## 10. The eight published series, compared
+
+![Top: eight published group-number series over 1610-2022, smoothed over one solar cycle and drawn on a log axis, converging after 1750 and fanning out across two decades of magnitude inside the shaded Maunder Minimum. Middle: each series' mean group count in the Maunder window as a filled marker and in the modern overlap as an open one, on a log axis, the Maunder markers spanning 0.05 to 3.28. Bottom: the difference between the 2024 Hoyt and Schatten update divided by 12.08 and the 1998 series it updates, within a thousandth of a group.](figures/step-2/f27_published_series_light.png)
+
+**Figure f27** — Every published group-number series this project holds, on one
+axis. Panel (a) is smoothed over one cycle and drawn on a log axis deliberately:
+at annual resolution eight cycle-resolved series are a hairball that hides the slow
+disagreement, which is the only thing worth comparing. Panel (b) is the comparison
+itself; panel (c) is the check that licenses the single scale (**D24**) — the
+supplement publishes its Hoyt & Schatten update in 12.08-scaled units while its own
+reconstruction is in counts, and dividing by 12.08 reproduces the 1998 series on all
+386 overlapping years to within 9×10⁻⁴. A series left unscaled would sit twelve
+times too high and still look like a plausible solar cycle.
+
+**Where they agree, they agree well.** Over **1749–1995**, where all six full-record
+series overlap, the mean daily group count runs from **3.83 to 4.80** — a spread of
+**25%**, and most of that is one series:
+
+| series | 1749–1995 | 1645–1715 |
+|---|---|---|
+| Velasco Herrera 2024 (H&S update) | 3.83 | **0.055** |
+| Hoyt & Schatten 1998 | 3.83 | **0.055** |
+| Usoskin et al. (ADF family) | 4.18 | — |
+| Svalgaard & Schatten 2016 | 4.45 | **1.01** |
+| Chatzistergos et al. 2017 | 4.51 | — |
+| Velasco Herrera et al. 2024 | 4.80 | **0.10** |
+| Vaquero et al. *(window only)* | — | **0.20** |
+| Zolotova & Ponyavin *(window only)* | — | **3.28** |
+
+**Where they disagree, they disagree by sixty.** Over the Maunder Minimum
+**1645–1715** the same quantity runs from **0.055 to 3.28 groups per day**, a factor
+of **60**. Two of the eight are window studies rather than reconstructions, and
+including them is the point: the disagreement is not a tail of one method's error
+bar, it is two incompatible pictures of the same seventy years. Note also what is
+*missing* from that column: the Usoskin and Chatzistergos series begin in 1749 and
+1739, so neither says anything about the window at all. Four series, two of them
+window studies, are the entire published basis for the Maunder Minimum's level.
+
+**This benchmark explains the size of that gap.** Five of the eight series were
+produced by methods scored here — HoSc98, SvSc16, CEA17, UEA21 and VHS24 — so the
+scores in §§4–7 are statements about these series' provenance, not about
+look-alikes. And the disagreement sits exactly where the benchmark finds no skill:
+§6 measures that five of seven methods never reach the era at all, and that the two
+that do overestimate the Maunder level by **23–25×** on a known truth (that figure
+is from the 2026-11-23 grid; see the status box). A published spread of 60× across
+methods whose Maunder-era error is of that order is not a puzzle; it
+is the expected consequence, and it is the strongest argument in this document for
+why the series needs rebuilding rather than re-weighting.
+
+**One correction to the frozen table, recorded here because it changed numbers.**
+The 2017 MATLAB snapshot's yearly files use `gn = -1` with `n_observations = 0` for
+a year with no data, and the first export carried it through as a negative group
+count: six years of Hoyt & Schatten and one of the Usoskin file. They are null now
+(**D25**). Comparison-only data, so no score moves.
+
+**A documented rule was not actually enforced, and now is.** That folder's
+README claimed the validator refuses these as a calibration input. It did
+not: `FIREWALLED_KINDS` is `silso`, `isotope`, `aurora`, `proxy`, and a GN
+series would have been declared `kind: sunspot` and passed. This mattered
+more than it had before, because what arrived with the supplement includes a
+**daily** reconstruction over the same observers — the one shape that could
+enter a likelihood looking like data. `validate_run_config` now refuses a
+`kind: published_series` dataset in role `calibration`, and every
+`lineage.json` carries the matching evidence.
+
+It is a **separate rule from the ADR-002 firewall**, not another entry in
+`FIREWALLED_KINDS`, for two reasons. It binds *both* variants — the
+proxy-informed variant may calibrate on isotopes, but neither variant may
+calibrate on someone else's recalibration of these observers. And a published
+GN series *is* sunspot data: listing it as proxy-derived would have made each
+run's own firewall statement false. The lineage record therefore gained
+`published_series_calibration_inputs` and a `circularity_statement` beside
+the existing firewall fields, and `tests/test_config.py` pins that the two
+stay apart. If you want this recorded as a decision rather than as
+enforcement of ADR-003, an ADR amendment is the place — it is not
+relitigating anything, since the project had already claimed the rule in
+three documents.
+
+The supplement also carries a corrected raw observation database, 1610–**2022**,
+in the v1.22 shape. It is not adopted: ADR-010 makes `gn_database_v1.3` release
+`_4` the database of record, and those corrections are an author's judgement to
+be compared against v1.3's changelog rather than merged. It is noted because it
+is the only thing in hand that runs past v1.3's 2010 end.
+
+## 11. Reproducing this
 
 Checks, all quick:
 
@@ -507,8 +620,7 @@ Figures are committed under [`figures/step-2/`](figures/step-2/) in light and da
 the per-observer summary behind §7 under
 [`data/step2_case_study_observers.csv`](data/step2_case_study_observers.csv); the rest of
 the CSVs are in git-ignored `outputs/step2/`.
-
-## 11. What this step does not establish
+## 12. What this step does not establish
 
 Stated plainly, because a benchmark that overclaims is worse than none.
 
@@ -532,84 +644,60 @@ Stated plainly, because a benchmark that overclaims is worse than none.
    anchor (RGO cycles 15–19). The Debrecen 21–23 anchoring is supported by the
    code and configured per scenario, but was not run, so the anchor-sensitivity
    comparison ADR-003 asks for is still owed by Steps 3–4.
-6. ~~**Two of the five published series were not acquired.**~~ **Closed
-   2026-11-23** — both are now in `data/raw/gn_published_series_2026-11/`; see
-   §11a. The reason recorded here was also wrong: Velasco Herrera et al. (2024)
-   was never at CDS/VizieR, and CDS was not down.
-7. **The second, model-based generator was not written.** The replay generator
+6. **The second, model-based generator was not written.** The replay generator
    already supplies the four structural misspecifications through real data; a
    parametric sibling would have added a knob without adding a departure from
    the Step 4 model.
+7. **The yearly coverage behind §5 was aggregated wrongly, and is now fixed in
+   code.** `uncertainty_scores` pooled a method's daily `gn_sd` to the year as
+   `sqrt(mean(sd^2) / n_days)` — the independent-days rule. The dominant term in a
+   chained method's `sd` is the observer's calibration factor error, which is
+   *identical on every day of that observer's career* and does not average down, so
+   the rule shrank every yearly interval by up to `sqrt(365) ≈ 19` and reported an
+   overconfidence no method had claimed. Measured on 3 S2 worlds before the fix,
+   carrying the factor error as correlated instead moves nominal-50% coverage from
+   0.177 to 0.810 (HoSc98), 0.161 to 0.824 (Pathfinding), 0.145 to 0.730 (SvSc16),
+   0.064 to 0.781 (VHS24) and 0.064 to 0.613 (CEA17) — **a sign change in §5's
+   finding**. It does *not* move the conclusion for UEA21 (0.025 to 0.116) or GRP
+   (0.014 to 0.246), which undercover under either rule. Each baseline now returns
+   `gn_sd_factor` and `gn_sd_spread` beside an unchanged `gn_sd`, and the scorer
+   pools them as `sqrt(mean(sd_factor)^2 + mean(sd_spread^2) / n_days)`. The test
+   that was supposed to guard this could not: it sets one day per year, so the
+   aggregation was a no-op; two tests with 200-day years now pin both halves.
+   **§5's numbers below are the pre-fix ones** and are superseded by the re-run.
+8. **The floor §4 compares against was the weak one, and two harder floors are now
+   in the grid.** `null-segmentation`'s random `exp(N(0, 0.3))` factors average out
+   over ~450 observers and a year of days, so it is the naive mean plus noise. A
+   plain daily **median of the raw, uncalibrated counts** is a much harder floor: on
+   3 S2 worlds it scores a yearly cRMSE of **0.391** against HoSc98's 0.343,
+   Pathfinding's 0.448, SvSc16's 0.479 and `null-segmentation`'s 0.711 — **six of
+   the seven methods lose to the median of the counts they were meant to
+   calibrate**, and only HoSc98 beats it. `naive-mean` and `naive-median` are now
+   registered floors; they are shape comparators only, with no anchoring and no
+   uncertainty, so they appear on centred RMSE and nowhere else. §4's "four of the
+   seven are beaten by a random segmentation" is true but understated, and its
+   "beats the null?" column — a hand comparison of two pooled means — is now a
+   per-world paired test written to `floors.csv` by the scorer.
+9. **`clean-modern` was testing a short record, not a clean one.** The case study
+   was selected as the densest post-1959 calendar, which is station 722: a
+   **517-day career, 1992-01 to 1993-05**, about 17 of the fixed months UEA21's
+   statistic is defined on against its own floor of 12. All fifty replicates reuse
+   that one window, and the replay drops a different synthetic Sun into it each
+   time. What the acuity methods then recovered was the window, not the observer:
+   across the ten S2 worlds the recovered acuity tracks the window's true mean
+   group count with **Spearman ρ = −0.93** (p = 1e-4), and in the one world whose
+   window is more active than the anchor epoch UEA21 returns **12 MSH against a
+   true 10**. The mechanism is the methods' own and is published — the ADF
+   fingerprint cannot separate a quiet Sun from a blind observer, the library is
+   built once over the anchor epoch with no conditioning on activity, and a
+   quiet-era observer's statistic lies below every library entry, so the fit runs to
+   the top of the grid and pins at the 300 MSH cap A157 documents. Selection now
+   requires **≥ 3,000 observing days**, which moves `clean-modern` to station 459
+   (6,922 days, 1977–1995, about two cycles), and f23 gained a panel showing
+   recovered acuity against era activity. **§7's numbers below are the pre-change
+   ones.**
 
-## 11a. Addendum, 2026-11-23 — the two missing series
-
-Both series the plan named and this step could not get are now frozen in
-`data/raw/gn_published_series_2026-11/`, and `published_gn_series.csv` carries
-**eight** series instead of five. Nothing in §§1–10 changes: the scorer never
-read this folder and no baseline consumes it. What changes is that the
-benchmark's results can now be read beside every series the same methods
-produced, including the two whose *ports* (CEA17 and VHS24) were scored here all
-along.
-
-- **Chatzistergos et al. (2017)**, A&A 602, A69, from CDS catalogue
-  J/A+A/602/A69: yearly, monthly and daily, 1739–2010, with **asymmetric** error
-  bars that the table now carries as `gn_sd_hi`/`gn_sd_lo`. CDS was reachable the
-  whole time — its own `/ftp/` path serves a placeholder page, while
-  `cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/602/A69` redirects to the NAOJ mirror,
-  which serves the files.
-- **Velasco Herrera et al. (2024)**, Adv. Space Res. 73, 2788: the article is
-  closed access and the series is in no open repository, so there was nothing to
-  download. The PI supplied the supplement ("Group Number series VERSION 3.14")
-  from his own access on 2026-11-23; the zip is archived and read in place.
-
-![Top: eight published group-number series over 1610-2022, the three newly added drawn in colour over the five already held in grey. Bottom: the difference between the 2024 Hoyt and Schatten update divided by 12.08 and the 1998 series it updates, within a thousandth of a group across 1610-1995, with the 1995-2022 extension shaded.](figures/step-2/f27_published_series_light.png)
-
-**Figure f27** — The eight series on one axis, all in mean daily group counts
-(top), and the check that licenses that single scale (bottom). The Velasco
-Herrera supplement publishes its Hoyt & Schatten update in **12.08-scaled**
-units while its own reconstruction is in counts (**D24**); dividing by 12.08
-reproduces the 1998 series this folder already held on all 386 overlapping years
-to within 9×10⁻⁴, and carries it 27 years past 1995. A series left unscaled
-would sit twelve times too high and still look like a plausible solar cycle.
-
-Two corrections fell out of adding them:
-
-1. **A sentinel was being read as data (D25).** The 2017 MATLAB snapshot's
-   yearly files use `gn = -1` with `n_observations = 0` for a year with no data,
-   and the first export carried it through: six years of Hoyt & Schatten (1636,
-   1637, 1641, 1744, 1745, 1747) and one of the Usoskin file (1811) sat in the
-   table as negative group counts. They are null now. Comparison-only data, so
-   no score moves.
-2. **A documented rule was not actually enforced, and now is.** That folder's
-   README claimed the validator refuses these as a calibration input. It did
-   not: `FIREWALLED_KINDS` is `silso`, `isotope`, `aurora`, `proxy`, and a GN
-   series would have been declared `kind: sunspot` and passed. This mattered
-   more than it had before, because what arrived with the supplement includes a
-   **daily** reconstruction over the same observers — the one shape that could
-   enter a likelihood looking like data. `validate_run_config` now refuses a
-   `kind: published_series` dataset in role `calibration`, and every
-   `lineage.json` carries the matching evidence.
-
-   It is a **separate rule from the ADR-002 firewall**, not another entry in
-   `FIREWALLED_KINDS`, for two reasons. It binds *both* variants — the
-   proxy-informed variant may calibrate on isotopes, but neither variant may
-   calibrate on someone else's recalibration of these observers. And a published
-   GN series *is* sunspot data: listing it as proxy-derived would have made each
-   run's own firewall statement false. The lineage record therefore gained
-   `published_series_calibration_inputs` and a `circularity_statement` beside
-   the existing firewall fields, and `tests/test_config.py` pins that the two
-   stay apart. If you want this recorded as a decision rather than as
-   enforcement of ADR-003, an ADR amendment is the place — it is not
-   relitigating anything, since the project had already claimed the rule in
-   three documents.
-
-The supplement also carries a corrected raw observation database, 1610–**2022**,
-in the v1.22 shape. It is not adopted: ADR-010 makes `gn_database_v1.3` release
-`_4` the database of record, and those corrections are an author's judgement to
-be compared against v1.3's changelog rather than merged. It is noted because it
-is the only thing in hand that runs past v1.3's 2010 end.
-
-## 12. What Steps 3–4 inherit
+## 13. What Steps 3–4 inherit
 
 | Setting | Value | Why |
 |---|---|---|

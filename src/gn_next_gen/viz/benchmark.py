@@ -26,7 +26,8 @@ from gn_next_gen.viz.style import (
 
 #: Method order, used by every table and figure so a reader learns it once: the
 #: three linear scalings, the two non-parametric methods, the count-distribution
-#: variant, the pathfinding chain, then the nulls.
+#: variant, the pathfinding chain, then the four floors -- hardest first, so the
+#: bar a method has to clear is the first grey line a reader meets.
 METHOD_ORDER = [
     "HoSc98",
     "SvSc16",
@@ -35,9 +36,19 @@ METHOD_ORDER = [
     "UEA21",
     "GRP",
     "Pathfinding",
+    "naive-median",
+    "naive-mean",
     "null-segmentation",
     "null-prior",
 ]
+
+#: The floors, which are drawn recessively and never ranked with the seven.
+FLOOR_PREFIXES = ("null-", "naive-")
+
+
+def is_floor(method: str) -> bool:
+    return method.startswith(FLOOR_PREFIXES)
+
 
 UNIX_EPOCH_ORDINAL = 719_163
 
@@ -61,7 +72,7 @@ def _method_colors(methods, mode: str) -> dict[str, str]:
     extras = [m for m in _order(methods) if m not in METHOD_ORDER]
     colors = {}
     for method in _order(methods):
-        if method.startswith("null-"):
+        if is_floor(method):
             colors[method] = theme["text_secondary"]
             continue
         slot = (
@@ -73,9 +84,14 @@ def _method_colors(methods, mode: str) -> dict[str, str]:
     return colors
 
 
-#: Nulls are drawn in the same recessive grey, so they need a second channel to
-#: tell them apart -- colour alone is never the identity (the house rule).
-NULL_LINESTYLE = {"null-prior": (0, (1, 2)), "null-segmentation": (0, (5, 2))}
+#: The floors are drawn in the same recessive grey, so they need a second channel
+#: to tell them apart -- colour alone is never the identity (the house rule).
+NULL_LINESTYLE = {
+    "null-prior": (0, (1, 2)),
+    "null-segmentation": (0, (5, 2)),
+    "naive-mean": (0, (3, 1, 1, 1)),
+    "naive-median": (0, (6, 1, 1, 1)),
+}
 
 
 def _linestyle(method: str):
@@ -86,7 +102,9 @@ def _linestyle(method: str):
 #: points, so shape and colour both say which method a mark belongs to: the
 #: identity survives a greyscale print, a reader who cannot separate two hues,
 #: and the two nulls sharing one recessive grey.  `x` is left out on purpose --
-#: f22 reserves it for the default-setting cross, which is not a method.
+#: `x` is left out on purpose -- f22 reserves it for the default-setting cross,
+#: which is not a method.  The two naive floors take the pentagon and the hexagon,
+#: which read as a pair without colliding with anything the seven use.
 METHOD_MARKERS = {
     "HoSc98": "o",
     "SvSc16": "s",
@@ -95,12 +113,17 @@ METHOD_MARKERS = {
     "UEA21": "v",
     "GRP": "P",
     "Pathfinding": "*",
+    "naive-median": "p",
+    "naive-mean": "h",
     "null-segmentation": ">",
     "null-prior": "<",
 }
 
-#: Shapes for methods this module does not know about yet, in the same order.
-MARKER_FALLBACK = ("o", "s", "D", "^", "v", "P", "*", ">", "<", "h")
+#: Shapes for methods this module does not know about yet.  Allocation skips any
+#: shape a named method already holds: indexing this tuple by position was fine
+#: while there were nine methods and ten shapes, and started handing a new method
+#: SvSc16's square the moment the two naive floors were registered.
+MARKER_FALLBACK = ("8", "d", "H", "+", "1", "2", "3", "4", "|", "_")
 
 #: A star of a given nominal size reads much smaller than a circle of it, and a
 #: diamond larger; these are linear size factors that even out visual weight.
@@ -108,9 +131,17 @@ MARKER_SCALE = {"*": 1.75, "P": 1.2, "p": 1.15, "h": 1.15, "D": 0.9}
 
 
 def _method_markers(methods) -> dict[str, str]:
-    markers = {}
-    for index, method in enumerate(_order(methods)):
-        markers[method] = METHOD_MARKERS.get(method, MARKER_FALLBACK[index % len(MARKER_FALLBACK)])
+    """One shape per method, and never the same shape twice."""
+    ordered = _order(methods)
+    taken = {METHOD_MARKERS[m] for m in ordered if m in METHOD_MARKERS}
+    spare = [shape for shape in MARKER_FALLBACK if shape not in taken]
+    markers, next_spare = {}, 0
+    for method in ordered:
+        if method in METHOD_MARKERS:
+            markers[method] = METHOD_MARKERS[method]
+            continue
+        markers[method] = spare[next_spare % len(spare)] if spare else "o"
+        next_spare += 1
     return markers
 
 
@@ -352,10 +383,26 @@ def sampling_only_figure(
 
 
 def acuity_recovery_figure(cases: pd.DataFrame, mode: str = "light") -> plt.Figure:
-    """f23 -- recovered against true acuity, for the methods that estimate one."""
+    """f23 -- recovered against true acuity, and against the era that confounds it.
+
+    The right panel is the diagnosis, not decoration.  UEA21 and GRP match an
+    observer's statistic against a library built once over the anchor epoch, with
+    no conditioning on activity: a quiet era and a blind observer produce the same
+    fingerprint, so the recovered acuity tracks how active the observer's own window
+    truly was.  Reporting only the left panel states a bias without saying what
+    drives it.
+    """
     with figure_style(mode) as theme:
         usable = cases[np.isfinite(cases["recovered_threshold_msh"])]
-        fig, ax = plt.subplots(figsize=(5.8, 5.2))
+        has_era = "era_mean_truth" in cases.columns and bool(
+            np.isfinite(cases.get("era_mean_truth", pd.Series(dtype=float))).any()
+        )
+        if has_era and not usable.empty:
+            fig, axes = plt.subplots(1, 2, figsize=(10.2, 5.0))
+            ax = axes[0]
+        else:
+            fig, ax = plt.subplots(figsize=(5.8, 5.2))
+            axes = [ax]
         if usable.empty:
             ax.text(
                 0.5,
@@ -396,10 +443,51 @@ def acuity_recovery_figure(cases: pd.DataFrame, mode: str = "light") -> plt.Figu
             ax.set_xlabel("true acuity threshold (MSH)")
             ax.set_ylabel("recovered acuity threshold (MSH)")
             ax.legend(fontsize=7.5, frameon=False)
+            ax.set_title("(a) recovered against true", fontsize=8, loc="left")
+
+        if has_era and not usable.empty:
+            ax = axes[1]
+            era = usable[np.isfinite(usable["era_mean_truth"])]
+            for method in _order(era["method"].unique()):
+                block = era[era["method"] == method]
+                ax.scatter(
+                    block["era_mean_truth"],
+                    block["recovered_threshold_msh"],
+                    s=_marker_area(markers[method], 34),
+                    marker=markers[method],
+                    color=colors[method],
+                    label=method,
+                    alpha=0.85,
+                )
+            if len(era) > 2:
+                rho = (
+                    era[["era_mean_truth", "recovered_threshold_msh"]]
+                    .corr(method="spearman")
+                    .iloc[0, 1]
+                )
+                ax.annotate(
+                    f"Spearman $\\rho$ = {rho:+.2f}",
+                    xy=(0.97, 0.95),
+                    xycoords="axes fraction",
+                    ha="right",
+                    va="top",
+                    fontsize=8,
+                    color=theme["text_secondary"],
+                )
+            ax.set_xlabel("true mean group count over the observer's own window")
+            ax.set_ylabel("recovered acuity threshold (MSH)")
+            ax.set_title(
+                "(b) the same points against the era, not the observer",
+                fontsize=8,
+                loc="left",
+            )
+
         caption(
             fig,
-            "Points above the diagonal are observers judged worse than they were. "
-            "A157 reports UEA21 systematically overestimates acuity.",
+            "Left: points above the diagonal are observers judged worse than they "
+            "were, which A157 reports for UEA21. Right: the recovered acuity falls "
+            "as the observer's own era gets more active -- the statistic cannot tell "
+            "a quiet Sun from a blind observer.",
             mode,
         )
         fig.tight_layout()
@@ -1132,88 +1220,200 @@ def _year_of(date_ord: int) -> int:
     return dt.date.fromordinal(int(date_ord)).year
 
 
-#: The two series added on 2026-11-23, drawn in colour against the five the
-#: 2017 MATLAB snapshot already carried.
-NEW_SERIES = ("chatzistergos_2017", "velasco_herrera_2024", "velasco_herrera_2024_hoyt_update")
+#: Shown in the order the comparison reads: the two long reconstructions a reader
+#: is most likely to know, then the rest, then the two Maunder-window-only studies
+#: whose disagreement is the point of the figure.
+SERIES_ORDER = (
+    "hoyt_schatten_1998",
+    "velasco_herrera_2024_hoyt_update",
+    "svalgaard_schatten_2016_backbone",
+    "usoskin_series",
+    "chatzistergos_2017",
+    "velasco_herrera_2024",
+    "vaquero",
+    "zolotova",
+)
 
 SERIES_LABEL = {
     "hoyt_schatten_1998": "Hoyt & Schatten 1998",
+    "velasco_herrera_2024_hoyt_update": "Velasco Herrera 2024 (H&S update)",
     "svalgaard_schatten_2016_backbone": "Svalgaard & Schatten 2016",
     "usoskin_series": "Usoskin et al. (ADF family)",
-    "vaquero": "Vaquero et al.",
-    "zolotova": "Zolotova & Ponyavin",
     "chatzistergos_2017": "Chatzistergos et al. 2017",
     "velasco_herrera_2024": "Velasco Herrera et al. 2024",
-    "velasco_herrera_2024_hoyt_update": "Velasco Herrera et al. 2024 (H&S update)",
+    "vaquero": "Vaquero et al.",
+    "zolotova": "Zolotova & Ponyavin",
 }
+
+#: Marker per series, so the identity survives greyscale and the two H&S variants
+#: -- which lie on top of each other by construction -- stay separable.
+SERIES_MARKER = {
+    "hoyt_schatten_1998": "o",
+    "velasco_herrera_2024_hoyt_update": "s",
+    "svalgaard_schatten_2016_backbone": "D",
+    "usoskin_series": "^",
+    "chatzistergos_2017": "v",
+    "velasco_herrera_2024": "P",
+    "vaquero": "X",
+    "zolotova": "*",
+}
+
+#: The two windows the comparison is made in.  The modern one is where all six
+#: full-record series overlap; the Maunder one is ADR-009's grand-minimum window and
+#: the one Step 2 section 6 scores against.
+COMPARISON_WINDOWS = (("Maunder Minimum", 1645, 1715), ("modern overlap", 1749, 1995))
+
+
+def series_window_means(table: pd.DataFrame) -> pd.DataFrame:
+    """Each series' mean daily group count in each comparison window.
+
+    The numbers the comparison rests on, returned rather than drawn so the figure
+    and the report quote the same arithmetic.
+    """
+    rows = []
+    year = np.floor(table["year"]).astype(int)
+    for label, first, last in COMPARISON_WINDOWS:
+        inside = table[(year >= first) & (year <= last)].dropna(subset=["gn"])
+        for name, block in inside.groupby("series"):
+            rows.append(
+                {
+                    "window": label,
+                    "first_year": first,
+                    "last_year": last,
+                    "series": name,
+                    "mean_gn": float(block["gn"].mean()),
+                    "n_years": int(len(block)),
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def published_series_figure(table: pd.DataFrame, mode: str = "light") -> plt.Figure:
-    """f27 -- the eight published series on one scale, and the 12.08 check."""
-    with figure_style(mode) as theme:
-        fig, axes = plt.subplots(2, 1, figsize=(10.0, 5.6), height_ratios=[3, 2])
+    """f27 -- the eight published series compared, on one scale.
 
+    Not a record of which arrived when: all eight are drawn alike.  What the figure
+    is for is the *shape* of their disagreement -- a quarter over the modern
+    overlap, a factor of sixty-six in the Maunder Minimum -- because that is the
+    quantity this benchmark's section 6 explains.
+    """
+    with figure_style(mode) as theme:
+        fig, axes = plt.subplots(3, 1, figsize=(10.0, 8.2), height_ratios=[3, 3, 1.5])
+        colors = {name: theme["categorical"][i % 8] for i, name in enumerate(SERIES_ORDER)}
+        present = [s for s in SERIES_ORDER if s in set(table["series"])]
+
+        # --- (a) every series, drawn alike ---------------------------------
         ax = axes[0]
-        old = [s for s in SERIES_LABEL if s not in NEW_SERIES]
-        for name in old:
-            block = table[table["series"] == name].dropna(subset=["gn"])
+        ax.axvspan(1645, 1715, color=theme["text_secondary"], alpha=0.10, zorder=0)
+        for name in present:
+            block = table[table["series"] == name].dropna(subset=["gn"]).sort_values("year")
+            # Annual values are a hairball at this width and, worse, a *misleading*
+            # one: eight cycle-resolved series on one axis hide exactly the slow
+            # disagreement the figure is about.  An 11-year centred mean is one
+            # cycle, so what is left is the secular level each series claims.
+            smooth = block["gn"].rolling(11, center=True, min_periods=4).mean()
             ax.plot(
                 block["year"],
-                block["gn"],
-                color=theme["grid"],
-                linewidth=0.9,
-                zorder=1,
-            )
-        for slot, name in enumerate(NEW_SERIES):
-            block = table[table["series"] == name].dropna(subset=["gn"])
-            ax.plot(
-                block["year"],
-                block["gn"],
-                color=theme["categorical"][slot],
+                smooth.clip(lower=0.02),
+                color=colors[name],
                 linewidth=1.3,
                 label=SERIES_LABEL[name],
-                zorder=3 - slot,
+                zorder=2,
             )
-        ax.set_ylabel("mean daily group count")
+        ax.set_yscale("log")
+        # Headroom for the legend, so it never sits on a curve or on the shaded band.
+        ax.set_ylim(0.018, 90.0)
+        ax.set_ylabel("mean daily group count\n(11-year centred mean)")
         ax.set_xlim(1600, 2030)
-        ax.legend(loc="upper left", fontsize=7, frameon=False)
+        ax.legend(loc="upper center", fontsize=6.5, frameon=False, ncol=4)
         ax.set_title(
-            "eight published series, all in group counts (grey: the five already held)",
+            "(a) eight published series, smoothed over one cycle, log axis; "
+            "shaded: the Maunder Minimum 1645-1715",
             fontsize=8,
             loc="left",
         )
 
+        # --- (b) the comparison itself -------------------------------------
         ax = axes[1]
+        means = series_window_means(table)
+        rows = [s for s in present if s in set(means["series"])]
+        positions = {name: len(rows) - 1 - i for i, name in enumerate(rows)}
+        for window, style in zip([w[0] for w in COMPARISON_WINDOWS], ["full", "open"], strict=True):
+            block = means[means["window"] == window]
+            for _, row in block.iterrows():
+                name = row["series"]
+                if name not in positions:
+                    continue
+                ax.scatter(
+                    max(row["mean_gn"], 1e-3),
+                    positions[name],
+                    marker=SERIES_MARKER[name],
+                    s=110 * MARKER_SCALE.get(SERIES_MARKER[name], 1.0),
+                    facecolor=colors[name] if style == "full" else "none",
+                    edgecolor=colors[name],
+                    linewidth=1.3,
+                    zorder=3,
+                )
+        for name in rows:
+            pair = means[means["series"] == name].set_index("window")["mean_gn"]
+            if len(pair) == 2:
+                ax.plot(
+                    [max(pair.min(), 1e-3), pair.max()],
+                    [positions[name]] * 2,
+                    color=colors[name],
+                    linewidth=0.9,
+                    alpha=0.6,
+                    zorder=2,
+                )
+        maunder = means[means["window"] == "Maunder Minimum"]["mean_gn"]
+        if len(maunder) > 1 and maunder.min() > 0:
+            ax.annotate(
+                f"Maunder spread: {maunder.max() / maunder.min():.0f}$\\times$\n"
+                f"({maunder.min():.2f} to {maunder.max():.2f} groups/day)",
+                xy=(0.02, 0.06),
+                xycoords="axes fraction",
+                ha="left",
+                fontsize=7.5,
+                color=theme["text_secondary"],
+            )
+        ax.set_xscale("log")
+        ax.set_yticks(list(positions.values()))
+        ax.set_yticklabels([SERIES_LABEL[n] for n in rows], fontsize=7)
+        ax.set_xlabel("mean daily group count in the window (log scale)")
+        ax.set_title(
+            "(b) filled: Maunder Minimum 1645-1715   open: modern overlap 1749-1995",
+            fontsize=8,
+            loc="left",
+        )
+
+        # --- (c) the scale check that licenses one axis --------------------
+        ax = axes[2]
         old_hs = table[table["series"] == "hoyt_schatten_1998"].copy()
         new_hs = table[table["series"] == "velasco_herrera_2024_hoyt_update"].copy()
         old_hs["key"] = np.floor(old_hs["year"]).astype(int)
         new_hs["key"] = np.floor(new_hs["year"]).astype(int)
         both = old_hs.merge(new_hs, on="key", suffixes=("_a", "_b"))
-        residual = both["gn_b"] - both["gn_a"]
         ax.axhline(0.0, color=theme["grid"], linewidth=0.8)
-        ax.plot(both["key"], residual * 1e3, color=theme["categorical"][2], linewidth=0.9)
-        extension = new_hs[new_hs["key"] > old_hs["key"].max()]
-        ax.axvspan(
-            old_hs["key"].max(),
-            new_hs["key"].max(),
-            color=theme["categorical"][2],
-            alpha=0.12,
+        ax.plot(
+            both["key"],
+            (both["gn_b"] - both["gn_a"]) * 1e3,
+            color=colors["velasco_herrera_2024_hoyt_update"],
+            linewidth=0.9,
         )
-        ax.annotate(
-            f"extends to {int(new_hs['key'].max())}\n({len(extension)} new years)",
-            xy=(old_hs["key"].max() + 4, 0.0),
-            fontsize=7,
-            va="center",
-            color=theme["categorical"][2],
-        )
-        ax.set_ylabel("(2024 update / 12.08)\n$-$ 1998  [$10^{-3}$ groups]")
+        ax.set_ylabel("(update / 12.08)\n$-$ 1998  [$10^{-3}$]", fontsize=7)
         ax.set_xlabel("year")
         ax.set_xlim(1600, 2030)
+        ax.set_title(
+            "(c) the 12.08 check (D24): the two Hoyt & Schatten files agree to "
+            "under a thousandth of a group",
+            fontsize=8,
+            loc="left",
+        )
 
         caption(
             fig,
-            "Dividing the supplement's 12.08-scaled file by 12.08 lands on the series it "
-            "updates to under a thousandth of a group, which is what licenses one scale.",
+            "All eight series carry the same units, so one axis compares them: they "
+            "agree to about a quarter where they overlap in the modern era and diverge "
+            "by more than an order of magnitude in the Maunder Minimum.",
             mode,
         )
         fig.tight_layout()

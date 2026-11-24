@@ -63,9 +63,13 @@ def _truth_from(counts: np.ndarray, start: int = EPOCH, threshold: float = 10.0)
     )
 
 
-def _result(days, gn, sd, name="toy"):
+def _result(days, gn, sd, name="toy", *, sd_factor=None, sd_spread=None):
+    series = pd.DataFrame({"date_ord": days, "gn": gn, "gn_sd": sd})
+    if sd_factor is not None:
+        series["gn_sd_factor"] = sd_factor
+        series["gn_sd_spread"] = 0.0 if sd_spread is None else sd_spread
     return CalibrationResult(
-        series=pd.DataFrame({"date_ord": days, "gn": gn, "gn_sd": sd}),
+        series=series,
         observers=pd.DataFrame(
             columns=["station", "factor", "factor_sd", "recovered_threshold_msh", "reached"]
         ),
@@ -339,3 +343,95 @@ def test_the_case_study_summary_keeps_the_ten_observers_in_their_published_order
 
     assert list(summary["kind"]) == ["clean-modern", "clean-modern", "blanket-statements"]
     assert list(summary["method"]) == ["CEA17", "GRP", "GRP"]
+
+
+# --- the yearly aggregation -------------------------------------------------
+#
+# The test above this comment keeps one day per "year" so the daily -> yearly step
+# is a no-op.  That is exactly why it could not catch the bug these tests pin: with
+# many days in a year, how the two parts of a method's uncertainty are pooled
+# changes the interval by up to sqrt(n_days).
+
+
+def _one_year(n_days: int, sigma: float, *, correlated: bool, seed: int):
+    """``n_years`` years of ``n_days`` days, with a known error structure.
+
+    ``correlated``: one offset per year, the same on every day of it -- a
+    calibration factor.  Otherwise: independent per day.
+    """
+    rng = np.random.default_rng(seed)
+    n_years = 400
+    counts = rng.poisson(4.0, size=n_years * n_days)
+    truth = _truth_from(counts)
+    if correlated:
+        offset = np.repeat(rng.normal(0.0, sigma, size=n_years), n_days)
+        estimate = counts + offset
+        result = _result(
+            truth.days,
+            estimate,
+            np.full(len(counts), sigma),
+            sd_factor=np.full(len(counts), sigma),
+            sd_spread=0.0,
+        )
+    else:
+        estimate = counts + rng.normal(0.0, sigma, size=len(counts))
+        result = _result(
+            truth.days,
+            estimate,
+            np.full(len(counts), sigma),
+            sd_factor=0.0,
+            sd_spread=np.full(len(counts), sigma),
+        )
+    aligned = align(truth, result)
+    aligned["year"] = np.repeat(np.arange(n_years), n_days)
+    return uncertainty_scores(aligned)
+
+
+def test_a_correlated_error_keeps_nominal_coverage_over_a_long_year():
+    """The bug this pins: a factor error does not average down over the year."""
+    scores = _one_year(200, 1.0, correlated=True, seed=11)
+    assert scores["sd_decomposed"] == 1
+    for level in COVERAGE_LEVELS:
+        assert scores[f"coverage_{int(level * 100)}"] == pytest.approx(level, abs=0.05)
+
+
+def test_a_day_level_error_does_average_down_over_a_long_year():
+    """And the other half: a genuinely independent error must still divide by sqrt(n)."""
+    scores = _one_year(200, 1.0, correlated=False, seed=12)
+    for level in COVERAGE_LEVELS:
+        assert scores[f"coverage_{int(level * 100)}"] == pytest.approx(level, abs=0.05)
+
+
+def test_pooling_a_correlated_error_as_independent_is_the_old_bug():
+    """Without the decomposition the same series looks wildly overconfident.
+
+    This is the measured size of the defect: the independent-days rule divides a
+    200-day year's interval by ~14, and coverage collapses.
+    """
+    rng = np.random.default_rng(13)
+    n_years, n_days, sigma = 400, 200, 1.0
+    counts = rng.poisson(4.0, size=n_years * n_days)
+    truth = _truth_from(counts)
+    offset = np.repeat(rng.normal(0.0, sigma, size=n_years), n_days)
+    # No components -> the scorer falls back to the old rule.
+    result = _result(truth.days, counts + offset, np.full(len(counts), sigma))
+    aligned = align(truth, result)
+    aligned["year"] = np.repeat(np.arange(n_years), n_days)
+    scores = uncertainty_scores(aligned)
+    assert scores["sd_decomposed"] == 0
+    assert scores["coverage_90"] < 0.2
+
+
+def test_the_decomposition_reaches_the_scorer_through_align():
+    counts = np.random.default_rng(14).poisson(4.0, size=500)
+    truth = _truth_from(counts)
+    result = _result(
+        truth.days,
+        counts.astype(float),
+        np.full(len(counts), 1.0),
+        sd_factor=np.full(len(counts), 0.8),
+        sd_spread=np.full(len(counts), 0.6),
+    )
+    aligned = align(truth, result)
+    assert {"sd", "sd_factor", "sd_spread"} <= set(aligned.columns)
+    assert aligned["sd_factor"].iloc[0] == pytest.approx(0.8)

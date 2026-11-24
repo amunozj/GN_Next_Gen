@@ -30,7 +30,12 @@ from gn_next_gen.baselines.linear import (
     calibrate_svsc16,
     calibrate_vhs24,
 )
-from gn_next_gen.baselines.nulls import calibrate_prior_null, calibrate_random_segmentation
+from gn_next_gen.baselines.nulls import (
+    calibrate_naive_mean,
+    calibrate_naive_median,
+    calibrate_prior_null,
+    calibrate_random_segmentation,
+)
 from gn_next_gen.baselines.pathfinding import calibrate_pathfinding
 from gn_next_gen.baselines.pmf import calibrate_cea17
 
@@ -94,6 +99,8 @@ BASELINES: dict[str, Callable[..., CalibrationResult]] = {
 NULLS: dict[str, Callable[..., CalibrationResult]] = {
     "null-prior": calibrate_prior_null,
     "null-segmentation": calibrate_random_segmentation,
+    "naive-mean": calibrate_naive_mean,
+    "naive-median": calibrate_naive_median,
 }
 
 ALL_METHODS = {**BASELINES, **NULLS}
@@ -105,6 +112,8 @@ __all__ = [
     "CalibrationResult",
     "PairEstimate",
     "calibrate_acuity",
+    "calibrate_naive_mean",
+    "calibrate_naive_median",
     "calibrate_pathfinding",
     "calibrate_cea17",
     "calibrate_hosc98",
