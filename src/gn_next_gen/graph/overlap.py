@@ -2,7 +2,7 @@
 
 Chained calibration's random error grows like the **effective resistance** between
 an observer and the reference on this graph, which is identifiability trap 3 of
-the assessment (§6) and the quantity the backbone baseline is judged against.  The
+the assessment (§6) and the quantity the pathfinding baseline is judged against.  The
 graph is also what makes this benchmark differ from Chatzistergos et al. (2025):
 they compare every synthetic observer pairwise to RGO, so no graph exists and
 daisy-chaining is, in their words, "not evaluated in this study".

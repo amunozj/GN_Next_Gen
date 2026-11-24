@@ -3,6 +3,9 @@
 - Spec: `docs/05_roadmap/step-2-blind-benchmark.md`
 - Author: Claude Code session, 2026-11-22
 - Status: **Approved 2026-11-22** (PI, in session) <!-- Draft → Approved (by PI, with date) → Superseded -->
+- Naming, post-approval: the 2017 MATLAB port is named **Pathfinding** throughout (PI, 2026-11-24);
+  this plan said `backbone`, which collided with **SvSc16**, Svalgaard & Schatten's backbone. Name only —
+  no change to the method, its scope or its scores.
 
 ## Context
 
@@ -44,7 +47,7 @@ step's positioning.
 | Group lifetimes | none — a per-day threshold | real `obs_duration` distribution, through a rotation kernel |
 | Sampling | days **deleted at random** to hit 50 %…1 % overlap | real historical calendars transplanted from the v1.3_4 record |
 | Overlap structure | each observer compared **pairwise to RGO** | the real overlap graph, with its bottlenecks |
-| Daisy-chaining | **not evaluated** (their §4) | the backbone composite is a scored baseline |
+| Daisy-chaining | **not evaluated** (their §4) | the pathfinding composite is a scored baseline |
 | Metrics | RMS, mean, relative, max-absolute difference | those **plus** interval coverage, CRPS, PIT, trend, MM level |
 | Uncertainty calibration | **none** | the load-bearing metric (ADR-007) |
 | Blind / generator ≠ model | no; the generator is the hard threshold the methods assume | generator deliberately misspecified (below) |
@@ -73,7 +76,7 @@ histogram (PMF) over the **reference** observer's count on those days. Record th
 | 2 | **Port every baseline; run no legacy code** | Spec OQ2. No `gn-legacy` environment, no `pyemd`; 1-D EMD is implemented exactly as the L1 distance between CDFs |
 | 3 | **ADF derives cycle phase from the observations** on the benchmark | New. Legacy ADF takes phase from SILSO v2, which a synthetic world does not have. Documented deviation from legacy ADF |
 | 4 | **Six scenarios × 10 realizations** (S1 at 20) | Spec OQ3 |
-| 5 | **Seven baselines**: HoSc98, SvSc16, VHS24, CEA17, UEA21 (ADF), GRP, backbone | New. Makes this benchmark a strict superset of A157's and gives two validation targets |
+| 5 | **Seven baselines**: HoSc98, SvSc16, VHS24, CEA17, UEA21 (ADF), GRP, pathfinding | New. Makes this benchmark a strict superset of A157's and gives two validation targets |
 | 6 | **Generator differs from the Step 4 model in four ways**: lifetime law, emergence clustering, drift form, correlated observer errors | Spec OQ4 |
 | 7 | **Drop the `runcsvs/` reproduction check** | Spec acceptance criterion 4 is deliberately not met — recorded as a deviation, with a replacement criterion (below) |
 | 8 | **Acquire all five published GN series** into a new raw folder, `role: comparison` | PI, 2026-11-21, carried out here |
@@ -127,7 +130,7 @@ running legacy code (decision 2); the `runcsvs/` reproduction (decision 7); prox
 | `benchmark/scenarios.py` | Config-driven assembly; one scenario = (generator, observer population, calendar set, anchoring, seed) |
 | `benchmark/store.py` | Writes `observations.parquet` (open) and `truth.parquet` (sealed) to separate roots; own content-hash keying, because `io.cache.manifest_checksum` refuses unmanifested inputs by design |
 | `benchmark/scoring.py` | The scorer |
-| `baselines/{hosc98,svsc16,vhs24,cea17,uea21_adf,grp,backbone}.py` | The seven ports |
+| `baselines/{hosc98,svsc16,vhs24,cea17,uea21_adf,grp,pathfinding}.py` | The seven ports |
 | `graph/overlap.py` | Day-tolerant overlap graph, components, bridges, effective resistance |
 | `io/legacy_inputs.py` | `reference_areas/` (day × `AREA1..AREA26`, **no header** — D1) and `gn_database_v1.22/` readers |
 | `viz/benchmark.py` | Figures f13–f24 |
@@ -217,7 +220,7 @@ generated for the scoring run. The results doc says this plainly rather than cla
 | CEA17 | PMF conversion matrix; columns indexed by the secondary's count, each a PMF over the reference's; sparse columns filled by a 1000-iteration MC bootstrap fitting `⟨G*|G⟩ − G = R₀ − B·e^{−aG}`; the quality criteria of their §2.2.3 (≥ 20 overlapping days, > 4 years for long records, χ²/dof ≤ 6) | moderate |
 | UEA21 (ADF) | acuity from the cumulative active-day distribution against a precomputed reference library, then that acuity's PMF matrix. **Cycle phase from a smoothed composite of raw observer counts, not SILSO** (decision 3) | moderate |
 | GRP | daily group-count distribution fingerprint; `LowLim = 2`, two-stage `nBest1/nBest2` selection, smoothed distance surface (`gn_series_matlab.md`, `grpssn.md`) | moderate |
-| Backbone | day-tolerant overlap graph, robust weighted pairwise proportional and linear fits, edge cost `|σ_a/a| / overlap_days`, k-shortest paths, multiplicative chaining with relative uncertainties in quadrature, `1/σ²` composite | moderate |
+| Pathfinding | day-tolerant overlap graph, robust weighted pairwise proportional and linear fits, edge cost `|σ_a/a| / overlap_days`, k-shortest paths, multiplicative chaining with relative uncertainties in quadrature, `1/σ²` composite | moderate |
 
 Ports cite their legacy source file and line range, per the hard rules. Three legacy bugs are **not**
 reproduced (no reproduction target any more, decision 7) and each is recorded in the port's docstring:
@@ -226,7 +229,7 @@ accumulated arrays; and the `1e16` sentinel that distorts the `NBEST` weights. T
 double scaling by `LnkVlP` (`GN_Reconstruction_MultiPath.m` l. 668–669, which inflates the propagated
 uncertainty by one factor of `a`) is also **not** reproduced, and is reported upstream as a finding.
 
-Station-number caution for the backbone port: the MATLAB scripts use **V1-12** numbering and V1-12 is
+Station-number caution for the pathfinding port: the MATLAB scripts use **V1-12** numbering and V1-12 is
 not in the repo. `stnd = 445`/`endnd = 590` are Koyama and Janssens in V1.22; the intended nodes are
 **466 (Staudach)** and **614 (Locarno)**. The port resolves endpoints **by observer name**, never by
 a hard-coded number.
@@ -346,7 +349,7 @@ Fast suite (target: the whole suite stays under ~90 s; it is 41 s today):
   scores between the prior null and the real baselines.
 - **Baselines on analytically known cases**: HoSc98/SvSc16/VHS24 recover their `k` exactly on
   constructed data; CEA17's matrix is column-stochastic and its bootstrap fill is reproducible;
-  the backbone recovers a known chain of proportional factors on a hand-built graph.
+  Pathfinding recovers a known chain of proportional factors on a hand-built graph.
 - **Graph**: effective resistance on a path graph equals the sum of edge resistances; bridges on a
   hand-built graph; components match `networkx`.
 - **Legacy loaders**: `reference_areas/` reads with supplied column names (D1), `AREA1 = NaN` means
@@ -362,7 +365,7 @@ validation run; one full S2 realization end to end.
 |---|---|---|---|
 | Determinism: same config + seed → identical datasets (tested) | SHA-256 of `observations.parquet` and `truth.parquet` across two runs, every scenario | Byte-identical for all 6 scenarios | — |
 | Scorer unit-tested on hand-made cases | The scorer test list above | All pass; coverage of a known Gaussian ensemble within ±2 % of nominal at 50/68/90/95 | `f20` |
-| At least ADF and one backbone baseline scored on every scenario | Score table rows | **All 7 baselines × 6 scenarios = 42 cells populated**, none missing | `f18` |
+| At least ADF and one pathfinding baseline scored on every scenario | Score table rows | **All 7 baselines × 6 scenarios = 42 cells populated**, none missing | `f18` |
 | A port reproduces legacy thresholds within a stated tolerance | **Not met — PI decision 7.** Replaced by A7 below | Deviation recorded; recovered `runcsvs/` parameters written into `docs/03_legacy/adfssn.md` | — |
 | **A1** Truth is sealed from fitting code | Import audit over `src/` | Zero imports of `benchmark.truth` outside `benchmark/`; test green | — |
 | **A2** Truth carries real areas *and* real lifetimes | Generated truth vs reference | Per-group area and `obs_duration` distributions match the donor survey within KS 0.05; the 289 D22-colliding KMAS ids absent | `f14` |
@@ -385,7 +388,7 @@ parquet). 71 worlds across the grid ≈ 2.5 GB in git-ignored `outputs/benchmark
 
 Per world: the three linear baselines are O(n) — milliseconds. CEA17's MC bootstrap is the heaviest;
 vectorized least-squares over 1000 draws gives ~0.1 s/observer → ~75 s. UEA21's reference library is
-built once per scenario, then ~0.05 s/observer. Backbone: ~5,000 edges × a vectorized robust fit ≈ 5 s,
+built once per scenario, then ~0.05 s/observer. Pathfinding: ~5,000 edges × a vectorized robust fit ≈ 5 s,
 plus k-shortest paths in `networkx`. **Estimate ~3–5 min per world**, so the 71-world grid is
 **roughly 4–6 h on CPU**, parallelized over realizations; S6's perturbation grid is capped at 5 per
 knob and applied only to S2. Budget < 8 h. No GPU — Step 1 measured the CPU as 4.8× faster for this
@@ -441,7 +444,7 @@ other's record.
 | Thinned-RGO grand minima are not a real regime change | S3 scores look good but transfer poorly | Stated as a limitation in the results doc, not smoothed over; no source exists for grand-minimum synthetic truths and the plan says so |
 | No matched-model control, so overconfidence is not decomposed | The paper wants method error separated from data error | Stated limitation; a matched-model arm is a cheap later addition |
 | The benchmark flatters every method because the generator is still too tidy | All baselines show near-nominal coverage | The four deliberate misspecifications plus correlated observer errors are the guard; if coverage is still nominal everywhere, that is itself a reportable result and the stress scenarios S3/S4 are where it should break |
-| Backbone port's V1-12 station numbers | Paths terminate at the wrong observers | Endpoints resolved by observer name, never by number; a test pins Staudach → 466 and Locarno → 614 in V1.22 |
+| Pathfinding port's V1-12 station numbers | Paths terminate at the wrong observers | Endpoints resolved by observer name, never by number; a test pins Staudach → 466 and Locarno → 614 in V1.22 |
 | Published series are behind paywalls or have unclear licences | `fetch_published_gn_series.py` cannot retrieve one | Record what is unavailable in `refresh_todo.md`, use the `legacy/GN_Series_matlab/data/` copy where one exists, and say which series is missing |
 | Runtime overruns the estimate | The grid does not finish in a working day | S1 is the development scenario; every long script is resumable per (scenario, realization, baseline) cell and writes `progress.json`, so a partial grid still scores and a re-launch resumes rather than restarting |
 | A long run dies with the session | Hours of compute lost on a disconnect | The session never launches one (PI, 2026-11-22). The grid runs detached under `nohup`/`tmux` from the documented commands, and resumability makes a lost run cheap |

@@ -164,7 +164,7 @@ def load_v122_observers() -> pd.DataFrame:
     return frame.rename(columns={"TOT.OBS": "TOT_OBS"})
 
 
-#: Canonical ``OBSERVER`` patterns for the backbone endpoints, resolved by name
+#: Canonical ``OBSERVER`` patterns for the pathfinding endpoints, resolved by name
 #: because the MATLAB scripts' V1-12 numbers do not transfer (see
 #: :func:`v122_station_by_name`).  These are **regexes**, and several are anchored
 #: or spelled out because v1.22 carries near-duplicates: ``STAUDACH`` also matches
@@ -173,7 +173,7 @@ def load_v122_observers() -> pd.DataFrame:
 #: ``SCHWABE, H., DESSAU-ARLT``.  Resolved values under v1.22: Staudach 466,
 #: Locarno 614, RGO 332 -- against the MATLAB scripts' V1-12 445 and 590, which
 #: are Koyama and Janssens here.
-BACKBONE_ENDPOINTS = {
+PATHFINDING_ENDPOINTS = {
     "staudach": r"STAUDACH, J\.C\.",
     "locarno": "LOCARNO, SWITZERLAND",
     "rgo": "ROYAL GREENWICH",
@@ -184,7 +184,7 @@ BACKBONE_ENDPOINTS = {
 def v122_station_by_name(fragment: str) -> int:
     """The v1.22 station number whose ``OBSERVER`` matches ``fragment`` (a regex).
 
-    The MATLAB backbone code hard-codes **V1-12** station numbers, and V1-12 is not
+    The MATLAB pathfinding code hard-codes **V1-12** station numbers, and V1-12 is not
     in this repository.  Its ``stnd = 445`` / ``endnd = 590`` are Koyama and
     Janssens under v1.22; the intended nodes are 466 (Staudach) and 614 (Locarno).
     Every port therefore resolves an endpoint by name, never by a copied number.

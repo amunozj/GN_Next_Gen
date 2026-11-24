@@ -1,7 +1,9 @@
-# GN-series MATLAB — observer network and shortest-path backbones (legacy)
+# GN-series MATLAB — observer network and pathfinding (legacy)
 
 Code: `legacy/GN_Series_matlab/` (2017). Aim: replace human-chosen backbones with an objective path through the observer
 overlap graph, with error propagation. Uses the GN database **V1-12** station numbering.
+Ported into `src/gn_next_gen/baselines/pathfinding.py` and scored as **Pathfinding** (Step 2); the port
+was called `Backbone` until 2026-11-24, which collided with Svalgaard & Schatten's backbone (SvSc16).
 
 ## Pipeline
 

@@ -32,7 +32,8 @@ Step 1 loaders and reference tables; real observing calendars and the real overl
 4. **Scorer:** errors at daily, monthly, yearly and cycle scales; cycle amplitudes; long-term trend; Maunder-Minimum
    level; interval coverage (e.g. 50% and 90%); recovery of observer parameters; a Hay-style sampling-only experiment
    (apply real sampling to known truth, measure the induced bias).
-5. **Baselines:** ADF (ADFSSN), GRP (GRPSSN) and shortest-path / multipath backbone (MATLAB logic), either as validated
+5. **Baselines:** ADF (ADFSSN), GRP (GRPSSN) and the shortest-path / multipath **Pathfinding** method
+   (MATLAB logic; named `Backbone` until 2026-11-24, which collided with SvSc16's backbone), either as validated
    ports in `gn_next_gen.baselines` (check against `legacy/ADFSSN/runcsvs/`) or run in `environment-legacy.yml`.
    **Reproduce the legacy numbers against the data the legacy code actually used** — the retained
    `data/raw/reference_areas/` and `data/raw/gn_database_v1.22/`, not the renovated inputs. That is the
@@ -44,7 +45,7 @@ Step 1 loaders and reference tables; real observing calendars and the real overl
 ## Acceptance criteria (quantify in the plan)
 - Determinism: same config + seed → identical datasets (tested).
 - Scorer unit-tested on hand-made cases.
-- At least the ADF baseline and one backbone/shortest-path baseline scored on every scenario.
+- At least the ADF baseline and one shortest-path / chaining baseline (Pathfinding) scored on every scenario.
 - A port, if used, reproduces legacy thresholds on a stated set of observers within a stated tolerance.
 
 ## Decisions already made

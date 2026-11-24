@@ -12,7 +12,6 @@ from gn_next_gen.baselines.acuity import (
     build_library,
     recover_acuity,
 )
-from gn_next_gen.baselines.backbone import robust_proportional_fit
 from gn_next_gen.baselines.base import (
     PairEstimate,
     chain_from_reference,
@@ -20,6 +19,7 @@ from gn_next_gen.baselines.base import (
     station_series,
 )
 from gn_next_gen.baselines.linear import VHS24, HoSc98, SvSc16, years_of
+from gn_next_gen.baselines.pathfinding import robust_proportional_fit
 from gn_next_gen.baselines.pmf import compose, conversion_matrix
 from gn_next_gen.graph.overlap import build_overlap_graph
 

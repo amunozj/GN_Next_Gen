@@ -116,9 +116,9 @@ def test_v122_observers_list_every_station():
     assert {"STATION", "TOT_OBS", "OBSERVER"} <= set(observers.columns)
 
 
-def test_backbone_endpoints_resolve_by_name_not_by_the_matlab_numbers():
+def test_pathfinding_endpoints_resolve_by_name_not_by_the_matlab_numbers():
     """The MATLAB scripts' V1-12 445/590 are Koyama and Janssens under v1.22."""
-    resolved = {k: legacy.v122_station_by_name(v) for k, v in legacy.BACKBONE_ENDPOINTS.items()}
+    resolved = {k: legacy.v122_station_by_name(v) for k, v in legacy.PATHFINDING_ENDPOINTS.items()}
     assert resolved == {"staudach": 466, "locarno": 614, "rgo": 332, "schwabe": 279}
 
     observers = legacy.load_v122_observers().set_index("STATION")["OBSERVER"]

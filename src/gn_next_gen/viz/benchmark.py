@@ -24,7 +24,7 @@ from gn_next_gen.viz.style import (
 
 #: Method order, used by every table and figure so a reader learns it once: the
 #: three linear scalings, the two non-parametric methods, the count-distribution
-#: variant, the backbone, then the nulls.
+#: variant, the pathfinding chain, then the nulls.
 METHOD_ORDER = [
     "HoSc98",
     "SvSc16",
@@ -32,7 +32,7 @@ METHOD_ORDER = [
     "CEA17",
     "UEA21",
     "GRP",
-    "Backbone",
+    "Pathfinding",
     "null-segmentation",
     "null-prior",
 ]

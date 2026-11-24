@@ -1,4 +1,10 @@
-"""The shortest-path / multipath backbone, ported from the 2017 MATLAB code.
+"""Pathfinding: shortest-path, multipath chaining, ported from the 2017 MATLAB code.
+
+Called ``Backbone`` until 2026-11-24 and renamed to end a collision: **SvSc16**
+is Svalgaard & Schatten's backbone, a different baseline in the same registry, so
+"the backbone method" named two of the seven.  This one is the graph method -- edge
+costs from error propagation, then a path -- which is what the brief
+(``docs/00_brief/modernization.md``) already called a pathfinding problem.
 
 ``legacy/GN_Series_matlab/`` cannot be run: it needs MATLAB with the Curve Fitting
 and Statistics toolboxes, three File Exchange functions, and the **V1-12** database,
@@ -95,17 +101,17 @@ def robust_proportional_fit(
     return slope, float(np.sqrt(max(variance, 0.0)))
 
 
-class BackbonePair(PairwiseEstimator):
-    """One edge of the backbone graph: a robust proportional link."""
+class PathfindingPair(PairwiseEstimator):
+    """One edge of the pathfinding graph: a robust proportional link."""
 
-    name = "Backbone"
+    name = "Pathfinding"
 
     def estimate(self, left, right, prepared_left, prepared_right):
         del prepared_left, prepared_right
-        return _backbone_pair(left, right)
+        return _pathfinding_pair(left, right)
 
 
-def _backbone_pair(left: Series, right: Series) -> PairEstimate:
+def _pathfinding_pair(left: Series, right: Series) -> PairEstimate:
     target, source = matched_counts(left, right)
     if len(target) < MIN_UNIQUE_PAIRS:
         return PairEstimate(np.nan, np.inf, len(target), usable=False)
@@ -131,7 +137,7 @@ def _backbone_pair(left: Series, right: Series) -> PairEstimate:
     )
 
 
-def calibrate_backbone(
+def calibrate_pathfinding(
     observations: pd.DataFrame,
     graph,
     reference: int,
@@ -149,7 +155,7 @@ def calibrate_backbone(
     is here to catch.
     """
     series = station_series(observations)
-    estimates = estimate_edges(graph, series, BackbonePair())
+    estimates = estimate_edges(graph, series, PathfindingPair())
 
     available = dict(estimates)
     composites, all_scales = [], []
@@ -178,7 +184,7 @@ def calibrate_backbone(
         return CalibrationResult(
             pd.DataFrame(columns=["date_ord", "gn", "gn_sd", "n_observers"]),
             pd.DataFrame(),
-            "Backbone",
+            "Pathfinding",
             {"reason": "no usable path from the reference"},
         )
 
@@ -206,6 +212,6 @@ def calibrate_backbone(
     return CalibrationResult(
         series=series_out,
         observers=observers,
-        name="Backbone",
+        name="Pathfinding",
         meta={"n_passes": len(composites), "n_edges_estimated": len(estimates) // 2},
     )

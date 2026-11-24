@@ -16,7 +16,7 @@ datasets:
     kind: sunspot
 
 params:
-  methods: [HoSc98, SvSc16, VHS24, CEA17, UEA21, GRP, Backbone]
+  methods: [HoSc98, SvSc16, VHS24, CEA17, UEA21, GRP, Pathfinding]
   nulls: [null-prior, null-segmentation]
 
   # Graph construction is a free choice shared by the chained methods.
