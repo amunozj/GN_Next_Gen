@@ -1,31 +1,29 @@
 # Plan: Step 2 scorer follow-ups (out-of-band)
 
 - Raised: 2026-11-24, in session, from PI questions about the Step 2 results doc
-- Status: **implemented 2026-11-24** on branch `step-2-scorer-followups`, except the
-  grid run itself. The PI chose, in session: the full two-component decomposition for
-  item 1, and reselect-and-regrid for item 4 with **the PI launching the run** (plan
-  decision A13 — no run over ~15 minutes from a Claude Code session).
-- **Outstanding, and it is the only outstanding thing:**
-
-  ```bash
-  ./scripts/run_step2_grid.sh --detach
-  ```
-
-  It regenerates the 51 worlds, re-fits 11 methods over them, re-scores, and redraws
-  every figure; about 20 minutes on 64 cores. Until it runs, §§4–9 of the results doc
-  carry the 2026-11-23 numbers and say so in a status box. Staleness is enforced, not
-  trusted: `is_complete` refuses a world whose `generator_version` is older than the
-  code's, and `cell_done` refuses a fit whose parquet lacks `gn_sd_factor`, so no
-  stage can silently skip stale work and no `--force` is needed.
-- Scope, per item. **Items 1-3 are scorer and nulls only**: no baseline is re-fitted
-  and no world regenerated, so the whole re-run is `score_benchmark.py` plus
-  `make_step2_figures.py` (~16 min on 64 cores, less if only scoring is redone) —
-  the 51 worlds and 459 fits stay on disk and both runners skip existing cells.
-  **Item 4 changes a sealed observer parameter**, so it regenerates the worlds and
-  re-fits. **Item 5 is documentation and one figure**, and touches no run at all.
-- Affects: `docs/results/step-2-blind-benchmark.md` §4, §5, §7, §11a, the section
-  numbering from §10 on, f18, f20, f23, f25 and f27, and the summary table's
-  coverage row. §6, §8 and §9 keep their claims; §8's can only strengthen.
+- Status: **done 2026-11-24.** All five items implemented, and the PI launched the
+  grid re-run at 12:25 the same day: 51 worlds regenerated, 561 scored cells, a
+  495-cell structural ensemble, no stage failed, 18 minutes on 64 cores. The results
+  and verification documents carry the new numbers.
+- A fourth defect surfaced while checking item 4 and was fixed with it: f22 pooled
+  worlds and settings into one "structural" bar, which for UEA21 and GRP — neither
+  of which touches the overlap graph — was *entirely* world variation. The bar is
+  now the within-world range, and those two methods are correctly zero.
+- Affected: `docs/results/step-2-blind-benchmark.md` summary, §4, §5, §7, §8, the
+  old §11a and the section numbering from §10 on, f18, f20, f22, f23, f25, f26 and
+  f27; `docs/results/step-2-verification.md` A1, A5, A10, F1 and the figure
+  captions. §3, §6, §9 and §10 kept their claims.
+- **What actually changed in the conclusions**, now that the run is in:
+  - §5 reversed for one method. CEA17 covers **0.591 / 0.862** against a nominal
+    0.50 / 0.90 — it was reported at 0.064 — and the prior null passes the same test
+    with an interval 19× wider, which is the TARP warning made concrete.
+  - §4 hardened. Six of seven lose to the daily median of the raw counts in most of
+    the 51 worlds, paired; only HoSc98 wins (35/51).
+  - §7 softened where the case study was at fault: `clean-modern` went from four of
+    seven past 2× with SvSc16 silent, to two of seven with every method answering.
+    `poor-instrument` is now the hardest case.
+  - §8 unchanged in direction and sharper in detail: UEA21 and GRP have exactly zero
+    structural spread.
 
 ## 1. Yearly coverage treats a year's daily errors as independent
 

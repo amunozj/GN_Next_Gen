@@ -296,6 +296,10 @@ def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
     with figure_style(mode) as theme:
         if "scenario" in coverage:
             coverage = coverage[~coverage["scenario"].isin(COVERAGE_EXCLUDED_SCENARIOS)]
+        # A method that reports no interval -- the two naive floors -- has no curve
+        # here, and listing it in the legend would imply one that is merely hidden.
+        answered = coverage.groupby("method")["empirical"].apply(lambda b: np.isfinite(b).any())
+        coverage = coverage[coverage["method"].isin(answered[answered].index)]
         methods = _order(coverage["method"].unique())
         colors = _method_colors(methods, mode)
         markers = _method_markers(methods)
@@ -327,8 +331,10 @@ def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
         ax.legend(fontsize=7.5, frameon=False, ncol=2)
         caption(
             fig,
-            "Every curve below the diagonal is an overconfident method. S5 is excluded: "
-            "with detection error off it is not a test of calibration.",
+            "A curve below the diagonal is an overconfident method -- but read it with "
+            "the interval's width: the prior null sits near the diagonal with a 90% "
+            "interval nineteen times wider than HoSc98's. S5 is excluded: with "
+            "detection error off it is not a test of calibration.",
             mode,
         )
         fig.tight_layout()
@@ -1135,10 +1141,18 @@ def observer_population_figure(parameters: pd.DataFrame, mode: str = "light") ->
 def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="light") -> plt.Figure:
     """f22 -- the spread a method's own free choices produce.
 
-    The default-setting marker is taken from the **same worlds** the ensemble
-    ran on. An earlier version drew the ensemble's S2 bars against the default
-    run's S1 bias, which compared two different scenarios and made every method
-    look as though its structural choices had moved it.
+    The bar is the **within-world** range: for each world, the spread across the
+    fifteen settings, averaged over worlds, drawn about the method's mean.  Pooling
+    worlds and settings into one min-max bar instead -- which this did until
+    2026-11-24 -- measures the two together and labels the result structural.  For
+    UEA21 and GRP that is not a quibble but the whole bar: neither method touches
+    the overlap graph, so their within-world range is *exactly zero* and a pooled
+    bar reports world-to-world variation as if the knobs had caused it.
+
+    The default-setting marker is taken from the **same worlds** the ensemble ran
+    on.  An earlier version drew the ensemble's S2 bars against the default run's S1
+    bias, which compared two different scenarios and made every method look as
+    though its structural choices had moved it.
     """
     with figure_style(mode) as theme:
         methods = _order(structural["method"].unique())
@@ -1156,11 +1170,15 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
         positions = np.arange(len(methods))
         drew_default = False
         for index, method in enumerate(methods):
-            block = structural[structural["method"] == method]["bias_yearly"].dropna()
+            rows = structural[structural["method"] == method].dropna(subset=["bias_yearly"])
+            block = rows["bias_yearly"]
             if block.empty:
                 continue
+            per_world = rows.groupby("seed")["bias_yearly"].agg(lambda x: x.max() - x.min())
+            half = float(per_world.mean()) / 2.0
+            centre = float(block.mean())
             ax.plot(
-                [block.min(), block.max()],
+                [centre - half, centre + half],
                 [index, index],
                 linewidth=3.0,
                 color=colors[method],
@@ -1207,9 +1225,10 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
             )
         caption(
             fig,
-            "Bars span the method's own free choices (graph tolerance, minimum overlap, "
-            "minimum distinct counts); the method's own marker is their mean and the grey "
-            "cross the default, on the same worlds.",
+            "Bars are the mean within-world spread across the method's own free choices "
+            "(graph tolerance, minimum overlap, minimum distinct counts); the marker is "
+            "the method's mean and the grey cross the default, on the same worlds. "
+            "UEA21 and GRP need no graph, so their bar is zero by construction.",
             mode,
         )
         fig.tight_layout()
