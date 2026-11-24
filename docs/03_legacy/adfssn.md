@@ -80,3 +80,35 @@ fails), Sykora 366, Guillaume 386, Stempell 389, Koyama 445, National Astron. Ob
 - The driver's `SKIP_OBSERVERS_WITH_PLOTS` branch (`Main_SSN_ADF_all_Observers.py` l. 371–384) passes
   `SSN_ADF_Config.ADF_TYPE`/`MONTH_TYPE`, which do not exist (the config uses `NUM_TYPE`/`DEN_TYPE`).
 - Library-era APIs: `np.int`, `DataFrame.append`, `sp.in1d`, `signal.gaussian` (see `legacy/README.md`).
+
+## The `runcsvs/` parameters, recovered (Step 2, 2026-11-22)
+
+Step 2 dropped the plan to reproduce `runcsvs/` (PI decision 7): those files were
+**not** produced by the committed driver settings, and `legacy/ADFSSN/uncommitted.diff`
+is already applied in this snapshot, so the snapshot is not the code that made them.
+What could be recovered from the files themselves is recorded here so a later session
+does not have to redo it.
+
+| parameter | value | how it was recovered |
+|---|---|---|
+| threshold grid | integers **0-99** | pooling `AvThreshold` across all 13 `A_*` files gives exactly `{0, 1, ..., 99}`; the committed driver's `thS=1, thE=90` cannot produce 0 or 91-99 |
+| `MoLngt` | **15**, not 20 | `ObsPerMonth = (QDays+ADays)/NumMonths`: Spörer's 6281/7.822 = 803 = floor(12052/15); Meyer's 912/4.984 = 183 = floor(2750/15) |
+| `maxValInt` | **>= 5** | Spörer's `SDThresholdS` shows 5 valid intervals of 7 |
+| `NBEST` | **1** | the filenames, and `SDThreshold` is `nan` in every row |
+| observers | **318-632** | wider than the committed driver's 318-418 |
+
+Still unknown: `dt`, `phTol`, `minObD`, `minADFmnth`, `emdSw`, `fulActSw`, `Dis_Pow`,
+`gssnKrnl`, `minYrRef`.
+
+Three further defects were found while reading the engine and are **not** reproduced
+in `gn_next_gen.baselines`, since there is no longer a number to match:
+
+- `mDOO` is computed from the last interval's arrays rather than the accumulated
+  `calRefN`/`calObsN`, which are built and never used (l. 1829-1870). So the `*VI`
+  columns of `runcsvs/` are last-interval-only, not the common-threshold result the
+  header implies.
+- The `EMD` matrix is preallocated to the sentinel `1e16` (l. 990); an unfilled cell
+  entering the top `NBEST` gives every real point weight ~1 and the sentinel 0.
+  Harmless at `NBEST=1`, which is what produced `runcsvs/`, and not at `NBEST=50`.
+- `InvCount` (l. 601) counts `maxValInt`-pruned intervals as valid, because
+  `np.logical_not(np.nan)` is `False`.

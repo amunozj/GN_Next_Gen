@@ -1,0 +1,91 @@
+{
+  "exported_utc": "2026-11-23T18:46:46Z",
+  "exporter": "scripts/fetch_published_gn_series.py",
+  "role": "comparison_only",
+  "series": {
+    "chatzistergos_2017": {
+      "acquired": "2026-11-23",
+      "archived_files": [
+        {
+          "bytes": 5960,
+          "file": "ReadMe",
+          "sha256": "0968ef652c9315415ac9d267ec593c09ee6a26553a5dffadc231ed3f698a9a37"
+        },
+        {
+          "bytes": 7616,
+          "file": "ch_gsn_y.dat",
+          "sha256": "d79d946f1e7c076a00b41ea38742fd8837abce11688e9f5f58cb1783a3be7e8f"
+        },
+        {
+          "bytes": 97920,
+          "file": "ch_gsn_m.dat",
+          "sha256": "80d0ab497101150893c46216e1579e8f6693db51a2a8d2e67af4341b73d7ac70"
+        },
+        {
+          "bytes": 477291,
+          "file": "ch_gsn_d.dat.gz",
+          "sha256": "46e505f065ad8f2c879073529a55a0ed65cea978bb184dbe34849d69165bbeac"
+        }
+      ],
+      "note": "non-parametric PDF-matrix daisy chain, 314 observers, 1739-2010. ASYMMETRIC errors: sigmaU -> gn_sd_hi, sigmaL -> gn_sd_lo, and gn_sd is left null rather than averaging them. -99 is the missing-value sentinel, so 266 of 272 years carry a value",
+      "reference": "Chatzistergos, Usoskin, Kovaltsov, Krivova & Solanki 2017, A&A 602, A69 (CDS J/A+A/602/A69)",
+      "source": "chatzistergos_2017/ch_gsn_y.dat",
+      "upstream": "http://vizier.nao.ac.jp/ftp/J/A+A/602/A69/"
+    },
+    "hoyt_schatten_1998": {
+      "note": "the original group sunspot number; reads blanket statements as daily observations (D7). Group counts, not 12.08-scaled (D24)",
+      "reference": "Hoyt & Schatten 1998, Sol. Phys. 179, 189",
+      "sha256": "f39a9e9ad2e85d3632bd293810e3f9307d009ff53dda5a30d7af5c9003f713d0",
+      "source": "legacy/GN_Series_matlab/data/GNhs_y.txt"
+    },
+    "svalgaard_schatten_2016_backbone": {
+      "note": "the backbone series; A157 finds linear scaling amplifies strong cycles",
+      "reference": "Svalgaard & Schatten 2016, Sol. Phys. 291, 2653",
+      "sha256": "e6efdd30a9c32ccc056389ca49ccb715094e59da08694c5d8a526cb81f7f8a0a",
+      "source": "legacy/GN_Series_matlab/data/GNbb2_y.txt"
+    },
+    "usoskin_series": {
+      "note": "ADF-family series as carried by the 2017 MATLAB snapshot; the version string was not recorded there, so it is NOT asserted to be Usoskin et al. 2021",
+      "reference": "Usoskin et al., active-day-fraction family (exact version not recorded upstream)",
+      "sha256": "bb3886bc7b469059fbfb8063ddc401765dd9f8a3a16f8671caa58905a6f1bb48",
+      "source": "legacy/GN_Series_matlab/data/GNiu_y2.txt"
+    },
+    "vaquero": {
+      "note": "sparse yearly reconstruction",
+      "reference": "Vaquero et al., as carried by the 2017 snapshot",
+      "sha256": "103b98c2a036cb44a51b3d7d0a1c6e615d1d239357d0a31935bcd6a09c51fe16",
+      "source": "legacy/GN_Series_matlab/data/Vaquero.csv"
+    },
+    "velasco_herrera_2024": {
+      "acquired": "2026-11-23",
+      "archived_files": [
+        {
+          "bytes": 11572972,
+          "file": "velasco_herrera_2024.zip",
+          "sha256": "ec8ee34682aef37cf814638fada1c1fbbbb4da0b565563861523aaa0fd42797f"
+        }
+      ],
+      "note": "the V-ELSY/3.14 reconstruction, 1610-2022, in GROUP COUNTS. No uncertainty is published, so gn_sd is null. 401 of 413 years carry a value; NaN marks the rest",
+      "reference": "Velasco Herrera, Soon, Babynets, Murakozy, Tlatov, Nagovitsyn, Qiu, Svanda & Velasco Herrera 2024, Adv. Space Res. 73, 2788 (doi:10.1016/j.asr.2023.12.011)",
+      "source": "velasco_herrera_2024/velasco_herrera_2024.zip::Group Number series VERSION 3.14/New_Reconstruction_GSN/New_annual_GSN_1610_2022.txt",
+      "upstream": "ScienceDirect supplement (closed access), PII S0273117723009651; supplied by the PI"
+    },
+    "velasco_herrera_2024_hoyt_update": {
+      "acquired": "2026-11-23",
+      "archived_files": [],
+      "note": "H&S 1998 recomputed and extended to 2022. Published 12.08-scaled and DIVIDED BY 12.08 here so gn means group counts throughout (D24); it reproduces this folder's hoyt_schatten_1998 to 9e-4 over 1610-1995 and carries it 27 years further. -99 is the missing-value sentinel",
+      "published_scale_divided_by": 12.08,
+      "reference": "Velasco Herrera et al. 2024 (as above), updating Hoyt & Schatten 1998",
+      "source": "velasco_herrera_2024/velasco_herrera_2024.zip::Group Number series VERSION 3.14/Database_GSN_HOYT/ANNUAL_GSN_HOYT_1610_2022.txt",
+      "upstream": "ScienceDirect supplement (closed access), PII S0273117723009651; supplied by the PI"
+    },
+    "zolotova": {
+      "note": "sparse yearly reconstruction",
+      "reference": "Zolotova & Ponyavin, as carried by the 2017 snapshot",
+      "sha256": "2da468b5d5f2037056f858675ed34813ed77e3495c9fd508c2be564ee707f905",
+      "source": "legacy/GN_Series_matlab/data/Zolotova.csv"
+    }
+  },
+  "units": "gn is the mean daily group COUNT for every series; 12.08-scaled sources are divided by 12.08 on the way in (D24)",
+  "year_convention": "as published per series: mid-year for three, integer for Vaquero and both Velasco Herrera series, exact fractional dates for Zolotova"
+}

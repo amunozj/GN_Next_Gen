@@ -1,8 +1,13 @@
-"""The run config must refuse the two mistakes documentation has not prevented.
+"""The run config must refuse the mistakes documentation has not prevented.
 
 The firewall (ADR-002) and the KMAS single-use rule (ADR-009) were documentation-only
 until this step. These tests are the point of the config layer: a tainted run has to
 fail at load time, not produce a quietly overconfident posterior.
+
+The circular-calibration rule joined them on 2026-11-23, when two more published GN
+series were frozen under ``data/raw/`` -- one of them a *daily* reconstruction over
+the same observers. Until then the folder's README claimed the validator refused
+them and it did not: they would have been declared ``kind: sunspot`` and passed.
 """
 
 from __future__ import annotations
@@ -29,12 +34,16 @@ REFERENCE = DatasetRef("reference_groups_2026-10", "calibration", "sunspot")
 EXTENSION = DatasetRef("gn_observer_extension_2026-10", "calibration", "sunspot")
 SILSO_CAL = DatasetRef("silso", "calibration", "silso")
 SILSO_CMP = DatasetRef("silso", "comparison", "silso")
+PUBLISHED = "gn_published_series_2026-11"
+SERIES_CAL = DatasetRef(PUBLISHED, "calibration", "published_series")
+SERIES_CMP = DatasetRef(PUBLISHED, "comparison", "published_series")
 
 STEP1_CONFIGS = ("step1_check_a.yaml", "step1_check_b.yaml")
+STEP2_CONFIGS = ("step2_benchmark.yaml", "step2_baselines.yaml")
 
 
 def test_committed_configs_load_and_validate():
-    for name in STEP1_CONFIGS:
+    for name in STEP1_CONFIGS + STEP2_CONFIGS:
         config = load_run_config(CONFIGS / name)
         assert config.variant == SUNSPOT_ONLY
         assert config.seed, "every run config must carry a seed"
@@ -74,6 +83,45 @@ def test_proxy_informed_variant_may_calibrate_on_proxies():
     """The firewall is a property of the sunspot-only variant, not of the code."""
     config = RunConfig(name="proxy", variant=PROXY_INFORMED, datasets=(REFERENCE, SILSO_CAL))
     assert validate_run_config(config) is config
+
+
+# --- no circular calibration (ADR-003) -------------------------------------
+
+
+@pytest.mark.parametrize("variant", [SUNSPOT_ONLY, PROXY_INFORMED])
+def test_no_variant_may_calibrate_on_a_published_series(variant):
+    """Unlike the firewall, this one binds the proxy-informed variant too."""
+    config = RunConfig(name="circular", variant=variant, datasets=(REFERENCE, SERIES_CAL))
+    with pytest.raises(ConfigError, match="circular calibration"):
+        validate_run_config(config)
+
+
+def test_a_published_series_is_fine_for_comparison():
+    config = RunConfig(name="ok", datasets=(REFERENCE, SERIES_CMP))
+    assert validate_run_config(config) is config
+
+
+def test_a_published_series_is_not_recorded_as_proxy_derived():
+    """The two prohibitions stay apart in the lineage record.
+
+    A published GN series is sunspot data. Folding it into FIREWALLED_KINDS would
+    be the easy fix and would make the run's own firewall statement false.
+    """
+    record = lineage_record(RunConfig(name="circular", datasets=(REFERENCE, SERIES_CAL)))
+    firewall = record["firewall"]
+    assert firewall["proxy_derived_calibration_inputs"] == []
+    assert "No isotope, aurora, proxy or SILSO input" in firewall["statement"]
+    assert firewall["published_series_calibration_inputs"] == ["published_series"]
+    assert "Calibration used published series" in firewall["circularity_statement"]
+
+
+def test_a_clean_run_states_both_negatives():
+    record = lineage_record(RunConfig(name="clean", datasets=(REFERENCE, SERIES_CMP)))
+    firewall = record["firewall"]
+    assert firewall["published_series_calibration_inputs"] == []
+    assert firewall["circularity_statement"] == (
+        "No published group-number series entered calibration."
+    )
 
 
 # --- the KMAS single-use rule (ADR-009) ------------------------------------
@@ -203,3 +251,26 @@ def test_lineage_records_file_checksums_not_just_names(tmp_path):
     entry = record["inputs"][0]
     assert entry["sha256"] and entry["sha256"] != "directory"
     assert len(entry["sha256"]) == 64
+
+
+def test_two_runs_sharing_a_directory_keep_separate_lineage(tmp_path):
+    """ADR-002 wants lineage per run, and several Step 2 scripts share a log
+    directory. Writing ``lineage.json`` from each of them left only the last
+    one's provenance, and two overlapping runs could tear the file."""
+    from gn_next_gen.config import load_run_config, write_lineage
+
+    config = load_run_config(CONFIGS / "step2_benchmark.yaml")
+    first = write_lineage(config, tmp_path, extra={"script": "a"}, filename="lineage_a.json")
+    second = write_lineage(config, tmp_path, extra={"script": "b"}, filename="lineage_b.json")
+
+    assert first != second
+    assert first.is_file() and second.is_file()
+    assert json.loads(first.read_text())["script"] == "a"
+    assert json.loads(second.read_text())["script"] == "b"
+
+
+def test_lineage_still_defaults_to_the_step_1_filename(tmp_path):
+    from gn_next_gen.config import load_run_config, write_lineage
+
+    config = load_run_config(CONFIGS / "step1_check_a.yaml")
+    assert write_lineage(config, tmp_path).name == "lineage.json"

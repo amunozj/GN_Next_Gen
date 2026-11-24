@@ -17,16 +17,14 @@ Command(s) run and summary (passed / failed / skipped). Paste failures verbatim.
 **Embed every figure referred to anywhere in this document**, each with a caption (CLAUDE.md, "Reports and
 figures"). One block per figure:
 
-```html
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="figures/step-N/fNN_slug_dark.png">
-    <img alt="what the panels show" src="figures/step-N/fNN_slug_light.png">
-  </picture>
-</p>
+```markdown
+![what the panels show](figures/step-N/fNN_slug_light.png)
 
 **Figure fNN** — what to look at, then the claim it supports.
 ```
+
+Embed the **light** variant as plain Markdown; see CLAUDE.md for why a theme-switching `<picture>`
+block does not work on GitHub.
 
 Committed figures live under `docs/results/figures/step-N/` in both modes and stay small; the CSVs behind them
 stay in git-ignored `outputs/` and are listed here by path.

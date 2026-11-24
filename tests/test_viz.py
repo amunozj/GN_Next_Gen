@@ -219,6 +219,69 @@ def test_scores_figure_draws_the_target_as_a_reference_not_a_verdict(score_table
     plt.close(figure)
 
 
+@pytest.mark.parametrize("mode", MODES)
+def test_network_figure_draws_every_node_including_the_unreachable(mode):
+    """f28's point is the observers the anchor cannot reach, so none may be dropped."""
+    from gn_next_gen.viz import benchmark
+
+    nodes = pd.DataFrame(
+        {
+            "station": [1, 2, 3, 4],
+            "mid_year": [1700.5, 1800.0, 1900.0, 1990.0],
+            "resistance": [np.inf, 1e-2, 1e-4, 0.0],
+        }
+    )
+    edges = pd.DataFrame({"station_a": [2, 3], "station_b": [3, 4], "overlap_days": [120, 4000]})
+    cut = pd.DataFrame(
+        {
+            "year": [1750, 1850, 1950],
+            "n_edges": [0, 1, 2],
+            "overlap_days": [0, 120, 4120],
+            "n_before": [1, 2, 3],
+            "n_after": [3, 2, 1],
+        }
+    )
+    figure = benchmark.network_figure(nodes, edges, cut, [(2, 3)], mode, min_side=1)
+    scatters = [
+        c
+        for c in figure.axes[0].collections
+        if isinstance(c, matplotlib.collections.PathCollection)
+    ]
+    # Every station once, plus the anchor again as the star that marks it.
+    assert sum(len(c.get_offsets()) for c in scatters) == len(nodes) + 1
+    labels = [t.get_text() for t in figure.axes[0].get_legend().get_texts()]
+    assert any("unreachable (1)" in label for label in labels)
+    assert any("bridge (1)" in label for label in labels)
+    plt.close(figure)
+
+
+def test_each_method_keeps_one_marker_and_they_are_all_distinct():
+    """Shape is a method's identity, so no two methods may share one."""
+    from gn_next_gen.viz import benchmark
+
+    markers = benchmark._method_markers(benchmark.METHOD_ORDER)
+    assert set(markers) == set(benchmark.METHOD_ORDER)
+    assert len(set(markers.values())) == len(benchmark.METHOD_ORDER)
+    # f22 draws the default-setting run as a grey cross, which is not a method.
+    assert "x" not in set(markers.values())
+    # A method the module has not met yet still gets a shape of its own.
+    extended = benchmark._method_markers([*benchmark.METHOD_ORDER, "NewPort"])
+    assert extended["NewPort"] not in {markers[m] for m in benchmark.METHOD_ORDER}
+    assert all(extended[m] == markers[m] for m in benchmark.METHOD_ORDER)
+
+
+def test_a_method_keeps_its_colour_when_the_others_are_absent():
+    """f23 draws two methods and f20 draws nine; UEA21 is the same colour in both."""
+    from gn_next_gen.viz import benchmark
+
+    full = benchmark._method_colors(benchmark.METHOD_ORDER, "light")
+    subset = benchmark._method_colors(["UEA21", "GRP"], "light")
+    assert subset["UEA21"] == full["UEA21"]
+    assert subset["GRP"] == full["GRP"]
+    coloured = [m for m in benchmark.METHOD_ORDER if not m.startswith("null-")]
+    assert len({full[m] for m in coloured}) == len(coloured)
+
+
 def test_save_both_modes_writes_one_file_per_mode(tmp_path):
     def builder(mode):
         figure, ax = plt.subplots()
@@ -230,36 +293,50 @@ def test_save_both_modes_writes_one_file_per_mode(tmp_path):
     assert all(p.stat().st_size > 1000 for p in written)
 
 
-def test_every_committed_figure_has_both_modes():
-    """The results doc can only offer a dark variant if every figure has one."""
+def _figure_folders():
+    """Every committed step folder, so a new step is covered the day it lands."""
     from gn_next_gen.paths import DOCS
 
-    folder = DOCS / "results" / "figures" / "step-1"
-    if not folder.is_dir():
+    return sorted(p for p in (DOCS / "results" / "figures").glob("step-*") if p.is_dir())
+
+
+def test_every_committed_figure_has_both_modes():
+    """The results doc can only offer a dark variant if every figure has one."""
+    folders = _figure_folders()
+    if not folders:
         pytest.skip("figures not built in this checkout")
-    stems = {p.name.rsplit("_", 1)[0] for p in folder.glob("*.png")}
-    for stem in stems:
-        assert (folder / f"{stem}_light.png").is_file(), stem
-        assert (folder / f"{stem}_dark.png").is_file(), stem
+    for folder in folders:
+        stems = {p.name.rsplit("_", 1)[0] for p in folder.glob("*.png")}
+        for stem in stems:
+            assert (folder / f"{stem}_light.png").is_file(), f"{folder.name}/{stem}"
+            assert (folder / f"{stem}_dark.png").is_file(), f"{folder.name}/{stem}"
 
 
 def test_committed_figures_stay_small():
     """Only small summary figures are committed; the rest live in git-ignored outputs/."""
-    from gn_next_gen.paths import DOCS
-
-    folder = DOCS / "results" / "figures" / "step-1"
-    if not folder.is_dir():
+    folders = _figure_folders()
+    if not folders:
         pytest.skip("figures not built in this checkout")
-    for path in folder.glob("*.png"):
-        assert path.stat().st_size < 400_000, f"{path.name} is {path.stat().st_size / 1e3:.0f} kB"
+    for folder in folders:
+        for path in folder.glob("*.png"):
+            assert path.stat().st_size < 400_000, (
+                f"{folder.name}/{path.name} is {path.stat().st_size / 1e3:.0f} kB"
+            )
 
 
 def test_every_committed_figure_is_embedded_and_captioned():
     """CLAUDE.md's "Reports and figures" rule, as a test rather than as prose.
 
-    A committed figure that no report shows is a figure the reader has to go hunting for, and a
-    figure embedded in light mode only is a black-on-black panel for half of them. Both are easy
-    to do by accident and invisible in review, so they are checked here.
+    A committed figure that no report shows is a figure the reader has to go hunting for,
+    and an uncaptioned one makes the reader guess what it proves. Both are easy to do by
+    accident and invisible in review.
+
+    The embed must be the **light** variant in plain Markdown. A ``<picture>`` block with
+    ``prefers-color-scheme`` was tried and reverted on 2026-11-22: GitHub resolves a
+    relative path in ``<img src>`` but not in a ``<source srcset>``, so on a dark theme the
+    matching source won with a dead path and the fallback was never reached -- every figure
+    in the report broke at once. The dark variant still has to exist, for slides, which
+    ``test_every_committed_figure_has_both_modes`` covers.
     """
     from gn_next_gen.paths import DOCS
 
@@ -270,13 +347,31 @@ def test_every_committed_figure_is_embedded_and_captioned():
 
     for light in sorted(results.glob("figures/step-*/*_light.png")):
         relative = light.relative_to(results).as_posix()
-        stem = light.name.removesuffix("_light.png")
-        code = stem.split("_", 1)[0]
+        code = light.name.split("_", 1)[0]
         hosts = [text for text in reports.values() if relative in text]
         assert hosts, f"{relative} is committed but no report embeds it"
         for text in hosts:
-            assert relative.replace("_light", "_dark") in text, (
-                f"{relative} is embedded without its dark variant: a dark-mode reader sees "
-                "a light figure on a dark page"
+            assert f"]({relative})" in text, (
+                f"{relative} is referenced but not embedded as a Markdown image; "
+                "a <picture>/<img> embed breaks on GitHub in dark mode"
             )
             assert f"**Figure {code}**" in text, f"{relative} is embedded without a caption"
+
+
+def test_reports_do_not_use_a_picture_embed():
+    """The regression that sent this report's figures blank for dark-theme readers.
+
+    GitHub rewrites a relative path in ``<img src>`` and leaves ``<source srcset>`` alone,
+    so a ``<picture>`` block resolves in light mode and fails in dark mode -- which is the
+    worst kind of breakage, because it passes a casual look.
+    """
+    from gn_next_gen.paths import DOCS
+
+    for path in (DOCS / "results").glob("*.md"):
+        # Markup only: a prose mention inside backticks is how the reports explain the revert.
+        for number, line in enumerate(path.read_text().splitlines(), start=1):
+            stripped = line.strip()
+            assert stripped != "<picture>", f"{path.name}:{number} opens a <picture> embed"
+            assert 'srcset="' not in stripped, (
+                f"{path.name}:{number} sets srcset, which GitHub leaves unresolved"
+            )

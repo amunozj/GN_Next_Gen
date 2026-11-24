@@ -13,7 +13,7 @@ JAX/NumPyro (ADR-001).
 2. `docs/01_assessment/assessment.md` — why this approach; state of the field; the three approaches; identifiability traps.
 3. The spec of the step you are working on: `docs/05_roadmap/step-N-*.md` and its **Required reading** list.
 4. `docs/06_decisions/README.md` — accepted decisions (do not relitigate; propose a new ADR instead).
-5. As needed: `docs/04_data/` (data dictionary, known issues **D1–D22**), `docs/03_legacy/` (what old code did, known bugs,
+5. As needed: `docs/04_data/` (data dictionary, known issues **D1–D25**), `docs/03_legacy/` (what old code did, known bugs,
    reuse map), `docs/02_research/` (cross-domain methods; mind the evidence labels), `docs/glossary.md`.
 
 ## Repository map
@@ -84,18 +84,18 @@ Still true:
 ## Reports and figures
 Every report under `docs/` — results, verification, feedback, plan outcomes — is **figure-first and
 self-contained**: a reader must be able to follow the argument without opening a single file.
-- **Embed every figure you cite.** A report that names a figure shows it inline, with the light/dark `<picture>`
-  block so the reader's theme picks the variant (GitHub and VS Code both honour it):
-  ```html
-  <p align="center">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="figures/step-N/fNN_slug_dark.png">
-      <img alt="what the panels show" src="figures/step-N/fNN_slug_light.png">
-    </picture>
-  </p>
+- **Embed every figure you cite**, as a plain Markdown image of the **light** variant:
+  ```markdown
+  ![what the panels show](figures/step-N/fNN_slug_light.png)
 
   **Figure fNN** — what to look at, then the claim it supports.
   ```
+  Plain Markdown is deliberate. A `<picture>` block with `prefers-color-scheme` was tried and
+  reverted (2026-11-22): **GitHub rewrites a relative path in `<img src>` but not in a
+  `<source srcset>`**, so on a dark theme the matching `<source>` wins with an unresolved path and
+  the `<img>` fallback is never reached — every figure in the report breaks at once, and the same
+  happens in VS Code's preview. Keep rendering both modes with `save_both_modes`; the `*_dark.png`
+  is for slides, not for the report.
 - **Caption, never just label.** The caption states what the reader should see *and* the claim it carries; the
   `alt` text describes the panels for someone who cannot see them. A bare "Figure 3" is not a caption.
 - A figure's code (`fNN_slug`) is both its label in prose and its filename, so a claim traces to a file by eye.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from gn_next_gen.config.run_config import (
+    CIRCULAR_KINDS,
     FIREWALLED_KINDS,
     ROLES,
     SUNSPOT_ONLY,
@@ -50,6 +51,7 @@ def validate_run_config(config: RunConfig) -> RunConfig:
             raise ConfigError(f"{dataset.path}: no such path under data/raw")
 
     _check_firewall(config)
+    _check_no_circular_calibration(config)
     _check_kmas_single_use(config)
     return config
 
@@ -66,6 +68,23 @@ def _check_firewall(config: RunConfig) -> None:
             f"firewall (ADR-002): the {SUNSPOT_ONLY} variant may not calibrate on "
             f"{sorted(offenders)}. SILSO, isotopes, aurorae and other proxies may be "
             "carried with role 'comparison' or 'diagnostic', never 'calibration'."
+        )
+
+
+def _check_no_circular_calibration(config: RunConfig) -> None:
+    """ADR-003: a published GN series is a comparison, never a calibration input.
+
+    Unlike the firewall this applies to **both** variants. The proxy-informed
+    variant may calibrate on isotopes; neither variant may calibrate on somebody
+    else's reconstruction of the same observers, which would make the posterior a
+    measurement of that author's daisy chain rather than of the record.
+    """
+    offenders = [d.path for d in config.datasets_in_role("calibration") if d.kind in CIRCULAR_KINDS]
+    if offenders:
+        raise ConfigError(
+            f"circular calibration (ADR-003): no variant may calibrate on {sorted(offenders)}. "
+            "A published group-number series is a recalibration of the same observers this "
+            "model recalibrates; carry it with role 'comparison' or 'diagnostic'."
         )
 
 

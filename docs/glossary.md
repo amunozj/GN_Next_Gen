@@ -17,6 +17,7 @@
 | QDF | Quiet day fraction (1 − ADF-type quantity used at high activity in the legacy DTh mode) |
 | EMD | Earth Mover's (Wasserstein) distance between histograms (legacy fingerprint distance) |
 | Backbone | Calibration through a chain of long-running reference observers (Svalgaard & Schatten 2016) |
+| Pathfinding | This project's name for the 2017 MATLAB multipath method: edge costs from error propagation, shortest paths through the overlap graph, multiplicative chaining (`baselines/pathfinding.py`, scored as **Pathfinding**; called `Backbone` until 2026-11-24, which collided with the row above) |
 | Daisy chain | Pairwise calibration passed along a chain of overlapping observers |
 | Overlap graph | Nodes = observers, edges = pairs with near-simultaneous observations |
 | Effective resistance | Graph quantity equal to the variance of a concurrently estimated scale between two nodes (research derivation); grows with chain length, shrinks with parallel paths |

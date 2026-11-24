@@ -239,6 +239,16 @@ def gaussian_smooth(values, sigma_days: float) -> np.ndarray:
     weight = (~np.isnan(values)).astype(float)
     num = np.convolve(finite, kernel, mode="same")
     den = np.convolve(weight, kernel, mode="same")
+    # np.convolve(mode="same") returns max(len(values), len(kernel)), not
+    # len(values).  At sigma = 182 days the kernel is 1,457 long, so any series
+    # shorter than ~4 years came back longer than it went in.  Step 1 only ever
+    # smoothed multi-decade series and never hit it; a short benchmark window
+    # does.  Crop centrally, which is a no-op whenever the series is the longer
+    # of the two and so cannot change any Step 1 result.
+    if len(num) != len(values):
+        start = (len(num) - len(values)) // 2
+        num = num[start : start + len(values)]
+        den = den[start : start + len(values)]
     with np.errstate(invalid="ignore", divide="ignore"):
         return np.where(den > 0, num / den, np.nan)
 

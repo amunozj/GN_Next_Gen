@@ -1,0 +1,35 @@
+# Step 2 -- which baselines run, and the S6 structural-ensemble perturbations.
+#
+# S6 is not a set of worlds. It is each method's own free choices, varied over
+# S2's worlds, so the spread it produces can be reported beside the parametric
+# uncertainty (Williams et al. 2012).
+name: step2_baselines
+variant: sunspot_only
+seed: 20261122
+
+datasets:
+  - path: reference_groups_2026-10
+    role: calibration
+    kind: sunspot
+  - path: gn_database_v1.3
+    role: calibration
+    kind: sunspot
+
+params:
+  methods: [HoSc98, SvSc16, VHS24, CEA17, UEA21, GRP, Pathfinding]
+  nulls: [null-prior, null-segmentation]
+
+  # Graph construction is a free choice shared by the chained methods.
+  graph:
+    day_tolerance: 2         # legacy DayTol
+    min_overlap_days: 60     # legacy MinOvr
+    min_distinct_values: 4   # legacy minObVal
+
+  # S6: one knob at a time, over S2's worlds.  Five settings per knob, as planned.
+  structural_ensemble:
+    source_scenario: S2
+    n_realizations: 3        # a subset of S2's worlds; the grid is knobs x worlds
+    perturbations:
+      day_tolerance: [0, 1, 2, 3, 5]
+      min_overlap_days: [20, 40, 60, 100, 200]
+      min_distinct_values: [2, 3, 4, 6, 8]

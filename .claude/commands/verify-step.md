@@ -17,7 +17,7 @@ failure, with the evidence pasted.
    firewall respected for sunspot-only runs; no SILSO in calibration code paths.
 6. Write `docs/results/step-$ARGUMENTS-verification.md` from `docs/templates/step-verification.md`, including findings
    that affect later steps (and propose roadmap/ADR changes there rather than editing other specs silently).
-   **Embed every figure the document refers to, each with a caption**, using the light/dark `<picture>` block in
-   CLAUDE.md's "Reports and figures" — a verification report must be readable without opening a file.
+   **Embed every figure the document refers to, each with a caption**, in the plain-Markdown form in CLAUDE.md's
+   "Reports and figures" — a verification report must be readable without opening a file.
 7. Update the status table in `docs/05_roadmap/README.md` (Verified / Pass with caveats / Fail).
 8. Summarize the verdict and the evidence for the PI.
