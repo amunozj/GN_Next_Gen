@@ -1,11 +1,15 @@
 """Run configuration: what a run reads, in which role, under which variant.
 
 Every run is reproducible from a committed YAML plus a seed, and every run records
-its data lineage (ADR-002).  The two rules the configuration exists to enforce are
-the ones no amount of documentation has so far prevented someone from breaking:
+its data lineage (ADR-002).  The three rules the configuration exists to enforce
+are the ones no amount of documentation has so far prevented someone from
+breaking -- each was documented, and documented-only, until something slipped:
 
 * the **firewall** -- a ``sunspot_only`` run may not take an isotope, aurora,
   proxy or SILSO input as a calibration input (ADR-002, ADR-003);
+* **no circular calibration** -- no run of either variant may calibrate on a
+  published group-number series, because every one of them is a recalibration of
+  the same observers this model recalibrates (ADR-003);
 * the **KMAS single-use rule** -- KMAS is reference areas *or* observer counts,
   never both, because its counts are derivable from its areas (ADR-009).
 """
@@ -32,6 +36,15 @@ ROLES = ("calibration", "comparison", "diagnostic")
 #: Inputs the firewall bars from calibration in the sunspot-only variant.
 #: SILSO is included because SN V2.0 is itself a composite (ADR-003).
 FIREWALLED_KINDS = ("silso", "isotope", "aurora", "proxy")
+
+#: Inputs barred from calibration in **every** variant, for a different reason
+#: than the firewall: a published GN series is a recalibration of the very
+#: observers this model recalibrates, so calibrating on one closes a loop and the
+#: posterior would be measuring the earlier author's choices.  Deliberately *not*
+#: folded into ``FIREWALLED_KINDS``, because these are sunspot data: the firewall
+#: is about proxy lineage and the run's lineage record says so in those words, so
+#: a published series listed there would make that statement false.
+CIRCULAR_KINDS = ("published_series",)
 
 DEFAULT_THRESHOLDS = (0.0, 10.0, 30.0, 60.0, 100.0)
 

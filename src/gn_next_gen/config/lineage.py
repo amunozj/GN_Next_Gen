@@ -12,7 +12,12 @@ import json
 import platform
 from pathlib import Path
 
-from gn_next_gen.config.run_config import FIREWALLED_KINDS, SUNSPOT_ONLY, RunConfig
+from gn_next_gen.config.run_config import (
+    CIRCULAR_KINDS,
+    FIREWALLED_KINDS,
+    SUNSPOT_ONLY,
+    RunConfig,
+)
 from gn_next_gen.io.cache import manifest_checksum
 
 
@@ -33,6 +38,12 @@ def lineage_record(config: RunConfig, *, extra: dict | None = None) -> dict:
 
     calibration_kinds = {d.kind for d in config.datasets_in_role("calibration")}
     firewalled = sorted(calibration_kinds & set(FIREWALLED_KINDS))
+    # Recorded separately from the proxy firewall, and in its own words: a
+    # published GN series is sunspot data, so calling it proxy-derived would make
+    # the statement below false. validate_run_config refuses such a run outright;
+    # this is here because lineage is evidence about what a run actually read,
+    # and a caller that skipped validation must still be caught by the record.
+    circular = sorted(calibration_kinds & set(CIRCULAR_KINDS))
     return {
         "run": config.name,
         "variant": config.variant,
@@ -47,10 +58,16 @@ def lineage_record(config: RunConfig, *, extra: dict | None = None) -> dict:
         "firewall": {
             "variant_is_sunspot_only": config.variant == SUNSPOT_ONLY,
             "proxy_derived_calibration_inputs": firewalled,
+            "published_series_calibration_inputs": circular,
             "statement": (
                 "No isotope, aurora, proxy or SILSO input entered calibration."
                 if not firewalled
                 else f"Calibration used proxy-derived inputs: {firewalled}."
+            ),
+            "circularity_statement": (
+                "No published group-number series entered calibration."
+                if not circular
+                else f"Calibration used published series: {circular}."
             ),
         },
         "environment": {
