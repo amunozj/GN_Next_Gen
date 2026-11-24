@@ -81,7 +81,26 @@ read; which method is unconfirmed". It has now been read.
 **Figure f15** — The structure A157 does not have. Chained calibration's variance
 grows like effective resistance to the anchor, so the left panel is the x-axis of
 every chained method's error. The reference observer sees only its own anchored
-epoch (ADR-009), so every other observer is reached through this graph.
+epoch (ADR-009), so every other observer is reached through this graph. **39 of the
+423 observers never reach it**: the graph is not one connected whole. These panels
+summarise the full-record network (**S2**); f28 draws it.
+
+![Left: the overlap graph over 1610-2026 drawn as a network, nodes placed at each observer's mid-career year and their effective resistance to the anchor, edges in grey and bridges in orange. Right: the number of edges crossing each year's cut, falling to zero in 1727-1745 and 1777-1798.](figures/step-2/f28_overlap_network_light.png)
+
+**Figure f28** — The graph f15 summarises, drawn in full (**S2**, 1610–2026). Left:
+every one of the 16,858 edges, each observer placed at its mid-career year and its
+resistance to the anchor, so the chain is visible as the thing a method has to walk.
+Median resistance rises from 1.4e-5 for observers centred after 1980 to 2.7e-3 before
+1830; **20 edges are bridges** (orange — cut one and everything behind it loses the
+anchor); **39 of 423 observers have no path to the anchor at all**. Right: how much of
+the chain crosses each year, splitting the observers by career midpoint (the ends of
+the record, where one side holds fewer than ten observers, are trivially empty and
+left out). **In 1727–1745 and 1777–1798 nothing crosses at all** — 41 years where the
+graph is severed, not merely thin — and across 1727–1801 the cut never exceeds five
+edges and holds one or none in 57 of those 75 years. That is the structural reason
+five of seven methods stop at 1774 (§6): a property of the real overlap pattern, not
+of any method. Numbers from
+[`data/step2_overlap_graph_cut.csv`](data/step2_overlap_graph_cut.csv).
 
 ![Acuity distribution with the ten case studies marked, MNAR omission rates, and counts of observers with breaks, copiers and blanket records.](figures/step-2/f16_observer_population_light.png)
 
@@ -92,7 +111,9 @@ own statement, and modelled here.
 ![Left: observing days against first year, per station. Right: observers by decade of first observation.](figures/step-2/f17_calendars_light.png)
 
 **Figure f17** — The calendars, transplanted verbatim from the real record
-including the sparse Maunder-era patterns where the graph is thinnest. A157
+including the sparse 17th- and 18th-century patterns where the graph is thinnest:
+**44 observers before 1800**, a median of 2.5 per decade, two-thirds of them with
+fewer than 300 observing days in total. A157
 reduces overlap by deleting days at random instead, which cannot reproduce a
 bottleneck.
 
@@ -141,16 +162,25 @@ disc is half the hemisphere, so MSH = msd / 2 (D4).
 
 ## 4. Baseline scores *(full grid: 459 cells)*
 
-![Bias as dots and centred RMSE as bars, at daily, monthly and yearly scales, for nine methods.](figures/step-2/f18_baseline_scores_light.png)
+> **Naming, 2026-11-24.** The port of the 2017 MATLAB multipath method is called
+> **Pathfinding** here and everywhere in the code; it was called `Backbone` through
+> 2026-11-23. The old name collided with **SvSc16**, which *is* Svalgaard &
+> Schatten's backbone and is a separate baseline in the same table, so "the backbone
+> method" named two of the seven. Nothing about the method, its inputs or its scores
+> changed — the figures and CSVs carry the new label.
+
+![Bias as a marker and centred RMSE as a bar, at daily, monthly and yearly scales, for nine methods, each method drawn in its own colour and marker shape.](figures/step-2/f18_baseline_scores_light.png)
 
 **Figure f18** — Point error at three averaging scales, pooled over all 51 worlds.
 A method can be unbiased daily and wrong per cycle, which is why HOME scores at
-several scales and so does this.
+several scales and so does this. Each method keeps one colour **and** one marker
+shape across f18–f26, so a mark says which method it belongs to without the
+legend, and the two nulls stay apart in the grey they share.
 
 | method | yearly bias | yearly cRMSE | CRPS | beats the null? |
 |---|---|---|---|---|
 | HoSc98 | −0.234 | **0.312** | 0.248 | yes |
-| Backbone | −0.194 | 0.373 | 0.265 | yes |
+| Pathfinding | −0.194 | 0.373 | 0.265 | yes |
 | SvSc16 | −0.254 | 0.379 | 0.285 | yes |
 | *null-segmentation* | *0.145* | *0.749* | *0.415* | — |
 | VHS24 | **0.013** | 0.787 | 0.542 | **no** |
@@ -175,7 +205,7 @@ scatter. A method can be centred and useless.
 ![Horizontal bars of the slope of estimated-minus-true cycle amplitude against true amplitude, per method.](figures/step-2/f19_cycle_amplitude_light.png)
 
 **Figure f19** — The secular-bias signature on the real overlap graph. The two
-families separate cleanly: the linear scalings and the Backbone sit at
+families separate cleanly: the linear scalings and Pathfinding sit at
 **−0.006 to −0.017**, effectively flat, while CEA17, UEA21, VHS24 and GRP run
 **−0.21 to −0.38**.
 
@@ -197,10 +227,10 @@ calibration cells. **Every curve lies far below the diagonal.**
 
 | nominal | best of the seven | worst of the seven |
 |---|---|---|
-| 50% | 0.159 (Backbone) | 0.009 (UEA21) |
+| 50% | 0.159 (Pathfinding) | 0.009 (UEA21) |
 | 68% | 0.199 (SvSc16) | 0.014 (UEA21) |
-| 90% | 0.272 (Backbone) | 0.025 (UEA21) |
-| 95% | 0.301 (Backbone) | 0.030 (UEA21) |
+| 90% | 0.272 (Pathfinding) | 0.025 (UEA21) |
+| 95% | 0.301 (Pathfinding) | 0.030 (UEA21) |
 
 S5 is excluded from this figure and table. With detection error switched off an
 exact method scores a coverage of 1.0 there, so it is a check on the pipeline
@@ -230,7 +260,7 @@ The result the two-world S1 slice could not show, because S1 begins in 1874.
 
 | method | earliest year reached | share of the 1610–2026 record |
 |---|---|---|
-| HoSc98, SvSc16, VHS24, CEA17, Backbone | **1774** | **46%** |
+| HoSc98, SvSc16, VHS24, CEA17, Pathfinding | **1774** | **46%** |
 | UEA21 | 1672 | 56% |
 | GRP | 1660 | 58% |
 
@@ -265,30 +295,69 @@ about it wrongly by a factor of twenty.
 
 An aggregate score says which method wins and hides the observers that break one.
 Ten observers are fixed by name and seed, each isolating a failure mode; 3,500
-case-study rows across S1–S4.
+case-study rows across S1–S4, which is **fifty replicates** — scenario × seed —
+behind every observer and method. The medians, quartiles and ranges below are in
+[`data/step2_case_study_observers.csv`](data/step2_case_study_observers.csv), the
+same table `f25` and `f26` are drawn from.
 
-![Panels for case studies 1 to 5: acuity recovered against true, and recovered-over-implied scale factor.](figures/step-2/f25_case_studies_easy_light.png)
+Fifty replicates make two different questions available, and they give different
+answers. A method is **typically** off when its *median* scale factor sits more
+than 2× from the truth; it is **sometimes** off when its *worst* replicate does.
+Reading only one of the two is how a case study gets misread:
 
-**Figure f25** — Case studies 1–5. **`slow-drift` defeats all seven methods**: a
-random walk in acuity over a long career puts every one of them more than 2×
-away from the implied scale. `clean-modern` — the case every method should get
-right — defeats four of seven, the worst by 10.7×, and its acuity is recovered as
-209 MSH against a true 10.
+| Observer | typically >2× off | sometimes >2× off | never answered |
+|---|---|---|---|
+| `clean-modern` | **4** | 4 | SvSc16 |
+| `sparse-maunder` | 0 | 1 | UEA21 |
+| `break-undocumented` | 1 | 2 | — |
+| `break-documented` | 0 | 1 | — |
+| `slow-drift` | 0 | **7** | — |
+| `poor-instrument` | 1 | 4 | SvSc16 |
+| `leaf-node` | 1 | 3 | UEA21 |
+| `copier` | 0 | 4 | — |
+| `zero-omitter` | 0 | 1 | — |
+| `blanket-statements` | — | — | all seven |
 
-The paired breaks price the metadata exactly, which is what the pair was built
-for: the **same** break recovered as **40.1 MSH when documented** and **111.5
-when not**, against a true 45. Documentation is worth a factor of 2.5 here.
+![Five panels for case studies 1 to 5, each with recovered acuity above and recovered-over-implied scale factor below; every method shows its median over fifty replicates as its own marker shape, its interquartile range as a thick bar and its full range as a thin one.](figures/step-2/f25_case_studies_easy_light.png)
 
-![Five panels for the hard cases: poor-instrument, leaf-node, copier, zero-omitter and blanket-statements.](figures/step-2/f26_case_studies_hard_light.png)
+**Figure f25** — Case studies 1–5. **`clean-modern` is the worst result in the
+figure**, which is the whole point of including it: the case every method should
+get right puts four of seven more than 2× off *in the median* — GRP 4.6×, UEA21
+4.6×, VHS24 3.0×, CEA17 2.2× — and the two methods that estimate an acuity return
+a median 300 MSH against a true 10. SvSc16 returns nothing for this observer in
+any of the fifty replicates, and no method produces a usable scale factor in all
+fifty.
 
-**Figure f26** — Case studies 6–10. `copier`, whose record duplicates a
-neighbour's, defeats four methods and has its acuity recovered as 161 MSH against
-a true 30 — correlated observer error, which nothing under test models.
-`leaf-node`, with one overlap partner, defeats three. `zero-omitter` is the one
-clear success: 26.1 MSH recovered against a true 30, so activity-dependent
-omission of blank days is the failure mode these methods *do* survive.
-`blanket-statements` produces nothing from any method, because the record is
-sentences rather than counts.
+**`slow-drift` is the opposite shape, and the ranges are what tell them apart.**
+Every median sits within 1.9× of the truth, so on a median-only reading a random
+walk in acuity defeats nobody; but every one of the seven has at least one
+replicate past 2×, HoSc98 by 6.2× and Pathfinding by 5.4×. Drift does not bias these
+methods, it makes them unreliable — a claim no single replicate, and no median,
+can carry on its own.
+
+The paired breaks still price the metadata, in acuity rather than scale: the
+**same** break is recovered at a median **50 MSH when documented** and **160 MSH
+when not** by UEA21, against a true 45, and at 28 against 58 by GRP. Documentation
+is worth a factor of 2–3 here.
+
+![Five panels for the hard cases — poor-instrument, leaf-node, copier, zero-omitter and blanket-statements — with recovered acuity above and scale factor below, each method drawn as a median marker in its own shape with interquartile and full ranges.](figures/step-2/f26_case_studies_hard_light.png)
+
+**Figure f26** — Case studies 6–10. `leaf-node` and `poor-instrument` are the two
+hard cases with a *typical* failure rather than an occasional one: GRP sits 2.6×
+and 2.5× off in the median. Both also show the other kind of failure, the one the
+counts under each slot record — **UEA21 returns nothing at all for `leaf-node`,
+in all fifty replicates**, and SvSc16 nothing for `poor-instrument`. A method that
+cannot answer is not the same as one that answers badly, and an aggregate score
+drops the first silently.
+
+`copier`, whose record duplicates a neighbour's, has no median past 2× but four
+methods with replicates that are, and UEA21's acuity spans 30–300 MSH against
+a true 30: correlated observer error, which nothing under test models, shows up as
+spread rather than bias. `zero-omitter` is the one clear success — UEA21 recovers a
+median 26 MSH against a true 30 and only CEA17 ever strays past 2× — so
+activity-dependent omission of blank days is the failure mode these methods *do*
+survive. `blanket-statements` produces nothing from any method in any replicate,
+the zero under every slot, because the record is sentences rather than counts.
 
 ![Recovered against true acuity threshold, for the two methods that estimate one.](figures/step-2/f23_acuity_recovery_light.png)
 
@@ -315,7 +384,7 @@ every one of them:
 | method | structural spread | mean reported sd | wider? |
 |---|---|---|---|
 | HoSc98 | 0.192 | 0.645 | no |
-| Backbone | 0.221 | 0.669 | no |
+| Pathfinding | 0.221 | 0.669 | no |
 | SvSc16 | 0.153 | 0.736 | no |
 | CEA17 | 0.401 | 0.510 | no |
 | UEA21 | 0.229 | 0.713 | no |
@@ -341,7 +410,7 @@ the days it looked, so any residual error is the sampling pattern and nothing
 else.
 
 S5 also turns out to be a correctness check on the whole pipeline: on it,
-**HoSc98 and the Backbone score a centred RMSE of exactly 0.000 and a coverage of
+**HoSc98 and Pathfinding score a centred RMSE of exactly 0.000 and a coverage of
 1.000**. When there is nothing to calibrate, the calibrators return the truth.
 That the two scaling methods do and the four non-parametric ones do not (0.86 to
 1.22) is itself informative about where their error comes from.
@@ -434,8 +503,10 @@ Useful flags: `--jobs N`, `--scenarios S1 S2`, `--realizations N` and
 `--methods HoSc98 CEA17` for a smoke run; `--help` for the rest. The underlying
 scripts can still be run individually — the orchestrator only sequences them.
 
-Figures are committed under [`figures/step-2/`](figures/step-2/) in light and dark;
-the CSVs behind every number are in git-ignored `outputs/step2/`.
+Figures are committed under [`figures/step-2/`](figures/step-2/) in light and dark, and
+the per-observer summary behind §7 under
+[`data/step2_case_study_observers.csv`](data/step2_case_study_observers.csv); the rest of
+the CSVs are in git-ignored `outputs/step2/`.
 
 ## 11. What this step does not establish
 
@@ -461,14 +532,82 @@ Stated plainly, because a benchmark that overclaims is worse than none.
    anchor (RGO cycles 15–19). The Debrecen 21–23 anchoring is supported by the
    code and configured per scenario, but was not run, so the anchor-sensitivity
    comparison ADR-003 asks for is still owed by Steps 3–4.
-6. **Two of the five published series were not acquired** — Chatzistergos et al.
-   (2017) and Velasco Herrera et al. (2024), both at CDS/VizieR, unreachable
-   from this machine. Recorded in `refresh_todo.md`. Nothing here depends on
-   them.
+6. ~~**Two of the five published series were not acquired.**~~ **Closed
+   2026-11-23** — both are now in `data/raw/gn_published_series_2026-11/`; see
+   §11a. The reason recorded here was also wrong: Velasco Herrera et al. (2024)
+   was never at CDS/VizieR, and CDS was not down.
 7. **The second, model-based generator was not written.** The replay generator
    already supplies the four structural misspecifications through real data; a
    parametric sibling would have added a knob without adding a departure from
    the Step 4 model.
+
+## 11a. Addendum, 2026-11-23 — the two missing series
+
+Both series the plan named and this step could not get are now frozen in
+`data/raw/gn_published_series_2026-11/`, and `published_gn_series.csv` carries
+**eight** series instead of five. Nothing in §§1–10 changes: the scorer never
+read this folder and no baseline consumes it. What changes is that the
+benchmark's results can now be read beside every series the same methods
+produced, including the two whose *ports* (CEA17 and VHS24) were scored here all
+along.
+
+- **Chatzistergos et al. (2017)**, A&A 602, A69, from CDS catalogue
+  J/A+A/602/A69: yearly, monthly and daily, 1739–2010, with **asymmetric** error
+  bars that the table now carries as `gn_sd_hi`/`gn_sd_lo`. CDS was reachable the
+  whole time — its own `/ftp/` path serves a placeholder page, while
+  `cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/602/A69` redirects to the NAOJ mirror,
+  which serves the files.
+- **Velasco Herrera et al. (2024)**, Adv. Space Res. 73, 2788: the article is
+  closed access and the series is in no open repository, so there was nothing to
+  download. The PI supplied the supplement ("Group Number series VERSION 3.14")
+  from his own access on 2026-11-23; the zip is archived and read in place.
+
+![Top: eight published group-number series over 1610-2022, the three newly added drawn in colour over the five already held in grey. Bottom: the difference between the 2024 Hoyt and Schatten update divided by 12.08 and the 1998 series it updates, within a thousandth of a group across 1610-1995, with the 1995-2022 extension shaded.](figures/step-2/f27_published_series_light.png)
+
+**Figure f27** — The eight series on one axis, all in mean daily group counts
+(top), and the check that licenses that single scale (bottom). The Velasco
+Herrera supplement publishes its Hoyt & Schatten update in **12.08-scaled**
+units while its own reconstruction is in counts (**D24**); dividing by 12.08
+reproduces the 1998 series this folder already held on all 386 overlapping years
+to within 9×10⁻⁴, and carries it 27 years past 1995. A series left unscaled
+would sit twelve times too high and still look like a plausible solar cycle.
+
+Two corrections fell out of adding them:
+
+1. **A sentinel was being read as data (D25).** The 2017 MATLAB snapshot's
+   yearly files use `gn = -1` with `n_observations = 0` for a year with no data,
+   and the first export carried it through: six years of Hoyt & Schatten (1636,
+   1637, 1641, 1744, 1745, 1747) and one of the Usoskin file (1811) sat in the
+   table as negative group counts. They are null now. Comparison-only data, so
+   no score moves.
+2. **A documented rule was not actually enforced, and now is.** That folder's
+   README claimed the validator refuses these as a calibration input. It did
+   not: `FIREWALLED_KINDS` is `silso`, `isotope`, `aurora`, `proxy`, and a GN
+   series would have been declared `kind: sunspot` and passed. This mattered
+   more than it had before, because what arrived with the supplement includes a
+   **daily** reconstruction over the same observers — the one shape that could
+   enter a likelihood looking like data. `validate_run_config` now refuses a
+   `kind: published_series` dataset in role `calibration`, and every
+   `lineage.json` carries the matching evidence.
+
+   It is a **separate rule from the ADR-002 firewall**, not another entry in
+   `FIREWALLED_KINDS`, for two reasons. It binds *both* variants — the
+   proxy-informed variant may calibrate on isotopes, but neither variant may
+   calibrate on someone else's recalibration of these observers. And a published
+   GN series *is* sunspot data: listing it as proxy-derived would have made each
+   run's own firewall statement false. The lineage record therefore gained
+   `published_series_calibration_inputs` and a `circularity_statement` beside
+   the existing firewall fields, and `tests/test_config.py` pins that the two
+   stay apart. If you want this recorded as a decision rather than as
+   enforcement of ADR-003, an ADR amendment is the place — it is not
+   relitigating anything, since the project had already claimed the rule in
+   three documents.
+
+The supplement also carries a corrected raw observation database, 1610–**2022**,
+in the v1.22 shape. It is not adopted: ADR-010 makes `gn_database_v1.3` release
+`_4` the database of record, and those corrections are an author's judgement to
+be compared against v1.3's changelog rather than merged. It is noted because it
+is the only thing in hand that runs past v1.3's 2010 end.
 
 ## 12. What Steps 3–4 inherit
 
@@ -476,7 +615,7 @@ Stated plainly, because a benchmark that overclaims is worse than none.
 |---|---|---|
 | Benchmark API | `gn_next_gen.benchmark` + `gn_next_gen.baselines`; one `calibrate(...) -> CalibrationResult` signature | A Step 3 or 4 method is scored by registering it in `BASELINES` |
 | One command | `./scripts/run_step2_grid.sh --detach` | 51 worlds, 459 cells, 16 min on 64 cores; resumable |
-| The bar to clear | yearly cRMSE **0.312** (HoSc98) and a 50% coverage of **0.159** (Backbone) | The best point error and the best coverage among the seven |
+| The bar to clear | yearly cRMSE **0.312** (HoSc98) and a 50% coverage of **0.159** (Pathfinding) | The best point error and the best coverage among the seven |
 | The floor | a random segmentation scores **0.749** | Four published methods are below it; a method that is not has demonstrated nothing |
 | The open goal | **no method reaches before 1774**, and the two that do overestimate the Maunder level 23–25× | This is the gap a joint model exists to close, now measured rather than asserted |
 | Hardest observer | `slow-drift` — beats all seven | A drift prior is not optional |

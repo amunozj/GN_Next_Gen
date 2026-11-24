@@ -5,8 +5,10 @@ from gn_next_gen.graph.overlap import (
     bridges,
     build_overlap_graph,
     components,
+    decimal_year,
     effective_resistance,
     resistance_to_set,
+    temporal_cut_profile,
 )
 
 __all__ = [
@@ -14,6 +16,8 @@ __all__ = [
     "build_overlap_graph",
     "bridges",
     "components",
+    "decimal_year",
+    "temporal_cut_profile",
     "effective_resistance",
     "resistance_to_set",
 ]

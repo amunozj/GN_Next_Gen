@@ -87,7 +87,7 @@ Running list of paper items (add as steps produce them):
       `gn_next_gen.io`, and the KMAS single-use rule and the ADR-002 firewall now **enforced in code**
 - [ ] Anchor-sensitivity comparison: the series under both ADR-009 anchorings (Steps 3–4)
 - [x] Birth-death + thinning validation against reference statistics (Step 1) — [results](../results/step-1-data-foundation.md), figures f06–f09
-- [x] Benchmark design figure and baseline scores (Step 2) — [results](../results/step-2-blind-benchmark.md), figures f13-f26
+- [x] Benchmark design figure and baseline scores (Step 2) — [results](../results/step-2-blind-benchmark.md), figures f13-f27
 - [x] Positioned against Chatzistergos et al. (2025, A&A 699, A157): all five of their
       methods ported and reproducing their Fig. 3b sign pattern, then extended to the
       real overlap graph, to daisy-chaining they did not evaluate, and to interval

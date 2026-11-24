@@ -34,6 +34,7 @@ import pandas as pd
 from scipy.stats import kstest, norm
 
 from gn_next_gen.baselines.base import CalibrationResult
+from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS
 from gn_next_gen.benchmark.truth import Truth
 
 #: Nominal central-interval levels.  The first two are the spec's headline.
@@ -320,3 +321,83 @@ def score(
     row |= uncertainty_scores(aligned)
     row |= acuity_recovery(result, parameters)
     return row
+
+
+def _spread(values: pd.Series, total: int, prefix: str) -> dict[str, float]:
+    """Median, quartiles and full range of the finite values, with their count."""
+    finite = values[np.isfinite(values)]
+    if prefix == "scale":
+        finite = finite[finite > 0]
+    if finite.empty:
+        return {
+            f"{prefix}_n_finite": 0,
+            f"{prefix}_n_replicates": total,
+            f"{prefix}_median": np.nan,
+            f"{prefix}_q1": np.nan,
+            f"{prefix}_q3": np.nan,
+            f"{prefix}_min": np.nan,
+            f"{prefix}_max": np.nan,
+        }
+    return {
+        f"{prefix}_n_finite": int(len(finite)),
+        f"{prefix}_n_replicates": total,
+        f"{prefix}_median": float(finite.median()),
+        f"{prefix}_q1": float(finite.quantile(0.25)),
+        f"{prefix}_q3": float(finite.quantile(0.75)),
+        f"{prefix}_min": float(finite.min()),
+        f"{prefix}_max": float(finite.max()),
+    }
+
+
+def _off_by(ratio: float) -> float:
+    """How far a scale factor sits from the truth, as a factor in either direction."""
+    if not np.isfinite(ratio) or ratio <= 0:
+        return np.nan
+    return float(max(ratio, 1.0 / ratio))
+
+
+def summarise_case_studies(cases: pd.DataFrame) -> pd.DataFrame:
+    """One row per case-study observer and method, across all replicates.
+
+    ``case_study_observers.csv`` holds one row per (scenario, seed, observer,
+    method) -- fifty replicates behind every point `f25`/`f26` draw.  Reading a
+    single one of them would put an arbitrary draw in the figure and let a claim
+    about typical behaviour rest on it, so the figure and the committed table are
+    both built here: median, interquartile range, full range, and how many
+    replicates produced a finite answer at all.
+
+    ``scale_off_by_median`` and ``scale_off_by_worst`` are the typical and
+    worst-case distance from the truth, as a factor in whichever direction the
+    method erred, so a "this method is off by more than 2x" count is checkable
+    from the table without re-deriving it.
+
+    Parameters
+    ----------
+    cases
+        Per-replicate rows, as ``score_benchmark.py`` writes them.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per ``(kind, method)``, ordered by case-study kind.
+    """
+    rows = []
+    for (kind, method), block in cases.groupby(["kind", "method"], sort=False):
+        true_acuity = block["true_threshold_msh"].dropna().unique()
+        row = {
+            "kind": kind,
+            "method": method,
+            "true_threshold_msh": float(true_acuity[0]) if len(true_acuity) else np.nan,
+        }
+        row |= _spread(block["recovered_threshold_msh"], len(block), "acuity")
+        row |= _spread(block["factor_ratio"], len(block), "scale")
+        row["scale_off_by_median"] = _off_by(row["scale_median"])
+        worst = [_off_by(value) for value in (row["scale_min"], row["scale_max"])]
+        row["scale_off_by_worst"] = float(np.nanmax(worst)) if np.isfinite(worst).any() else np.nan
+        rows.append(row)
+    summary = pd.DataFrame(rows)
+    if summary.empty:
+        return summary
+    order = {kind: index for index, kind in enumerate(CASE_STUDY_KINDS)}
+    summary["_kind"] = summary["kind"].map(lambda k: order.get(k, len(order)))
+    return summary.sort_values(["_kind", "method"]).drop(columns="_kind").reset_index(drop=True)

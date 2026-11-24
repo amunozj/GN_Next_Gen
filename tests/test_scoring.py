@@ -18,6 +18,7 @@ from gn_next_gen.benchmark.scoring import (
     maunder_level,
     scale_errors,
     score,
+    summarise_case_studies,
     trend_errors,
     uncertainty_scores,
 )
@@ -269,3 +270,72 @@ def test_the_gaussian_crps_matches_a_monte_carlo_estimate():
         ),
         rel=1e-9,
     )
+
+
+def _case_rows(kind, method, ratios, acuities, true_acuity=30.0):
+    return pd.DataFrame(
+        {
+            "scenario": "S1",
+            "seed": range(len(ratios)),
+            "method": method,
+            "station": 7,
+            "kind": kind,
+            "true_threshold_msh": true_acuity,
+            "recovered_threshold_msh": acuities,
+            "factor_ratio": ratios,
+        }
+    )
+
+
+def test_the_case_study_summary_collapses_replicates_to_median_and_range():
+    cases = _case_rows("copier", "UEA21", [1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0])
+    row = summarise_case_studies(cases).iloc[0]
+
+    assert row["kind"] == "copier" and row["method"] == "UEA21"
+    assert row["true_threshold_msh"] == 30.0
+    assert row["scale_n_replicates"] == 4 and row["scale_n_finite"] == 4
+    assert row["scale_median"] == pytest.approx(2.5)
+    assert (row["scale_q1"], row["scale_q3"]) == pytest.approx((1.75, 3.25))
+    assert (row["scale_min"], row["scale_max"]) == pytest.approx((1.0, 4.0))
+    assert row["acuity_median"] == pytest.approx(25.0)
+
+
+def test_the_case_study_summary_counts_the_replicates_a_method_answered():
+    """A method that answers rarely is a different failure from one that answers badly."""
+    cases = _case_rows(
+        "leaf-node",
+        "CEA17",
+        [np.nan, 0.0, -1.0, 2.0],
+        [np.nan, np.nan, np.nan, 50.0],
+    )
+    row = summarise_case_studies(cases).iloc[0]
+
+    # NaN, zero and negative scale factors are all "no usable answer".
+    assert row["scale_n_finite"] == 1 and row["scale_n_replicates"] == 4
+    assert row["scale_median"] == pytest.approx(2.0)
+    assert row["acuity_n_finite"] == 1 and row["acuity_median"] == pytest.approx(50.0)
+
+
+def test_the_case_study_summary_reports_off_by_in_whichever_direction_the_method_erred():
+    """Half the truth and twice the truth are both 'off by 2x'; the worst case is the extreme."""
+    cases = _case_rows("zero-omitter", "HoSc98", [0.5, 0.25, 4.0], [np.nan] * 3)
+    row = summarise_case_studies(cases).iloc[0]
+
+    assert row["scale_median"] == pytest.approx(0.5)
+    assert row["scale_off_by_median"] == pytest.approx(2.0)
+    assert row["scale_off_by_worst"] == pytest.approx(4.0)
+    assert row["acuity_n_finite"] == 0 and np.isnan(row["acuity_median"])
+
+
+def test_the_case_study_summary_keeps_the_ten_observers_in_their_published_order():
+    cases = pd.concat(
+        [
+            _case_rows("blanket-statements", "GRP", [1.0], [1.0]),
+            _case_rows("clean-modern", "GRP", [1.0], [1.0]),
+            _case_rows("clean-modern", "CEA17", [1.0], [1.0]),
+        ]
+    )
+    summary = summarise_case_studies(cases)
+
+    assert list(summary["kind"]) == ["clean-modern", "clean-modern", "blanket-statements"]
+    assert list(summary["method"]) == ["CEA17", "GRP", "GRP"]

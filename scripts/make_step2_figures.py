@@ -1,4 +1,4 @@
-"""Build f13-f26 from whatever the grid has produced.
+"""Build f13-f28 from whatever the grid has produced.
 
 Short (< 3 minutes) and safe to re-run: each figure is skipped, with a reason, if
 its inputs are not on disk yet, so the session can build the set from a two-world
@@ -20,9 +20,16 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS  # noqa: E402
+from gn_next_gen.benchmark.scoring import summarise_case_studies  # noqa: E402
 from gn_next_gen.benchmark.store import BENCHMARK_ROOT, read_observations  # noqa: E402
-from gn_next_gen.graph import build_overlap_graph, resistance_to_set  # noqa: E402
-from gn_next_gen.paths import DOCS, OUTPUTS  # noqa: E402
+from gn_next_gen.graph import (  # noqa: E402
+    bridges,
+    build_overlap_graph,
+    decimal_year,
+    resistance_to_set,
+    temporal_cut_profile,
+)
+from gn_next_gen.paths import DATA_RAW, DOCS, OUTPUTS  # noqa: E402
 from gn_next_gen.viz import benchmark as viz  # noqa: E402
 from gn_next_gen.viz.style import save_both_modes  # noqa: E402
 
@@ -30,6 +37,7 @@ SCORE_DIR = OUTPUTS / "step2" / "scores"
 SAMPLING_DIR = OUTPUTS / "step2" / "sampling_only"
 A157_DIR = OUTPUTS / "step2" / "a157"
 DEFAULT_OUT = DOCS / "results" / "figures" / "step-2"
+DATA_OUT = DOCS / "results" / "data"
 
 
 def _read(path: Path) -> pd.DataFrame | None:
@@ -49,7 +57,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--data-root", type=Path, default=BENCHMARK_ROOT)
-    parser.add_argument("--scenario", default="S1", help="which worlds the design figures use")
+    parser.add_argument(
+        "--scenario",
+        default="S2",
+        help="which worlds the design figures use; the full record by default, so a "
+        "caption about 1610-2026 is drawn from a world that spans it",
+    )
+    parser.add_argument(
+        "--network-scenario",
+        default="S2",
+        help="which worlds f28 draws the overlap graph from; the full record by default",
+    )
     args = parser.parse_args()
 
     out = args.out_dir
@@ -150,16 +168,23 @@ def main() -> None:
         written += save_both_modes(
             lambda mode: viz.acuity_recovery_figure(cases, mode), out, "f23_acuity_recovery"
         )
+        # f25/f26 and the committed table come from the same summary, so a
+        # number in a caption cannot drift from the file behind it.
+        summary = summarise_case_studies(cases)
+        DATA_OUT.mkdir(parents=True, exist_ok=True)
+        table = DATA_OUT / "step2_case_study_observers.csv"
+        summary.to_csv(table, index=False, lineterminator="\n", float_format="%.4f")
+        print(f"wrote {table} ({len(summary)} rows)")
         written += save_both_modes(
             lambda mode: viz.case_study_figure(
-                cases, list(CASE_STUDY_KINDS[:5]), mode, title="Case studies 1-5"
+                summary, list(CASE_STUDY_KINDS[:5]), mode, title="Case studies 1-5"
             ),
             out,
             "f25_case_studies_easy",
         )
         written += save_both_modes(
             lambda mode: viz.case_study_figure(
-                cases, list(CASE_STUDY_KINDS[5:]), mode, title="Case studies 6-10"
+                summary, list(CASE_STUDY_KINDS[5:]), mode, title="Case studies 6-10"
             ),
             out,
             "f26_case_studies_hard",
@@ -171,6 +196,41 @@ def main() -> None:
     else:
         written += save_both_modes(
             lambda mode: viz.a157_figure(a157, mode), out, "f24_a157_validation"
+        )
+
+    # f28 draws the graph over the whole record, so it uses the full-network
+    # scenario whatever --scenario the design figures were built from.
+    network_seed = _first_realization(args.data_root, args.network_scenario)
+    if network_seed is None:
+        skipped.append(f"f28: no {args.network_scenario} realization generated")
+    else:
+        from gn_next_gen.benchmark.scenarios import REFERENCE_STATION
+
+        network_obs = read_observations(args.network_scenario, network_seed, root=args.data_root)
+        network = build_overlap_graph(network_obs)
+        nodes = resistance_to_set(network, [REFERENCE_STATION]).assign(
+            mid_year=decimal_year((network.first_day + network.last_day) / 2.0)
+        )
+        cut = temporal_cut_profile(network)
+        DATA_OUT.mkdir(parents=True, exist_ok=True)
+        cut_table = DATA_OUT / "step2_overlap_graph_cut.csv"
+        cut.to_csv(cut_table, index=False, lineterminator="\n")
+        print(f"wrote {cut_table} ({len(cut)} rows)")
+        written += save_both_modes(
+            lambda mode: viz.network_figure(
+                nodes, network.edge_frame(), cut, bridges(network), mode
+            ),
+            out,
+            "f28_overlap_network",
+        )
+
+    # f27 needs no grid output: it reads the frozen comparison table directly.
+    published = _read(DATA_RAW / "gn_published_series_2026-11" / "published_gn_series.csv")
+    if published is None:
+        skipped.append("f27: no published_gn_series.csv; run fetch_published_gn_series.py")
+    else:
+        written += save_both_modes(
+            lambda mode: viz.published_series_figure(published, mode), out, "f27_published_series"
         )
 
     oversized = [p for p in written if p.stat().st_size > 400_000]

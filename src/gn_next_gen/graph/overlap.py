@@ -298,3 +298,80 @@ def _edge_weights(graph: OverlapGraph, weight: str) -> np.ndarray:
     if weight == "unit":
         return (graph.overlap > 0).astype(float)
     raise ValueError(f"unknown weight {weight!r}; expected 'overlap_days' or 'unit'")
+
+
+def decimal_year(date_ord: np.ndarray | float) -> np.ndarray:
+    """Calendar year plus the fraction of it elapsed.
+
+    Takes fractional ordinals -- a career midpoint lands between two days -- so it
+    floors to a day, converts that day with integer ordinals (pandas rejects a
+    *float* ordinal before 1677, and the record starts in 1610), and adds the
+    fraction back.
+    """
+    values = np.atleast_1d(np.asarray(date_ord, dtype=float))
+    day = np.floor(values)
+    stamps = pd.to_datetime(day.astype(np.int64) - 719_163, unit="D")
+    length = np.where(stamps.is_leap_year, 366.0, 365.0)
+    elapsed = stamps.day_of_year.to_numpy() - 1.0 + (values - day)
+    return stamps.year.to_numpy() + elapsed / length
+
+
+def temporal_cut_profile(graph: OverlapGraph, years: np.ndarray | None = None) -> pd.DataFrame:
+    """How much of the calibration chain crosses each year boundary.
+
+    Stations are split by the midpoint of their career, so each year ``y`` induces
+    the bipartition *finished before y* / *still to come*.  The edges crossing it
+    are every link a chained method could use to carry calibration from one side
+    to the other, and their total matched days is the chain's capacity there.  A
+    year with **zero** crossing edges is a severed graph: no chain of overlaps
+    reaches across it at all, whatever the method does with the data.
+
+    ``n_before``/``n_after`` say how many stations fall on each side, because a
+    cut with almost nothing on one side is empty for a trivial reason -- the
+    first and last years of the record always are.
+
+    Returns a frame of ``year, n_edges, overlap_days, n_before, n_after``.
+    """
+    mid = decimal_year((graph.first_day + graph.last_day) / 2.0)
+    if years is None:
+        years = np.arange(int(np.floor(mid.min())) + 1, int(np.ceil(mid.max())) + 1)
+    years = np.asarray(years)
+
+    n_before = np.searchsorted(np.sort(mid), years, side="right")
+
+    edges = graph.edge_frame()
+    if edges.empty:
+        return pd.DataFrame(
+            {
+                "year": years,
+                "n_edges": 0,
+                "overlap_days": 0,
+                "n_before": n_before,
+                "n_after": len(mid) - n_before,
+            }
+        )
+    row_a = edges["station_a"].map(graph.index).to_numpy()
+    row_b = edges["station_b"].map(graph.index).to_numpy()
+    lo = np.minimum(mid[row_a], mid[row_b])
+    hi = np.maximum(mid[row_a], mid[row_b])
+    weight = edges["overlap_days"].to_numpy().astype(float)
+
+    # An edge crosses every year y with lo < y <= hi; accumulate on a difference
+    # array so the whole profile costs one pass over the edges.
+    start = np.searchsorted(years, lo, side="right")
+    stop = np.searchsorted(years, hi, side="right")
+    counts = np.zeros(len(years) + 1)
+    weights = np.zeros(len(years) + 1)
+    np.add.at(counts, start, 1.0)
+    np.add.at(counts, stop, -1.0)
+    np.add.at(weights, start, weight)
+    np.add.at(weights, stop, -weight)
+    return pd.DataFrame(
+        {
+            "year": years,
+            "n_edges": np.cumsum(counts)[:-1].astype(int),
+            "overlap_days": np.cumsum(weights)[:-1].astype(np.int64),
+            "n_before": n_before,
+            "n_after": len(mid) - n_before,
+        }
+    )

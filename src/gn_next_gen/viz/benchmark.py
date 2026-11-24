@@ -13,6 +13,8 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 from gn_next_gen.viz.style import (
     annotate_target,
@@ -46,13 +48,28 @@ def _order(methods) -> list[str]:
 
 
 def _method_colors(methods, mode: str) -> dict[str, str]:
+    """A method's colour, fixed by `METHOD_ORDER` rather than by who is present.
+
+    Keyed off the position in the full order, not off the position in this
+    figure's subset: with the subset indexing, UEA21 was pink in f20, where all
+    nine methods appear, and blue in f23, where only two do.  The shapes in
+    `METHOD_MARKERS` are fixed, so the colours have to be as well, or the two
+    channels disagree about which method a mark belongs to.
+    """
     theme = palette(mode)
     categorical = theme["categorical"]
+    extras = [m for m in _order(methods) if m not in METHOD_ORDER]
     colors = {}
-    for index, method in enumerate(_order(methods)):
-        colors[method] = (
-            theme["text_secondary"] if method.startswith("null-") else categorical[index % 8]
+    for method in _order(methods):
+        if method.startswith("null-"):
+            colors[method] = theme["text_secondary"]
+            continue
+        slot = (
+            METHOD_ORDER.index(method)
+            if method in METHOD_ORDER
+            else len(METHOD_ORDER) + extras.index(method)
         )
+        colors[method] = categorical[slot % 8]
     return colors
 
 
@@ -63,6 +80,48 @@ NULL_LINESTYLE = {"null-prior": (0, (1, 2)), "null-segmentation": (0, (5, 2))}
 
 def _linestyle(method: str):
     return NULL_LINESTYLE.get(method, "-")
+
+
+#: One marker shape per method, carried by every figure that draws methods as
+#: points, so shape and colour both say which method a mark belongs to: the
+#: identity survives a greyscale print, a reader who cannot separate two hues,
+#: and the two nulls sharing one recessive grey.  `x` is left out on purpose --
+#: f22 reserves it for the default-setting cross, which is not a method.
+METHOD_MARKERS = {
+    "HoSc98": "o",
+    "SvSc16": "s",
+    "VHS24": "D",
+    "CEA17": "^",
+    "UEA21": "v",
+    "GRP": "P",
+    "Pathfinding": "*",
+    "null-segmentation": ">",
+    "null-prior": "<",
+}
+
+#: Shapes for methods this module does not know about yet, in the same order.
+MARKER_FALLBACK = ("o", "s", "D", "^", "v", "P", "*", ">", "<", "h")
+
+#: A star of a given nominal size reads much smaller than a circle of it, and a
+#: diamond larger; these are linear size factors that even out visual weight.
+MARKER_SCALE = {"*": 1.75, "P": 1.2, "p": 1.15, "h": 1.15, "D": 0.9}
+
+
+def _method_markers(methods) -> dict[str, str]:
+    markers = {}
+    for index, method in enumerate(_order(methods)):
+        markers[method] = METHOD_MARKERS.get(method, MARKER_FALLBACK[index % len(MARKER_FALLBACK)])
+    return markers
+
+
+def _marker_area(marker: str, base: float) -> float:
+    """`scatter` sizes a marker by area, so the factor has to be squared."""
+    return base * MARKER_SCALE.get(marker, 1.0) ** 2
+
+
+def _marker_size(marker: str, base: float) -> float:
+    """`plot` sizes a marker linearly."""
+    return base * MARKER_SCALE.get(marker, 1.0)
 
 
 def _years(date_ord) -> np.ndarray:
@@ -77,6 +136,7 @@ def scores_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Figure:
     with figure_style(mode) as theme:
         methods = _order(scores["method"].unique())
         colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
         panels = [
             ("bias_daily", "crmse_daily", "daily"),
             ("bias_monthly", "crmse_monthly", "monthly"),
@@ -93,14 +153,18 @@ def scores_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Figure:
                 alpha=0.45,
                 label="centred RMSE",
             )
-            ax.scatter(
-                [grouped.loc[m, bias_key] for m in methods],
-                positions,
-                color=[colors[m] for m in methods],
-                zorder=3,
-                s=26,
-                label="bias",
-            )
+            # One call per method, because a scatter takes a single marker:
+            # the shape is the method's identity everywhere else in the set and
+            # a bar chart is no reason to drop it.
+            for position, method in zip(positions, methods, strict=True):
+                ax.scatter(
+                    grouped.loc[method, bias_key],
+                    position,
+                    color=colors[method],
+                    marker=markers[method],
+                    zorder=3,
+                    s=_marker_area(markers[method], 26),
+                )
             ax.axvline(0.0, color=theme["grid"], linewidth=1.0, zorder=1)
             ax.set_yticks(positions)
             # With sharey, blanking the labels on one axis blanks them on all of
@@ -109,11 +173,32 @@ def scores_figure(scores: pd.DataFrame, mode: str = "light") -> plt.Figure:
             ax.tick_params(labelleft=(ax is axes[0]))
             ax.set_xlabel(f"groups, {label}")
             ax.set_title(label, fontsize=9, color=theme["text_secondary"])
-        axes[0].legend(loc="lower right", fontsize=7.5, frameon=False)
+        # The bias handle is built by hand: its marker now varies by method, so
+        # no single drawn point stands for "bias" and taking the legend off the
+        # axis would label one method's shape as the whole quantity.
+        axes[0].legend(
+            handles=[
+                Patch(facecolor=theme["text_secondary"], alpha=0.45, label="centred RMSE"),
+                Line2D(
+                    [],
+                    [],
+                    marker="o",
+                    markersize=5.0,
+                    markerfacecolor=theme["text_secondary"],
+                    markeredgecolor=theme["text_secondary"],
+                    linestyle="none",
+                    label="bias (one shape per method)",
+                ),
+            ],
+            loc="lower right",
+            fontsize=7.5,
+            frameon=False,
+        )
         caption(
             fig,
-            "Bars are centred RMSE, dots are bias. A method can be unbiased daily "
-            "and wrong per cycle, which is why three scales are shown.",
+            "Bars are centred RMSE, markers are bias -- one shape per method, the same "
+            "shape it keeps in f20-f26. A method can be unbiased daily and wrong per "
+            "cycle, which is why three scales are shown.",
             mode,
         )
         fig.tight_layout()
@@ -182,6 +267,7 @@ def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
             coverage = coverage[~coverage["scenario"].isin(COVERAGE_EXCLUDED_SCENARIOS)]
         methods = _order(coverage["method"].unique())
         colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
         fig, ax = plt.subplots(figsize=(6.0, 5.2))
         ax.plot([0, 1], [0, 1], color=theme["text_secondary"], linestyle=(0, (4, 3)), linewidth=1.0)
         ax.annotate(
@@ -196,8 +282,8 @@ def coverage_figure(coverage: pd.DataFrame, mode: str = "light") -> plt.Figure:
             ax.plot(
                 block.index,
                 block.to_numpy(),
-                marker="o",
-                markersize=4,
+                marker=markers[method],
+                markersize=_marker_size(markers[method], 4.4),
                 linewidth=1.4,
                 color=colors[method],
                 linestyle=_linestyle(method),
@@ -285,6 +371,7 @@ def acuity_recovery_figure(cases: pd.DataFrame, mode: str = "light") -> plt.Figu
         else:
             methods = _order(usable["method"].unique())
             colors = _method_colors(methods, mode)
+            markers = _method_markers(methods)
             limit = float(
                 max(usable["true_threshold_msh"].max(), usable["recovered_threshold_msh"].max())
             )
@@ -300,7 +387,8 @@ def acuity_recovery_figure(cases: pd.DataFrame, mode: str = "light") -> plt.Figu
                 ax.scatter(
                     block["true_threshold_msh"],
                     block["recovered_threshold_msh"],
-                    s=34,
+                    s=_marker_area(markers[method], 34),
+                    marker=markers[method],
                     color=colors[method],
                     label=method,
                     alpha=0.85,
@@ -326,16 +414,23 @@ def a157_figure(table: pd.DataFrame, mode: str = "light") -> plt.Figure:
     with figure_style(mode) as theme:
         methods = _order(table["method"].unique())
         colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
         fig, axes = plt.subplots(1, 2, figsize=(10.2, 3.8))
 
         ax = axes[0]
-        for method in methods:
+        # Markers are staggered along the curve rather than drawn at the same
+        # abscissae: CEA17 and UEA21 coincide exactly here, so a shared offset
+        # would stack one shape on top of the other and hide the lower one.
+        for slot, method in enumerate(methods):
             block = table[table["method"] == method].sort_values("acuity_msd")
             ax.plot(
                 block["acuity_msd"],
                 block["mean_difference"],
                 linewidth=1.5,
                 color=colors[method],
+                marker=markers[method],
+                markersize=_marker_size(markers[method], 4.0),
+                markevery=(slot % 5, 5),
                 label=method,
                 # CEA17 and UEA21 coincide exactly in this idealised case -- "by
                 # design, CEA17 and UEA21 are identical in these metrics in this
@@ -350,13 +445,16 @@ def a157_figure(table: pd.DataFrame, mode: str = "light") -> plt.Figure:
         ax.legend(fontsize=7.5, frameon=False)
 
         ax = axes[1]
-        for method in methods:
+        for slot, method in enumerate(methods):
             block = table[table["method"] == method].sort_values("acuity_msd")
             ax.plot(
                 block["acuity_msd"],
                 block["rms_difference"],
                 linewidth=1.5,
                 color=colors[method],
+                marker=markers[method],
+                markersize=_marker_size(markers[method], 4.0),
+                markevery=(slot % 5, 5),
                 label=method,
             )
         ax.set_xscale("log")
@@ -378,8 +476,37 @@ def a157_figure(table: pd.DataFrame, mode: str = "light") -> plt.Figure:
 # --- f25, f26: the ten case-study observers -------------------------------
 
 
+def _draw_spread(
+    ax, index: int, row, prefix: str, color: str, theme: dict, marker: str = "o"
+) -> bool:
+    """One method's replicate distribution: full range, IQR, median.
+
+    Returns whether anything was drawn, so the legend can be built from the
+    methods that actually appear rather than from one panel's handles.
+    """
+    if row[f"{prefix}_n_finite"] == 0:
+        return False
+    ax.vlines(
+        index, row[f"{prefix}_min"], row[f"{prefix}_max"], color=color, linewidth=1.0, alpha=0.45
+    )
+    ax.vlines(
+        index, row[f"{prefix}_q1"], row[f"{prefix}_q3"], color=color, linewidth=3.2, alpha=0.85
+    )
+    ax.scatter(
+        index,
+        row[f"{prefix}_median"],
+        s=_marker_area(marker, 26),
+        marker=marker,
+        color=color,
+        zorder=3,
+        edgecolor=theme["surface"],
+        linewidth=0.6,
+    )
+    return True
+
+
 def case_study_figure(
-    cases: pd.DataFrame, kinds: list[str], mode: str = "light", *, title: str = ""
+    summary: pd.DataFrame, kinds: list[str], mode: str = "light", *, title: str = ""
 ) -> plt.Figure:
     """f25/f26 -- one column per named observer: acuity above, scale below.
 
@@ -387,15 +514,41 @@ def case_study_figure(
     job is to show *why* a method fails cannot leave seven of nine out.  Every
     method produces a scale factor, and the truth implies one, so the lower row
     is comparable across all of them.
+
+    Each marker is the **median across the fifty replicates** behind that
+    observer, with the interquartile range as the thick bar and the full range
+    as the thin one -- so a claim about typical behaviour and a claim about the
+    worst case are different marks on the same figure, and neither rests on one
+    draw.  Where a method answered for only some replicates, the count of finite
+    answers is printed under its slot; a method that never answers anywhere in
+    the row is left unannotated, because that absence is structural rather than
+    a failure.
+
+    The legend is built from every method drawn anywhere in the figure, not from
+    one panel's handles: a method can be missing from the first column and
+    present in the rest, and reading the legend off that column silently drops
+    it.  The dashed truth lines get an entry too, so nothing is unlabelled.
     """
     with figure_style(mode) as theme:
-        fig, axes = plt.subplots(2, len(kinds), figsize=(2.35 * len(kinds), 5.0), sharey="row")
+        fig, axes = plt.subplots(2, len(kinds), figsize=(2.35 * len(kinds), 5.4), sharey="row")
         axes = np.atleast_2d(axes)
-        methods = _order(cases["method"].unique())
+        methods = _order(summary["method"].unique())
         colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
+        shown = summary[summary["kind"].isin(kinds)]
+        #: Methods that answer somewhere in this row; the rest are never counted.
+        answering = {
+            prefix: {
+                method
+                for method in methods
+                if (shown.loc[shown["method"] == method, f"{prefix}_n_finite"] > 0).any()
+            }
+            for prefix in ("acuity", "scale")
+        }
 
+        plotted: set[str] = set()
         for column, kind in enumerate(kinds):
-            block = cases[cases["kind"] == kind]
+            block = summary[summary["kind"] == kind].set_index("method")
             top, bottom = axes[0, column], axes[1, column]
             top.set_title(kind, fontsize=8, color=theme["text_primary"])
 
@@ -418,55 +571,76 @@ def case_study_figure(
             top.axhline(
                 true_acuity, color=theme["text_secondary"], linestyle=(0, (4, 3)), linewidth=1.1
             )
-            drawn = 0
-            for index, method in enumerate(methods):
-                row = block[block["method"] == method]
-                if row.empty:
-                    continue
-                value = row["recovered_threshold_msh"].iloc[0]
-                if np.isfinite(value):
-                    top.scatter(index, value, s=28, color=colors[method])
-                    drawn += 1
-            if drawn == 0:
-                top.annotate(
-                    "no method\nestimates acuity",
-                    xy=(0.5, 0.5),
-                    xycoords="axes fraction",
-                    ha="center",
-                    va="center",
-                    fontsize=7,
+            bottom.axhline(1.0, color=theme["text_secondary"], linestyle=(0, (4, 3)), linewidth=1.1)
+
+            for ax, prefix in ((top, "acuity"), (bottom, "scale")):
+                drawn = 0
+                labels = []
+                for index, method in enumerate(methods):
+                    if method not in block.index:
+                        labels.append("")
+                        continue
+                    row = block.loc[method]
+                    if _draw_spread(ax, index, row, prefix, colors[method], theme, markers[method]):
+                        plotted.add(method)
+                        drawn += 1
+                    finite, total = row[f"{prefix}_n_finite"], row[f"{prefix}_n_replicates"]
+                    partial = finite < total and method in answering[prefix]
+                    labels.append(f"{int(finite)}" if partial else "")
+                if drawn == 0 and prefix == "acuity":
+                    ax.annotate(
+                        "no method\nestimates acuity",
+                        xy=(0.5, 0.5),
+                        xycoords="axes fraction",
+                        ha="center",
+                        va="center",
+                        fontsize=7,
+                        color=theme["text_secondary"],
+                    )
+                ax.set_xlim(-1, len(methods))
+                # The slot identifies the method, so the count is drawn in the
+                # recessive text colour: a yellow numeral on a light surface
+                # would be the one unreadable mark in the figure.
+                ax.set_xticks(
+                    range(len(methods)),
+                    labels=labels,
+                    fontsize=5.5,
                     color=theme["text_secondary"],
                 )
-            top.set_xticks([])
-            top.set_xlim(-1, len(methods))
-
-            bottom.axhline(1.0, color=theme["text_secondary"], linestyle=(0, (4, 3)), linewidth=1.1)
-            for index, method in enumerate(methods):
-                row = block[block["method"] == method]
-                if row.empty or "factor_ratio" not in row:
-                    continue
-                ratio = row["factor_ratio"].iloc[0]
-                if np.isfinite(ratio) and ratio > 0:
-                    bottom.scatter(
-                        index,
-                        ratio,
-                        s=28,
-                        color=colors[method],
-                        label=method if column == 0 else None,
-                    )
+                ax.tick_params(axis="x", length=0, pad=1.5)
             bottom.set_yscale("log")
-            bottom.set_xticks([])
-            bottom.set_xlim(-1, len(methods))
 
         axes[0, 0].set_ylabel("acuity threshold (MSH)")
         axes[1, 0].set_ylabel("recovered / implied\nscale factor")
-        handles, labels = axes[1, 0].get_legend_handles_labels()
+
+        handles = [
+            Line2D(
+                [],
+                [],
+                marker=markers[method],
+                markersize=_marker_size(markers[method], 5.5),
+                linestyle="none",
+                color=colors[method],
+                label=method,
+            )
+            for method in methods
+            if method in plotted
+        ]
         if handles:
+            handles.append(
+                Line2D(
+                    [],
+                    [],
+                    color=theme["text_secondary"],
+                    linestyle=(0, (4, 3)),
+                    linewidth=1.1,
+                    label="truth",
+                )
+            )
             fig.legend(
-                handles,
-                labels,
+                handles=handles,
                 loc="lower center",
-                ncol=min(len(labels), 5),
+                ncol=min(len(handles), 5),
                 fontsize=7,
                 frameon=False,
                 bbox_to_anchor=(0.5, -0.06),
@@ -475,8 +649,10 @@ def case_study_figure(
             fig.suptitle(title, fontsize=9, color=theme["text_secondary"])
         caption(
             fig,
-            "Dashed lines are the truth: the observer's acuity above, a scale factor of "
-            "one below. An aggregate score hides exactly these observers.",
+            "Marker is the median over 50 replicates -- one shape per method, as in the "
+            "legend -- thick bar the interquartile range, thin bar "
+            "the full range; dashed lines are the truth. A small number under a method counts "
+            "the replicates it answered at all, where that was not all 50.",
             mode,
         )
         fig.tight_layout()
@@ -606,6 +782,166 @@ def calendar_figure(summary: pd.DataFrame, mode: str = "light") -> plt.Figure:
         return fig
 
 
+# --- f28: the overlap graph drawn as a network ----------------------------
+
+
+def network_figure(
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
+    cut: pd.DataFrame,
+    bridge_pairs: list[tuple[int, int]] | None = None,
+    mode: str = "light",
+    *,
+    min_side: int = 10,
+) -> plt.Figure:
+    """f28 -- the overlap graph itself: who links to whom, and where it is severed.
+
+    Parameters
+    ----------
+    nodes
+        ``station, mid_year, resistance`` -- one row per station, ``resistance``
+        infinite for stations the anchor cannot reach.
+    edges
+        ``station_a, station_b, overlap_days`` from ``OverlapGraph.edge_frame``.
+    cut
+        ``year, n_edges, overlap_days`` from ``graph.temporal_cut_profile``.
+    bridge_pairs
+        Edges whose removal disconnects the graph, drawn in the accent colour.
+    min_side
+        The right panel shows only years with at least this many stations on each
+        side of the cut, so the trivially empty cuts at the ends of the record are
+        not drawn as if they were bottlenecks.
+    """
+    from matplotlib.collections import LineCollection
+
+    with figure_style(mode) as theme:
+        fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.2), width_ratios=[1.35, 1])
+
+        finite = nodes[np.isfinite(nodes["resistance"])]
+        ceiling = float(finite["resistance"].max()) if not finite.empty else 1.0
+        pinned = ceiling * 4.0
+        y = np.where(np.isfinite(nodes["resistance"]), nodes["resistance"], pinned)
+        position = {
+            int(s): (float(x), float(v))
+            for s, x, v in zip(nodes["station"], nodes["mid_year"], y, strict=True)
+        }
+
+        ax = axes[0]
+        bridge_set = {tuple(sorted(pair)) for pair in (bridge_pairs or [])}
+        plain, marked = [], []
+        for a, b in zip(edges["station_a"], edges["station_b"], strict=True):
+            segment = (position[int(a)], position[int(b)])
+            (marked if tuple(sorted((int(a), int(b)))) in bridge_set else plain).append(segment)
+        ax.add_collection(
+            LineCollection(plain, colors=theme["text_secondary"], linewidths=0.25, alpha=0.10)
+        )
+        if marked:
+            ax.add_collection(
+                LineCollection(
+                    marked, colors=theme["categorical"][3], linewidths=1.1, alpha=0.9, zorder=2
+                )
+            )
+
+        reachable = np.isfinite(nodes["resistance"]).to_numpy()
+        ax.scatter(
+            nodes["mid_year"][reachable],
+            y[reachable],
+            s=13,
+            color=theme["categorical"][0],
+            zorder=3,
+            label=f"reachable ({int(reachable.sum())})",
+        )
+        ax.scatter(
+            nodes["mid_year"][~reachable],
+            y[~reachable],
+            s=20,
+            marker="^",
+            color=theme["categorical"][3],
+            zorder=3,
+            label=f"unreachable ({int((~reachable).sum())})",
+        )
+        is_anchor = (nodes["resistance"].to_numpy() == 0.0) & reachable
+        ax.scatter(
+            nodes["mid_year"][is_anchor],
+            y[is_anchor],
+            s=110,
+            marker="*",
+            color=theme["categorical"][1],
+            edgecolor=theme["surface"],
+            linewidth=0.6,
+            zorder=4,
+            label="anchor (reference survey)",
+        )
+        ax.axhline(pinned / 2, color=theme["grid"], linewidth=0.8, linestyle=(0, (4, 3)))
+        if marked:
+            ax.plot(
+                [],
+                [],
+                color=theme["categorical"][3],
+                linewidth=1.1,
+                label=f"bridge ({len(marked)})",
+            )
+        ax.plot(
+            [],
+            [],
+            color=theme["text_secondary"],
+            linewidth=0.8,
+            alpha=0.5,
+            label=f"overlap edge ({len(edges)})",
+        )
+        ax.set_yscale("symlog", linthresh=1e-5)
+        ax.set_ylim(0, pinned * 1.8)
+        ax.set_xlabel("observer's mid-career year")
+        ax.set_ylabel("effective resistance to the anchor")
+        ax.legend(fontsize=7.0, frameon=False, loc="lower left")
+
+        ax = axes[1]
+        inner = cut[(cut["n_before"] >= min_side) & (cut["n_after"] >= min_side)]
+        severed = inner["n_edges"].to_numpy() == 0
+        ax.fill_between(
+            inner["year"], inner["n_edges"], step="mid", color=theme["categorical"][2], alpha=0.85
+        )
+        for start, stop in _spans(inner["year"].to_numpy(), severed):
+            ax.axvspan(start - 0.5, stop + 0.5, color=theme["categorical"][3], alpha=0.22, lw=0)
+        ax.set_yscale("symlog", linthresh=1)
+        ax.set_ylim(0, inner["n_edges"].max() * 2)
+        ax.set_xlim(inner["year"].min(), inner["year"].max())
+        ax.set_xlabel("year")
+        ax.set_ylabel("edges crossing the year's cut")
+        ax.plot(
+            [],
+            [],
+            color=theme["categorical"][3],
+            alpha=0.35,
+            linewidth=6,
+            label=f"severed ({int(severed.sum())} years)",
+        )
+        ax.legend(fontsize=7.0, frameon=False, loc="upper left")
+
+        caption(
+            fig,
+            "Every observer reaches the anchor only through this graph, and in the shaded "
+            "years nothing crosses it at all.",
+            mode,
+        )
+        fig.tight_layout()
+        return fig
+
+
+def _spans(values: np.ndarray, flag: np.ndarray) -> list[tuple[float, float]]:
+    """Contiguous runs of ``True`` in ``flag``, as ``(first, last)`` of ``values``."""
+    spans, start = [], None
+    for index, active in enumerate(flag):
+        if active and start is None:
+            start = index
+        elif not active and start is not None:
+            spans.append((values[start], values[index - 1]))
+            start = None
+    if start is not None:
+        spans.append((values[start], values[-1]))
+    return spans
+
+
 def design_figure(mode: str = "light") -> plt.Figure:
     """f13 -- what the benchmark does, as a diagram."""
     with figure_style(mode) as theme:
@@ -719,6 +1055,7 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
     with figure_style(mode) as theme:
         methods = _order(structural["method"].unique())
         colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
 
         matched = scores
         if not scores.empty and {"scenario", "seed"} <= set(scores.columns):
@@ -742,7 +1079,19 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
                 alpha=0.7,
                 solid_capstyle="round",
             )
-            ax.scatter(block.mean(), index, s=28, color=colors[method], zorder=3)
+            # Drawn larger than elsewhere, and with a surface-coloured rim: the
+            # default-setting cross often lands on the mean, and at f18's size
+            # the cross would swallow the shape that says which method this is.
+            ax.scatter(
+                block.mean(),
+                index,
+                s=_marker_area(markers[method], 46),
+                marker=markers[method],
+                color=colors[method],
+                edgecolor=theme["surface"],
+                linewidth=0.6,
+                zorder=3,
+            )
             default = matched[matched["method"] == method]["bias_yearly"].dropna()
             if not default.empty:
                 ax.scatter(
@@ -771,8 +1120,8 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
         caption(
             fig,
             "Bars span the method's own free choices (graph tolerance, minimum overlap, "
-            "minimum distinct counts); dots are their mean and crosses the default, on the "
-            "same worlds.",
+            "minimum distinct counts); the method's own marker is their mean and the grey "
+            "cross the default, on the same worlds.",
             mode,
         )
         fig.tight_layout()
@@ -781,3 +1130,91 @@ def structural_figure(structural: pd.DataFrame, scores: pd.DataFrame, mode="ligh
 
 def _year_of(date_ord: int) -> int:
     return dt.date.fromordinal(int(date_ord)).year
+
+
+#: The two series added on 2026-11-23, drawn in colour against the five the
+#: 2017 MATLAB snapshot already carried.
+NEW_SERIES = ("chatzistergos_2017", "velasco_herrera_2024", "velasco_herrera_2024_hoyt_update")
+
+SERIES_LABEL = {
+    "hoyt_schatten_1998": "Hoyt & Schatten 1998",
+    "svalgaard_schatten_2016_backbone": "Svalgaard & Schatten 2016",
+    "usoskin_series": "Usoskin et al. (ADF family)",
+    "vaquero": "Vaquero et al.",
+    "zolotova": "Zolotova & Ponyavin",
+    "chatzistergos_2017": "Chatzistergos et al. 2017",
+    "velasco_herrera_2024": "Velasco Herrera et al. 2024",
+    "velasco_herrera_2024_hoyt_update": "Velasco Herrera et al. 2024 (H&S update)",
+}
+
+
+def published_series_figure(table: pd.DataFrame, mode: str = "light") -> plt.Figure:
+    """f27 -- the eight published series on one scale, and the 12.08 check."""
+    with figure_style(mode) as theme:
+        fig, axes = plt.subplots(2, 1, figsize=(10.0, 5.6), height_ratios=[3, 2])
+
+        ax = axes[0]
+        old = [s for s in SERIES_LABEL if s not in NEW_SERIES]
+        for name in old:
+            block = table[table["series"] == name].dropna(subset=["gn"])
+            ax.plot(
+                block["year"],
+                block["gn"],
+                color=theme["grid"],
+                linewidth=0.9,
+                zorder=1,
+            )
+        for slot, name in enumerate(NEW_SERIES):
+            block = table[table["series"] == name].dropna(subset=["gn"])
+            ax.plot(
+                block["year"],
+                block["gn"],
+                color=theme["categorical"][slot],
+                linewidth=1.3,
+                label=SERIES_LABEL[name],
+                zorder=3 - slot,
+            )
+        ax.set_ylabel("mean daily group count")
+        ax.set_xlim(1600, 2030)
+        ax.legend(loc="upper left", fontsize=7, frameon=False)
+        ax.set_title(
+            "eight published series, all in group counts (grey: the five already held)",
+            fontsize=8,
+            loc="left",
+        )
+
+        ax = axes[1]
+        old_hs = table[table["series"] == "hoyt_schatten_1998"].copy()
+        new_hs = table[table["series"] == "velasco_herrera_2024_hoyt_update"].copy()
+        old_hs["key"] = np.floor(old_hs["year"]).astype(int)
+        new_hs["key"] = np.floor(new_hs["year"]).astype(int)
+        both = old_hs.merge(new_hs, on="key", suffixes=("_a", "_b"))
+        residual = both["gn_b"] - both["gn_a"]
+        ax.axhline(0.0, color=theme["grid"], linewidth=0.8)
+        ax.plot(both["key"], residual * 1e3, color=theme["categorical"][2], linewidth=0.9)
+        extension = new_hs[new_hs["key"] > old_hs["key"].max()]
+        ax.axvspan(
+            old_hs["key"].max(),
+            new_hs["key"].max(),
+            color=theme["categorical"][2],
+            alpha=0.12,
+        )
+        ax.annotate(
+            f"extends to {int(new_hs['key'].max())}\n({len(extension)} new years)",
+            xy=(old_hs["key"].max() + 4, 0.0),
+            fontsize=7,
+            va="center",
+            color=theme["categorical"][2],
+        )
+        ax.set_ylabel("(2024 update / 12.08)\n$-$ 1998  [$10^{-3}$ groups]")
+        ax.set_xlabel("year")
+        ax.set_xlim(1600, 2030)
+
+        caption(
+            fig,
+            "Dividing the supplement's 12.08-scaled file by 12.08 lands on the series it "
+            "updates to under a thousandth of a group, which is what licenses one scale.",
+            mode,
+        )
+        fig.tight_layout()
+        return fig

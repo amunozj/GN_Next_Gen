@@ -10,8 +10,10 @@ from gn_next_gen.graph import (
     bridges,
     build_overlap_graph,
     components,
+    decimal_year,
     effective_resistance,
     resistance_to_set,
+    temporal_cut_profile,
 )
 
 
@@ -143,3 +145,62 @@ def test_the_real_network_is_mostly_one_component():
     assert graph.n_stations > 400
     assert largest / graph.n_stations > 0.8
     assert len(bridges(graph)) > 0
+
+
+# --- the temporal cut: where the chain is severed -------------------------
+
+
+def test_decimal_year_handles_the_pre_1677_record_and_fractions():
+    """pandas cannot hold a *float* ordinal before 1677, and midpoints are floats."""
+    import datetime as dt
+
+    start_1610 = float(dt.date(1610, 1, 1).toordinal())
+    assert decimal_year(start_1610)[0] == pytest.approx(1610.0)
+    # 1 July 2023 is day 182 of a 365-day year, and a half day further on.
+    midday = dt.date(2023, 7, 1).toordinal() + 0.5
+    assert decimal_year(midday)[0] == pytest.approx(2023 + 181.5 / 365.0)
+
+
+def test_a_severed_year_reports_zero_crossing_edges():
+    """Two clusters that never overlap: no chain crosses the gap between them."""
+    graph = build_overlap_graph(
+        _chain(
+            {
+                1: range(0, 2000),
+                2: range(1000, 3000),
+                3: range(8000, 10_000),
+                4: range(9000, 11_000),
+            }
+        )
+    )
+    cut = temporal_cut_profile(graph)
+    assert (cut["n_edges"] == 0).any()
+    severed = cut[cut["n_edges"] == 0]
+    assert (severed["overlap_days"] == 0).all()
+    # Within a cluster the cut is crossed, so not every year is severed.
+    assert (cut["n_edges"] > 0).any()
+
+
+def test_the_cut_counts_every_edge_that_straddles_the_year(path_graph):
+    """A chain 1-2-3: each year's cut is crossed by the edges spanning it."""
+    cut = temporal_cut_profile(path_graph)
+    assert cut["n_edges"].max() <= path_graph.n_edges
+    assert (cut["n_before"] + cut["n_after"] == path_graph.n_stations).all()
+    assert cut["n_before"].is_monotonic_increasing
+
+
+@pytest.mark.slow
+def test_the_real_networks_cut_is_thinnest_in_the_eighteenth_century():
+    """The bottleneck the benchmark inherits, as a number rather than an adjective."""
+    from gn_next_gen.io import load_observations
+
+    graph = build_overlap_graph(
+        load_observations(include_extension=True, kmas_role="observer_counts")
+    )
+    cut = temporal_cut_profile(graph)
+    inner = cut[(cut["n_before"] >= 10) & (cut["n_after"] >= 10)]
+    early = inner[(inner["year"] >= 1727) & (inner["year"] <= 1801)]
+    modern = inner[inner["year"] >= 1950]
+    assert not early.empty and not modern.empty
+    assert early["n_edges"].max() < modern["n_edges"].min() / 10
+    assert (early["n_edges"] == 0).sum() > 0
