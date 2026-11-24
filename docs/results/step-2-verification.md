@@ -73,7 +73,7 @@ $ pytest -q
 387 passed, 12 deselected in 60.85s
 
 $ pytest -m slow -q
-11 passed, 345 deselected in 402.53s (0:06:42)   # 2026-11-22; not re-run since
+12 passed, 387 deselected in 399.68s (0:06:40)
 
 $ ruff check . && ruff format --check .
 All checks passed!
