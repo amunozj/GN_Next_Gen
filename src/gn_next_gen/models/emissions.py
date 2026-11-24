@@ -75,10 +75,13 @@ from gn_next_gen.paths import (
     REFERENCE_GROUP_DAY,
 )
 from gn_next_gen.reference.area_law import (
+    ACTIVITY_SIGMA_DAYS,
+    MUHEM_PER_MHEM,
     PUBLISHED_2015,
     AreaLawParams,
     activity_level,
     fraction_above,
+    gaussian_smooth,
     load_upstream_parameters,
 )
 
@@ -177,17 +180,17 @@ def params_at_activity(
 def reference_activity(survey: str, *, use_cache: bool = True) -> float:
     """The activity level at which a survey's frozen law is taken to hold.
 
-    The median over the survey's own active days, with the **emergence**
-    weighting, because that is the weighting the published exponents attach to
-    (``activity_level``'s docstring: the two differ by about six and "the choice is
-    not cosmetic").  Scaling from here means the law reproduces upstream's
-    calibrated parameters at the survey's typical activity and only moves away
-    from them as the cycle does.
+    The median over the survey's own active days, with the **instantaneous**
+    weighting -- one scale shared by :class:`Catalogue`, the activity map and this,
+    because the two weightings differ by about six and mixing them would misplace
+    every observer on the grid's activity axis.  Scaling from here means the law
+    reproduces upstream's calibrated parameters at the survey's typical activity
+    and only moves away from them as the cycle does.
     """
     frame = cached_frame(
         "reference_activity",
         [REFERENCE_DAY_STATUS, AREA_LAW_POSTERIOR],
-        {"survey": survey, "weighting": "emergence"},
+        {"survey": survey, "weighting": "instantaneous"},
         lambda: _reference_activity_frame(survey),
         use_cache=use_cache,
     )
@@ -196,8 +199,7 @@ def reference_activity(survey: str, *, use_cache: bool = True) -> float:
 
 def _reference_activity_frame(survey: str) -> pd.DataFrame:
     day_status = load_day_status([survey])
-    groups = load_group_single_entry([survey])
-    series = activity_level(day_status, groups, weighting="emergence")
+    series = activity_level(day_status, weighting="instantaneous")
     observed = day_status.loc[day_status["day_status"] > 0, "date_ord"]
     values = series.reindex(observed).dropna()
     return pd.DataFrame(
@@ -294,48 +296,113 @@ MIN_GROUPS_PER_CELL = 30
 N_ACTIVITY_BINS = 12
 
 
+@dataclass(frozen=True)
+class Catalogue:
+    """A per-group-day area catalogue and the activity level it implies.
+
+    Two paths produce one of these and the rest of Step 3 cannot tell them apart,
+    which is the point: the real record's frozen reference survey, and a benchmark
+    world's own open ``reference_areas``.  A synthetic world has its own areas, so
+    a method calibrated on it must measure detection from *those* -- using the
+    frozen catalogue there would be reading the answer off the wrong Sun.
+
+    ``activity`` is the **instantaneous** weighting -- every group present on the
+    day, smoothed -- because that is the one both paths can supply, and because it
+    is "the natural covariate for the per-group-*day* area law" that a detection
+    integral works on (``activity_level``'s docstring).  Note that the published
+    power-law *exponents* were measured on the emergence weighting; only the ratio
+    ``AL / AL_ref`` enters :func:`params_at_activity`, and the parametric branch is
+    a fallback outside the catalogue's coverage, so the mismatch is second order.
+    It is recorded here rather than left implicit.
+    """
+
+    date_ord: np.ndarray
+    area_msh: np.ndarray
+    activity: pd.Series
+    name: str = "catalogue"
+
+    @property
+    def n_group_days(self) -> int:
+        return len(self.area_msh)
+
+
+def catalogue_from_survey(survey: str, *, sigma_days: float = ACTIVITY_SIGMA_DAYS) -> Catalogue:
+    """The frozen reference survey as a :class:`Catalogue`."""
+    from gn_next_gen.io.reference import load_group_days
+
+    day_status = load_day_status([survey])
+    groups = load_group_days([survey])
+    activity = activity_level(day_status, weighting="instantaneous", sigma_days=sigma_days)
+    return Catalogue(
+        date_ord=groups["date_ord"].to_numpy(dtype=np.int64),
+        area_msh=groups["area_corr"].to_numpy(dtype=float),
+        activity=activity,
+        name=survey,
+    )
+
+
+def catalogue_from_areas(
+    reference_areas: pd.DataFrame,
+    *,
+    area_column: str = "area_msh",
+    sigma_days: float = ACTIVITY_SIGMA_DAYS,
+    name: str = "reference_areas",
+) -> Catalogue:
+    """A benchmark world's open ``reference_areas`` as a :class:`Catalogue`.
+
+    The activity level is computed from the same table, by summing every group
+    present on a day and smoothing -- the instantaneous weighting, which is all a
+    group-day table can supply and what the detection integral wants anyway.
+    """
+    frame = reference_areas[["date_ord", area_column]].dropna()
+    daily = frame.groupby("date_ord")[area_column].sum()
+    days = daily.index.to_numpy(dtype=np.int64)
+    lo, hi = int(days.min()), int(days.max())
+    grid = np.arange(lo, hi + 1)
+    dense = np.full(grid.shape, np.nan)
+    dense[days - lo] = daily.to_numpy()
+    smoothed = gaussian_smooth(dense, sigma_days) / MUHEM_PER_MHEM
+    return Catalogue(
+        date_ord=frame["date_ord"].to_numpy(dtype=np.int64),
+        area_msh=frame[area_column].to_numpy(dtype=float),
+        activity=pd.Series(smoothed, index=grid, name="activity_level"),
+        name=name,
+    )
+
+
 def empirical_detection_table(
-    survey: str,
+    catalogue: Catalogue,
     thresholds: np.ndarray,
     *,
     reference_threshold_msh: float,
     n_bins: int = N_ACTIVITY_BINS,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """``log k`` measured directly in the frozen reference catalogue.
+    """``log k`` measured directly in an area catalogue, binned by activity.
 
-    For a set of days, ``k(T)`` is the number of group-days with
-    ``area_corr > T`` divided by the number with ``area_corr > T_ref``.  That is
-    ``fraction_above`` evaluated non-parametrically on the same frozen data the
-    law was calibrated on, and it is **already at per-group-day grain**, so the
-    per-group/per-group-day shift of Step 1 §2.4 does not apply to it -- the
-    correction exists only to convert the published per-group law, and here there
+    For a set of group-days, ``k(T)`` is the number with ``area > T`` divided by the
+    number with ``area > T_ref``.  That is ``fraction_above`` evaluated
+    non-parametrically on the catalogue itself, and it is **already at
+    per-group-day grain**, so the per-group shift of Step 1 §2.4 does not apply --
+    that correction exists to convert the published per-group law, and here there
     is no conversion to make.
 
     Measured against the parametric law on RGO, the law under-predicts ``k`` for
     observers coarser than the anchor by 4% at 40 MSH rising to 13% at 200 MSH, so
-    this table is not a refinement but the removal of a real bias in ``k_o``, which
-    multiplies every one of that observer's counts.
+    this table removes a real bias in ``k_o``, which multiplies every one of that
+    observer's counts (PI, 2026-11-24).
 
-    Returns ``(log_k, activity_centres, n_above)`` with ``log_k`` shaped
-    ``(n_thresholds, n_bins)``; cells backed by fewer than
+    Returns ``(log_k, activity_centres, n_above)``; cells backed by fewer than
     :data:`MIN_GROUPS_PER_CELL` group-days are ``nan``.
     """
-    from gn_next_gen.io.reference import load_group_days
-
-    day_status = load_day_status([survey])
-    groups = load_group_days([survey])
-    single = load_group_single_entry([survey])
-    activity = activity_level(day_status, single, weighting="emergence")
-
-    areas = groups["area_corr"].to_numpy(dtype=float)
-    day_of = groups["date_ord"].to_numpy(dtype=np.int64)
-    group_activity = activity.reindex(day_of).to_numpy()
+    areas = np.asarray(catalogue.area_msh, dtype=float)
+    group_activity = catalogue.activity.reindex(catalogue.date_ord).to_numpy()
     usable = np.isfinite(group_activity) & np.isfinite(areas)
     areas = areas[usable]
     group_activity = group_activity[usable]
+    if len(areas) < MIN_GROUPS_PER_CELL:
+        raise ValueError(f"{catalogue.name}: too few group-days for an empirical table")
 
-    edges = np.quantile(group_activity, np.linspace(0.0, 1.0, n_bins + 1))
-    edges = np.unique(edges)
+    edges = np.unique(np.quantile(group_activity, np.linspace(0.0, 1.0, n_bins + 1)))
     bin_index = np.clip(np.searchsorted(edges, group_activity, side="right") - 1, 0, len(edges) - 2)
     n_bins_actual = len(edges) - 1
     centres = np.array(
@@ -359,10 +426,7 @@ def empirical_detection_table(
             n_above[i, b] = numerator
             if numerator >= MIN_GROUPS_PER_CELL:
                 log_k[i, b] = np.log(numerator) - np.log(denominator)
-            elif threshold >= reference_threshold_msh and numerator == 0:
-                log_k[i, b] = np.nan
 
-    # T_ref is exact by definition, whatever the counts say.
     exact = np.isclose(thresholds, reference_threshold_msh)
     log_k[exact, :] = np.where(np.isfinite(centres), 0.0, np.nan)
     return log_k, centres, n_above
@@ -376,14 +440,22 @@ def detection_grid(
     force: bool = False,
     **kwargs,
 ) -> DetectionGrid:
-    """:func:`build_detection_grid`, cached in ``data/interim/``.
+    """:func:`build_detection_grid` for the frozen reference, cached in ``data/interim/``.
 
     Building the grid costs about 4 s -- a quadrature over the area law at every
-    (threshold, activity) node -- which is nothing once and a real cost spread
-    over a few hundred resumable workers.  Keyed on the raw inputs' manifest
-    checksums, so a grid built from another release cannot be read by mistake.
+    (threshold, activity) node, plus a pass over the catalogue -- which is nothing
+    once and a real cost spread over a few hundred resumable workers.  Keyed on the
+    raw inputs' manifest checksums, so a grid built from another release cannot be
+    read by mistake.
+
+    Only for the real record: a benchmark world passes its own ``catalogue``, which
+    has no manifest row and so cannot be keyed this way.
     """
-    if kwargs.get("thresholds") is not None or kwargs.get("activities") is not None:
+    if (
+        kwargs.get("thresholds") is not None
+        or kwargs.get("activities") is not None
+        or kwargs.get("catalogue") is not None
+    ):
         return build_detection_grid(survey, source=source, **kwargs)
 
     options = {
@@ -425,6 +497,7 @@ def detection_grid(
 def build_detection_grid(
     survey: str,
     *,
+    catalogue: Catalogue | None = None,
     reference_threshold_msh: float | None = None,
     thresholds: np.ndarray | None = None,
     activities: np.ndarray | None = None,
@@ -473,8 +546,14 @@ def build_detection_grid(
     base = load_upstream_parameters(survey)
     if reference_threshold_msh is None:
         reference_threshold_msh = float(base.threshold_msh)
+    if source == "empirical" and catalogue is None:
+        catalogue = catalogue_from_survey(survey)
     if activity_ref is None:
-        activity_ref = reference_activity(survey)
+        activity_ref = (
+            float(np.nanmedian(catalogue.activity.to_numpy()))
+            if catalogue is not None
+            else reference_activity(survey)
+        )
     if thresholds is None:
         thresholds = np.exp(np.linspace(np.log(0.5), np.log(600.0), 160))
     # T_ref must be a grid node, not something interpolated to.  log k(T_ref) is
@@ -485,7 +564,12 @@ def build_detection_grid(
         np.concatenate([np.asarray(thresholds, dtype=float), [float(reference_threshold_msh)]])
     )
     if activities is None:
-        activities = np.linspace(0.002, 4.0 * activity_ref, 64)
+        top = 4.0 * float(activity_ref)
+        if catalogue is not None:
+            observed = catalogue.activity.to_numpy()
+            if np.any(np.isfinite(observed)):
+                top = max(top, 1.2 * float(np.nanmax(observed)))
+        activities = np.linspace(0.002, top, 64)
     activities = np.asarray(activities, dtype=float)
 
     parametric = np.empty((len(thresholds), len(activities)))
@@ -521,7 +605,7 @@ def build_detection_grid(
         meta["empirical_fraction"] = 0.0
     elif source == "empirical":
         log_k, meta_empirical = _blend_empirical(
-            survey,
+            catalogue,
             thresholds,
             activities,
             parametric,
@@ -544,7 +628,7 @@ def build_detection_grid(
 
 
 def _blend_empirical(
-    survey: str,
+    catalogue: Catalogue,
     thresholds: np.ndarray,
     activities: np.ndarray,
     parametric: np.ndarray,
@@ -561,14 +645,14 @@ def _blend_empirical(
     dependence -- which is the only thing the catalogue cannot supply.
     """
     empirical, centres, n_above = empirical_detection_table(
-        survey,
+        catalogue,
         thresholds,
         reference_threshold_msh=reference_threshold_msh,
         n_bins=n_activity_bins,
     )
     good_bins = np.flatnonzero(np.isfinite(centres))
     if len(good_bins) < 2:
-        raise ValueError(f"{survey}: too few usable activity bins for an empirical table")
+        raise ValueError(f"{catalogue.name}: too few usable activity bins for an empirical table")
     centres = centres[good_bins]
     empirical = empirical[:, good_bins]
     order = np.argsort(centres)
@@ -687,3 +771,83 @@ def log_emission_library(
         for j, split in enumerate(split_values):
             table[i, j] = emission_matrix(float(k), float(split), max_count=max_count)
     return np.log(np.maximum(table, floor)), k_values, split_values
+
+
+def empirical_count_pmf(
+    survey: str,
+    *,
+    reference_threshold_msh: float | None = None,
+    n_bins: int = N_ACTIVITY_BINS,
+    max_count: int = MAX_COUNT,
+    use_cache: bool = True,
+    force: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
+    """The reference's own daily count distribution, binned by activity level.
+
+    Returns ``(pmf, activity_centres)`` with ``pmf`` shaped
+    ``(n_bins, max_count + 1)``, each row a distribution over the anchor's
+    reference-equivalent daily count on days at that activity level.
+
+    **Why this is measured rather than assumed Poisson.**  The occupancy
+    ("fingerprint") term is the only thing that can calibrate an observer with no
+    usable overlap, and it works by comparing the *shape* of a record's count
+    distribution against what an observer of a given acuity would have produced.
+    With a Poisson latent count that comparison is empty: thinning a Poisson gives
+    another Poisson, so the shape carries no information about the thinning rate at
+    all.  The research notes state the degeneracy exactly -- "multiplying all
+    ``p_o`` by ``c`` and dividing ``lambda_t`` by ``c`` leaves the binomial-Poisson
+    marginal unchanged, because Poisson thinning gives ``Poisson(p*lambda)``".
+
+    The reference's real distribution is **not** Poisson -- Step 1 measured its
+    dispersion index and count PMF against a fitted immigration-death chain -- so
+    the term has content exactly to the extent of that departure.  How much
+    content is a measured question, which is what the plan's ``w`` ablation
+    answers rather than asserts.
+    """
+    if reference_threshold_msh is None:
+        reference_threshold_msh = float(load_upstream_parameters(survey).threshold_msh)
+
+    def build() -> dict:
+        from gn_next_gen.io.reference import daily_counts
+
+        day_status = load_day_status([survey])
+        single = load_group_single_entry([survey])
+        activity = activity_level(day_status, single, weighting="emergence")
+        counts = daily_counts(float(reference_threshold_msh), [survey])
+        day_activity = activity.reindex(counts["date_ord"].to_numpy()).to_numpy()
+        values = np.clip(counts["n_groups"].to_numpy(), 0, max_count)
+        usable = np.isfinite(day_activity)
+        values = values[usable]
+        day_activity = day_activity[usable]
+
+        edges = np.unique(np.quantile(day_activity, np.linspace(0.0, 1.0, n_bins + 1)))
+        index = np.clip(np.searchsorted(edges, day_activity, side="right") - 1, 0, len(edges) - 2)
+        n_actual = len(edges) - 1
+        pmf = np.zeros((n_actual, max_count + 1))
+        centres = np.zeros(n_actual)
+        for b in range(n_actual):
+            selected = values[index == b]
+            if len(selected) == 0:
+                pmf[b] = 1.0 / (max_count + 1)
+                centres[b] = np.nan
+                continue
+            histogram = np.bincount(selected, minlength=max_count + 1).astype(float)
+            pmf[b] = histogram / histogram.sum()
+            centres[b] = float(np.median(day_activity[index == b]))
+        keep = np.isfinite(centres)
+        return {"pmf": pmf[keep], "activity": centres[keep]}
+
+    payload = cached_arrays(
+        "reference_count_pmf",
+        [REFERENCE_DAY_STATUS, REFERENCE_GROUP_DAY, AREA_LAW_POSTERIOR],
+        {
+            "survey": survey,
+            "threshold": round(float(reference_threshold_msh), 6),
+            "n_bins": n_bins,
+            "max_count": max_count,
+        },
+        build,
+        use_cache=use_cache,
+        force=force,
+    )
+    return np.asarray(payload["pmf"]), np.asarray(payload["activity"])
