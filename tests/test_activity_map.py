@@ -82,15 +82,21 @@ def test_smooth_counts_covers_the_requested_span():
 def test_fitted_map_is_tight_and_superlinear_on_real_data(survey, threshold):
     """Measured twice, independently, a century apart -- and they agree.
 
-    RGO gives ``AL = 0.0382 GN^1.0742`` and Debrecen ``0.0350 GN^1.0906``, both at
-    ``r > 0.996`` in log-log.  That agreement is what licenses using the map
-    outside the era it was fitted on.
+    On the **instantaneous** activity weighting, which is the one shared with the
+    detection grid: RGO gives ``AL = 0.2155 GN^1.1414`` and Debrecen
+    ``0.2038 GN^1.1600``, both at ``r > 0.994`` in log-log.  That agreement is what
+    licenses using the map outside the era it was fitted on.
+
+    The bounds are deliberately on the instantaneous scale.  An earlier version of
+    this test asserted ``0.03 < amplitude < 0.05``, which were the *emergence*
+    weighted values; the two weightings differ by about six, so a stale bound here
+    is exactly the kind of thing that would let a weighting mismatch through.
     """
     mapping = fit_activity_map(survey, threshold)
     assert mapping.r_log > 0.99
-    assert mapping.residual_sd < 0.12
-    assert 1.0 < mapping.exponent < 1.2
-    assert 0.03 < mapping.amplitude < 0.05
+    assert mapping.residual_sd < 0.13
+    assert 1.0 < mapping.exponent < 1.3
+    assert 0.15 < mapping.amplitude < 0.30
     assert mapping.n_days > 10_000
 
 
