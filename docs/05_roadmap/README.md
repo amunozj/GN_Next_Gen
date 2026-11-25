@@ -92,12 +92,16 @@ Running list of paper items (add as steps produce them):
       methods ported and reproducing their Fig. 3b sign pattern, then extended to the
       real overlap graph, to daisy-chaining they did not evaluate, and to interval
       coverage they did not score (Step 2 §2-§3)
-- [x] No method's uncertainties are calibrated: 0.009-0.159 empirical against a nominal
-      50%, for all seven baselines over 450 cells (Step 2 §5) — the evidence ADR-007 asks for
+- [x] Six of seven baselines are overconfident: 0.076-0.591 empirical against a nominal
+      50% over 450 cells, CEA17 alone close to calibrated (Step 2 §6) — the evidence ADR-007
+      asks for. Resolved by era, CEA17 runs 0.888 inside the anchor epoch and 0.224 after it,
+      and the chained scalings get steadily less honest toward the present (Step 2 §5)
 - [x] **Five of seven published methods cannot reach the Maunder Minimum at all** — every
       overlap-based method stops at 1774 and covers 46% of the record — and the two that
-      do reach it overestimate the Maunder level 23-25x (Step 2 §6)
-- [x] Four of seven score worse than a random segmentation of the same data (Step 2 §4)
+      do reach it overestimate the Maunder level 23-25x (Step 2 §7)
+- [x] Four of seven score worse than a random segmentation of the same data (Step 2 §4), and
+      **exactly one era of eight — the anchor epoch — has any method beating the median of the
+      raw counts** (Step 2 §5, f41)
 - [x] Overlap-graph diagnostics through time (Step 3) — [results](../results/step-3-global-network-calibration.md) §2, figures f29, f30, f39: the two ADR-009 anchors are **tied** (resistance 5.6e-06 through KMAS), overlap reaches **1774 and no earlier** for both, **83 of 509** observers float, **120 of 393** years are severed, and 3,586 loops close only to a median **0.060** in log
 - [ ] Benchmark comparison of all methods incl. coverage (Steps 3–4) — Step 3's two methods are registered and scored by `run_baselines.py --methods NetCal NetCal-M`; the grid is not run
 - [ ] GN posterior ensemble 1610–present, sunspot-only (Step 4)

@@ -13,6 +13,15 @@ Outputs, all under ``outputs/step2/scores/``:
     the ten named observers, true against recovered acuity, per method.
 ``structural.csv``
     the S6 ensemble, when ``--structural`` outputs exist.
+``yearly_errors.csv``
+    one row per (scenario, realization, method, **year**) -- the residual with its
+    era and its interval flags.  The pooled tables above cannot say *when* a method
+    is wrong, and the era winner changes across the record, so the year axis is kept.
+``yearly_pooled.csv``
+    the scenario-balanced RMSE, bias and truth level per method and calendar year.
+``era_scores.csv``
+    the same per era, per scenario and pooled, with coverage and reach -- the
+    era stratification acceptance criterion A5 asks for.
 
 Usage
 -----
@@ -33,7 +42,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from gn_next_gen.baselines.base import CalibrationResult  # noqa: E402
 from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS  # noqa: E402
 from gn_next_gen.benchmark.progress import Progress  # noqa: E402
-from gn_next_gen.benchmark.scoring import COVERAGE_LEVELS, score  # noqa: E402
+from gn_next_gen.benchmark.scoring import (  # noqa: E402
+    COVERAGE_LEVELS,
+    align,
+    era_errors,
+    pool_yearly,
+    score,
+    yearly_errors,
+)
 from gn_next_gen.benchmark.store import (  # noqa: E402
     BENCHMARK_ROOT,
     read_observations,
@@ -187,7 +203,7 @@ def main() -> None:
     )
 
     truths: dict[tuple[str, int], tuple] = {}
-    rows, case_rows = [], []
+    rows, case_rows, yearly_rows = [], [], []
     for scenario, seed, method, tag, seed_dir in cells:
         key = (scenario, seed)
         if key not in truths:
@@ -202,10 +218,18 @@ def main() -> None:
         truth, parameters, factors, eras = truths[key]
         try:
             result = _load(seed_dir, method)
-            row = score(truth, result, parameters, scenario=scenario, seed=seed)
+            aligned = align(truth, result)
+            row = score(truth, result, parameters, scenario=scenario, seed=seed, aligned=aligned)
             row["perturbation"] = tag
             rows.append(row)
             case_rows += _case_study_rows(result, parameters, scenario, seed, factors, eras)
+            if not args.structural and not aligned.empty:
+                # The structural ensemble is 495 more cells and asks a question about
+                # a method's own free choices, not about the record's eras, so it gets
+                # no per-year table.
+                yearly_rows.append(
+                    yearly_errors(aligned, scenario=scenario, seed=seed, method=method)
+                )
         except Exception as error:  # noqa: BLE001
             progress.record(failure=f"{scenario}/{seed}/{method}: {error!r}")
             print(f"FAILED {scenario} {seed} {method}: {error!r}", flush=True)
@@ -225,6 +249,19 @@ def main() -> None:
         floors = _floor_comparison(scores)
         floors.to_csv(args.out_dir / "floors.csv", index=False, lineterminator="\n")
         print(f"wrote {args.out_dir / 'floors.csv'}")
+
+        if yearly_rows:
+            yearly = pd.concat(yearly_rows, ignore_index=True)
+            yearly.to_csv(args.out_dir / "yearly_errors.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'yearly_errors.csv'} ({len(yearly)} rows)")
+
+            pooled = pool_yearly(yearly)
+            pooled.to_csv(args.out_dir / "yearly_pooled.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'yearly_pooled.csv'} ({len(pooled)} rows)")
+
+            by_era = era_errors(yearly)
+            by_era.to_csv(args.out_dir / "era_scores.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'era_scores.csv'} ({len(by_era)} rows)")
 
         if case_rows:
             cases = pd.DataFrame(case_rows)

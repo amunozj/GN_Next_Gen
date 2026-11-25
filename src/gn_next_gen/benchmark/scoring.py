@@ -48,6 +48,57 @@ TREND_START_YEARS = (1610, 1700, 1850)
 #: The Maunder Minimum, for the S3 level metric.
 MAUNDER_YEARS = (1645, 1715)
 
+#: The record cut into eras, as ``(label, first_year, last_year)`` inclusive.
+#:
+#: Pooled scores say which method is best overall and hide which method is best
+#: *when*.  These nine windows are the grain the era tables and ``f41``'s winner
+#: ribbon use, and every boundary is drawn from something in this repository
+#: rather than from solar history -- the truth here is a replay of RGO cycles, so
+#: only the observing *calendars* are real, and an era named for a real observer
+#: would claim more than the benchmark can support.
+ERAS: tuple[tuple[str, int, int], ...] = (
+    # Almost no observers survive the 50-day minimum on the transplanted calendars.
+    ("pre-network", 1610, 1644),
+    # MAUNDER_YEARS, and where S3 inserts its grand minimum.
+    ("maunder-window", 1645, 1715),
+    # The overlap graph has zero edges across 1727-1745 (f28), so no chain crosses it.
+    ("first-disconnection", 1716, 1748),
+    # The second cut with zero edges, 1777-1798 (f28).
+    ("second-disconnection", 1749, 1798),
+    # Ends where S1's modern sub-network begins.
+    ("pre-modern", 1799, 1873),
+    # Dense network, but no overlap with the anchor's own epoch yet.
+    ("pre-anchor", 1874, 1911),
+    # RGO cycles 15-19 -- the anchoring itself (ADR-009, ``rgo_15_19``).
+    ("anchor-epoch", 1912, 1969),
+    # To the last year the v1.3 observation database covers.
+    ("post-anchor", 1970, 2010),
+    # Only gn_observer_extension_2026-10 reports here; v1.3 has ended.
+    ("extension-only", 2011, 2026),
+)
+
+#: Era labels in record order, for a categorical axis.
+ERA_ORDER: tuple[str, ...] = tuple(label for label, _, _ in ERAS)
+
+#: The scenarios the era pooling runs over.  S1 begins in 1874 and holds 20 of the
+#: 51 worlds, so pooling it with the rest would step the curve at 1874 from the
+#: pool changing rather than from any method's behaviour; S5 switches detection
+#: error off entirely, which flatters an exact method (the reason
+#: ``COVERAGE_EXCLUDED_SCENARIOS`` drops it from f20).  Both are scored and both
+#: appear in the era table as their own rows -- they are excluded from the pooled
+#: *curve*, not from the benchmark.
+POOLED_SCENARIOS: tuple[str, ...] = ("S2", "S3", "S4")
+
+
+def era_of(year: int | np.ndarray) -> str | np.ndarray:
+    """The era a year falls in, or ``"outside"`` beyond :data:`ERAS`."""
+    years = np.asarray(year)
+    out = np.full(years.shape, "outside", dtype=object)
+    for label, first, last in ERAS:
+        out[(years >= first) & (years <= last)] = label
+    return out if out.ndim else str(out.item())
+
+
 #: 1970-01-01 as a proleptic-Gregorian ordinal.
 UNIX_EPOCH_ORDINAL = 719_163
 
@@ -249,6 +300,27 @@ def _yearly_sd(block: pd.DataFrame) -> float:
     return float(np.sqrt(np.nanmean(np.square(block["sd"])) / n))
 
 
+def yearly_frame(aligned: pd.DataFrame) -> pd.DataFrame:
+    """One row per year: the means, the day count, and the sd of the year's mean.
+
+    Both the pooled uncertainty scores and the per-era tables are built from this,
+    deliberately.  They were two code paths once, and they drifted: the era-stratified
+    coverage reported as finding F5 on 2026-11-22 was computed by hand and never
+    recomputed after the 2026-11-24 fix to :func:`_yearly_sd`, so it went on quoting
+    pre-fix numbers that the pooled table contradicted.  One frame, one aggregation
+    rule, and the two cannot disagree again.
+    """
+    columns = ["sd"] + [c for c in ("sd_factor", "sd_spread") if c in aligned.columns]
+    grouped = aligned.groupby("year")
+    yearly = grouped.agg(
+        truth=("truth", "mean"),
+        estimate=("estimate", "mean"),
+        n_days=("truth", "size"),
+    )
+    yearly["sd"] = grouped[columns].apply(_yearly_sd)
+    return yearly
+
+
 def uncertainty_scores(aligned: pd.DataFrame) -> dict[str, float]:
     """Coverage, CRPS and PIT on yearly means.
 
@@ -259,12 +331,7 @@ def uncertainty_scores(aligned: pd.DataFrame) -> dict[str, float]:
     module.
     """
     decomposed = "sd_factor" in aligned.columns and bool(np.isfinite(aligned["sd_factor"]).any())
-    columns = ["sd"] + [c for c in ("sd_factor", "sd_spread") if c in aligned.columns]
-    yearly = aligned.groupby("year").agg(
-        truth=("truth", "mean"),
-        estimate=("estimate", "mean"),
-    )
-    yearly["sd"] = aligned.groupby("year")[columns].apply(_yearly_sd)
+    yearly = yearly_frame(aligned)
     out: dict[str, float] = {"n_years": int(len(yearly)), "sd_decomposed": int(decomposed)}
 
     valid = yearly[np.isfinite(yearly["sd"]) & (yearly["sd"] > 0)]
@@ -288,6 +355,160 @@ def uncertainty_scores(aligned: pd.DataFrame) -> dict[str, float]:
     pit = norm.cdf((truth - mean) / sd)
     out["pit_ks"] = float(kstest(pit, "uniform").statistic)
     return out
+
+
+def yearly_errors(
+    aligned: pd.DataFrame, *, scenario: str = "", seed: int = 0, method: str = ""
+) -> pd.DataFrame:
+    """The per-year residual of one cell, with its era and its interval flags.
+
+    :func:`score` reduces a cell to a single row, which is what the pooled tables
+    need and is also why nothing in Step 2 could say *when* a method is wrong.  This
+    keeps the year axis.  ``within_50`` and friends are the same central-interval
+    tests :func:`uncertainty_scores` applies, on the same :func:`yearly_frame`, so an
+    era's coverage and the pooled coverage are the same measurement at two grains.
+    """
+    yearly = yearly_frame(aligned)
+    out = pd.DataFrame(
+        {
+            "scenario": scenario,
+            "seed": seed,
+            "method": method,
+            "year": yearly.index.to_numpy(dtype=int),
+            "era": era_of(yearly.index.to_numpy(dtype=int)),
+            "n_days": yearly["n_days"].to_numpy(dtype=int),
+            "truth": yearly["truth"].to_numpy(dtype=float),
+            "estimate": yearly["estimate"].to_numpy(dtype=float),
+            "sd": yearly["sd"].to_numpy(dtype=float),
+        }
+    )
+    out["error"] = out["estimate"] - out["truth"]
+    usable = np.isfinite(out["sd"]) & (out["sd"] > 0)
+    for level in COVERAGE_LEVELS:
+        half = norm.ppf(0.5 + level / 2) * out["sd"].to_numpy()
+        inside = np.abs(out["error"].to_numpy()) <= half
+        out[f"within_{int(level * 100)}"] = np.where(usable, inside, np.nan)
+    return out
+
+
+def _error_moments(block: pd.DataFrame) -> pd.Series:
+    """Mean squared error, bias and level over whatever rows are handed in."""
+    error = block["error"].to_numpy(dtype=float)
+    finite = np.isfinite(error)
+    if not finite.any():
+        return pd.Series({"mse": np.nan, "bias": np.nan, "truth": np.nan, "n_years": 0})
+    return pd.Series(
+        {
+            "mse": float(np.mean(np.square(error[finite]))),
+            "bias": float(np.mean(error[finite])),
+            "truth": float(np.nanmean(block["truth"].to_numpy(dtype=float)[finite])),
+            "n_years": int(finite.sum()),
+        }
+    )
+
+
+def _pool_scenarios(per_scenario: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
+    """Average per-scenario moments with equal weight per scenario.
+
+    Equal weight, not equal weight per *world*: S1 holds 20 of the 51 worlds and S5
+    holds one, so pooling rows would let one scenario's observer network decide the
+    answer.  Squared error is averaged and then rooted, so the result is the RMSE of
+    a scenario-balanced pool rather than the mean of three RMSEs.
+    """
+    grouped = per_scenario.groupby(keys, dropna=False)
+    out = grouped.agg(
+        mse=("mse", "mean"),
+        bias=("bias", "mean"),
+        truth=("truth", "mean"),
+        n_scenarios=("scenario", "nunique"),
+        n_worlds=("n_worlds", "sum"),
+        n_years=("n_years", "sum"),
+    ).reset_index()
+    out["rmse"] = np.sqrt(out["mse"])
+    return out
+
+
+def pool_yearly(yearly: pd.DataFrame, *, scenarios: tuple[str, ...] = POOLED_SCENARIOS):
+    """Per method and calendar year, the scenario-balanced RMSE, bias and level.
+
+    One row per ``(method, year)``.  A method that emitted no day in a year has no
+    row, so a curve drawn from this stops where the method's reach stops instead of
+    reading as zero error -- which is :func:`score`'s reach result made continuous.
+    """
+    frame = yearly[yearly["scenario"].isin(scenarios)]
+    if frame.empty:
+        return pd.DataFrame(
+            columns=["method", "year", "mse", "rmse", "bias", "truth", "n_scenarios", "n_worlds"]
+        )
+    per_scenario = (
+        frame.groupby(["scenario", "method", "year"], dropna=False)
+        .apply(_error_moments, include_groups=False)
+        .reset_index()
+    )
+    counts = (
+        frame.groupby(["scenario", "method", "year"], dropna=False)["seed"]
+        .nunique()
+        .rename("n_worlds")
+        .reset_index()
+    )
+    per_scenario = per_scenario.merge(counts, on=["scenario", "method", "year"])
+    return _pool_scenarios(per_scenario, ["method", "year"]).sort_values(["method", "year"])
+
+
+def era_errors(yearly: pd.DataFrame, *, scenarios: tuple[str, ...] = POOLED_SCENARIOS):
+    """Error, coverage and reach per method and era, per scenario and pooled.
+
+    Every scenario gets its own rows and ``scenario = "pooled"`` carries the
+    scenario-balanced average over ``scenarios``.  Keeping S1 and S5 as their own
+    rows rather than dropping them is what makes the pooling checkable: if S1's
+    ranking in an era disagrees with the pooled one, the table says so.
+
+    ``reached`` is the share of the scenario's worlds in which the method emitted
+    any day in that era -- the quantity that turns f41's gaps into a number, and
+    the reason a 0.0 RMSE cell is never mistaken for a perfect one.
+    """
+    worlds = yearly.groupby("scenario")["seed"].nunique()
+
+    moments = (
+        yearly.groupby(["scenario", "method", "era"], dropna=False)
+        .apply(_error_moments, include_groups=False)
+        .reset_index()
+    )
+    extra = yearly.groupby(["scenario", "method", "era"], dropna=False).agg(
+        n_worlds=("seed", "nunique"),
+        **{
+            f"coverage_{int(level * 100)}": (f"within_{int(level * 100)}", "mean")
+            for level in COVERAGE_LEVELS
+        },
+    )
+    per_scenario = moments.merge(extra.reset_index(), on=["scenario", "method", "era"])
+    per_scenario["reached"] = per_scenario["n_worlds"] / per_scenario["scenario"].map(worlds)
+    per_scenario["rmse"] = np.sqrt(per_scenario["mse"])
+
+    pooled = _pool_scenarios(
+        per_scenario[per_scenario["scenario"].isin(scenarios)], ["method", "era"]
+    )
+    for level in COVERAGE_LEVELS:
+        key = f"coverage_{int(level * 100)}"
+        pooled = pooled.merge(
+            per_scenario[per_scenario["scenario"].isin(scenarios)]
+            .groupby(["method", "era"], dropna=False)[key]
+            .mean()
+            .reset_index(),
+            on=["method", "era"],
+        )
+    pooled = pooled.merge(
+        per_scenario[per_scenario["scenario"].isin(scenarios)]
+        .groupby(["method", "era"], dropna=False)["reached"]
+        .mean()
+        .reset_index(),
+        on=["method", "era"],
+    )
+    pooled["scenario"] = "pooled"
+
+    out = pd.concat([per_scenario, pooled], ignore_index=True)
+    out["era"] = pd.Categorical(out["era"], categories=[*ERA_ORDER, "outside"], ordered=True)
+    return out.sort_values(["scenario", "method", "era"]).reset_index(drop=True)
 
 
 def acuity_recovery(result: CalibrationResult, parameters: pd.DataFrame) -> dict[str, float]:
@@ -351,9 +572,15 @@ def score(
     *,
     scenario: str = "",
     seed: int = 0,
+    aligned: pd.DataFrame | None = None,
 ) -> dict:
-    """Every metric for one (scenario, realization, method) cell."""
-    aligned = align(truth, result)
+    """Every metric for one (scenario, realization, method) cell.
+
+    ``aligned`` lets a caller that also wants the per-year table (:func:`yearly_errors`)
+    hand in the frame it already built, so the join runs once per cell rather than twice.
+    """
+    if aligned is None:
+        aligned = align(truth, result)
     row: dict = {
         "scenario": scenario,
         "seed": seed,

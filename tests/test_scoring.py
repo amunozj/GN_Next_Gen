@@ -10,17 +10,23 @@ from scipy.stats import norm
 from gn_next_gen.baselines.base import CalibrationResult
 from gn_next_gen.benchmark.scoring import (
     COVERAGE_LEVELS,
+    ERA_ORDER,
+    ERAS,
     align,
     break_detection_skill,
     crps_gaussian,
     cycle_boundaries,
     cycle_errors,
+    era_errors,
+    era_of,
     maunder_level,
+    pool_yearly,
     scale_errors,
     score,
     summarise_case_studies,
     trend_errors,
     uncertainty_scores,
+    yearly_errors,
 )
 from gn_next_gen.benchmark.truth import Truth
 
@@ -435,3 +441,182 @@ def test_the_decomposition_reaches_the_scorer_through_align():
     aligned = align(truth, result)
     assert {"sd", "sd_factor", "sd_spread"} <= set(aligned.columns)
     assert aligned["sd_factor"].iloc[0] == pytest.approx(0.8)
+
+
+# --- the era partition ----------------------------------------------------
+
+
+def test_the_eras_tile_the_record_without_a_gap_or_an_overlap():
+    """A year must fall in exactly one era, or an era table double-counts it."""
+    assert [label for label, _, _ in ERAS] == list(ERA_ORDER)
+    assert len(set(ERA_ORDER)) == len(ERA_ORDER)
+    assert ERAS[0][1] == 1610
+    assert ERAS[-1][2] == 2026
+    for (_, _, end), (_, start, _) in zip(ERAS, ERAS[1:], strict=False):
+        assert start == end + 1, f"{end} -> {start} is a gap or an overlap"
+    for label, first, last in ERAS:
+        assert first <= last, label
+
+
+def test_every_year_of_the_record_lands_in_an_era_and_the_edges_in_the_right_one():
+    years = np.arange(1610, 2027)
+    labels = era_of(years)
+    assert "outside" not in set(labels)
+    for label, first, last in ERAS:
+        assert era_of(np.array([first]))[0] == label
+        assert era_of(np.array([last]))[0] == label
+    assert era_of(np.array([1609, 2027])).tolist() == ["outside", "outside"]
+    # The anchor epoch is the one the whole era story turns on (ADR-009, RGO 15-19).
+    assert era_of(np.array([1912, 1940, 1969])).tolist() == ["anchor-epoch"] * 3
+
+
+# --- the per-year table ---------------------------------------------------
+
+
+def test_yearly_errors_reports_the_error_of_each_year_separately():
+    """A method wrong in one year only must show that year only."""
+    n_days = 100
+    counts = np.full(3 * n_days, 4.0)
+    truth = _truth_from(counts)
+    estimate = counts.copy()
+    estimate[n_days : 2 * n_days] += 2.0  # the middle year, off by exactly two
+    result = _result(truth.days, estimate, np.full(len(counts), 1.0))
+    aligned = align(truth, result)
+    aligned["year"] = np.repeat([1800, 1801, 1802], n_days)
+
+    yearly = yearly_errors(aligned, scenario="S2", seed=7, method="toy")
+    assert list(yearly["year"]) == [1800, 1801, 1802]
+    assert yearly["error"].to_numpy() == pytest.approx([0.0, 2.0, 0.0])
+    assert list(yearly["n_days"]) == [n_days] * 3
+    assert set(yearly["era"]) == {"pre-modern"}
+    assert list(yearly["scenario"]) == ["S2"] * 3 and list(yearly["method"]) == ["toy"] * 3
+
+
+def test_a_years_interval_flags_agree_with_the_pooled_coverage():
+    """The regression finding F5 lacked.
+
+    The era table and the pooled coverage table were two code paths once, and the
+    era-stratified numbers went on quoting pre-fix values after :func:`_yearly_sd`
+    was corrected.  Both now read the same frame, so the per-year flags must average
+    to exactly what ``uncertainty_scores`` reports.
+    """
+    rng = np.random.default_rng(29)
+    n_years, n_days = 80, 120
+    counts = rng.poisson(4.0, size=n_years * n_days).astype(float)
+    truth = _truth_from(counts)
+    offset = np.repeat(rng.normal(0.0, 1.0, size=n_years), n_days)
+    result = _result(
+        truth.days,
+        counts + offset,
+        np.full(len(counts), 1.0),
+        sd_factor=np.full(len(counts), 1.0),
+        sd_spread=np.zeros(len(counts)),
+    )
+    aligned = align(truth, result)
+    aligned["year"] = np.repeat(np.arange(1900, 1900 + n_years), n_days)
+
+    pooled = uncertainty_scores(aligned)
+    yearly = yearly_errors(aligned, scenario="S2", seed=1, method="toy")
+    for level in COVERAGE_LEVELS:
+        key = int(level * 100)
+        assert yearly[f"within_{key}"].mean() == pytest.approx(pooled[f"coverage_{key}"])
+
+
+def test_a_method_that_reports_no_uncertainty_gets_no_interval_flags():
+    counts = np.full(200, 3.0)
+    truth = _truth_from(counts)
+    result = _result(truth.days, counts, np.full(200, np.nan))
+    aligned = align(truth, result)
+    aligned["year"] = 1950
+    yearly = yearly_errors(aligned, scenario="S2", seed=1, method="naive-median")
+    assert yearly["within_50"].isna().all()
+    assert yearly["error"].to_numpy() == pytest.approx([0.0])
+
+
+# --- pooling --------------------------------------------------------------
+
+
+def _yearly_rows(scenario, seeds, method, year, error):
+    return pd.DataFrame(
+        {
+            "scenario": scenario,
+            "seed": list(seeds),
+            "method": method,
+            "year": year,
+            "era": era_of(np.array([year]))[0],
+            "n_days": 300,
+            "truth": 4.0,
+            "estimate": 4.0 + error,
+            "sd": 1.0,
+            "error": error,
+            "within_50": 1.0,
+            "within_68": 1.0,
+            "within_90": 1.0,
+            "within_95": 1.0,
+        }
+    )
+
+
+def test_a_scenario_with_more_worlds_does_not_outweigh_one_with_fewer():
+    """S1 holds 20 of the 51 worlds; pooling rows would let it decide the answer."""
+    yearly = pd.concat(
+        [
+            _yearly_rows("S2", range(20), "toy", 1900, 0.0),
+            _yearly_rows("S3", [100], "toy", 1900, 2.0),
+        ],
+        ignore_index=True,
+    )
+    pooled = pool_yearly(yearly, scenarios=("S2", "S3"))
+    row = pooled.iloc[0]
+    # Equal weight per scenario: sqrt(mean(0^2, 2^2)) = sqrt(2), not sqrt(20*0+4)/21.
+    assert row["rmse"] == pytest.approx(np.sqrt(2.0))
+    assert row["bias"] == pytest.approx(1.0)
+    assert row["n_scenarios"] == 2
+    assert row["n_worlds"] == 21
+
+
+def test_pooling_leaves_out_the_scenarios_it_is_not_given():
+    yearly = pd.concat(
+        [
+            _yearly_rows("S2", [1], "toy", 1900, 1.0),
+            _yearly_rows("S5", [2], "toy", 1900, 9.0),
+        ],
+        ignore_index=True,
+    )
+    pooled = pool_yearly(yearly, scenarios=("S2",))
+    assert pooled["rmse"].to_numpy() == pytest.approx([1.0])
+
+
+def test_a_year_a_method_never_reached_gets_no_row_rather_than_a_zero():
+    """Absence has to stay absence: a zero would read as a perfect reconstruction."""
+    yearly = pd.concat(
+        [
+            _yearly_rows("S2", [1], "reaches", 1700, 1.0),
+            _yearly_rows("S2", [1], "reaches", 1900, 1.0),
+            _yearly_rows("S2", [1], "stops-late", 1900, 1.0),
+        ],
+        ignore_index=True,
+    )
+    pooled = pool_yearly(yearly, scenarios=("S2",))
+    late = pooled[pooled["method"] == "stops-late"]
+    assert list(late["year"]) == [1900]
+    assert 1700 not in set(late["year"])
+
+
+def test_era_errors_reports_reach_and_keeps_every_scenario_beside_the_pooled_row():
+    yearly = pd.concat(
+        [
+            _yearly_rows("S2", [1, 2], "toy", 1900, 1.0),
+            # Only one of S3's two worlds reaches the era at all.
+            _yearly_rows("S3", [3], "toy", 1900, 1.0),
+            _yearly_rows("S3", [3, 4], "toy", 1950, 1.0),
+        ],
+        ignore_index=True,
+    )
+    by_era = era_errors(yearly, scenarios=("S2", "S3"))
+    s3 = by_era[(by_era["scenario"] == "S3") & (by_era["era"] == "pre-anchor")].iloc[0]
+    assert s3["reached"] == pytest.approx(0.5)
+    assert set(by_era["scenario"]) == {"S2", "S3", "pooled"}
+    pooled = by_era[(by_era["scenario"] == "pooled") & (by_era["era"] == "pre-anchor")].iloc[0]
+    assert pooled["rmse"] == pytest.approx(1.0)
+    assert pooled["coverage_50"] == pytest.approx(1.0)

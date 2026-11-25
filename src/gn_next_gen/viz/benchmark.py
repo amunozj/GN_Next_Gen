@@ -1,4 +1,4 @@
-"""Step 2's figures, f13-f26, in the house style of Step 1.
+"""Step 2's figures, f13-f28 and f41-f42, in the house style of Step 1.
 
 Figure-first, as `CLAUDE.md` requires: each figure carries the claim it supports
 and every number in it comes from a committed CSV.  Two of them -- `f25` and
@@ -16,6 +16,7 @@ import pandas as pd
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+from gn_next_gen.benchmark.scoring import ERA_ORDER, ERAS
 from gn_next_gen.viz.style import (
     annotate_target,
     caption,
@@ -1019,6 +1020,360 @@ def network_figure(
             mode,
         )
         fig.tight_layout()
+        return fig
+
+
+# --- f41, f42: the error through time -------------------------------------
+
+#: The floor every method is measured against through time.  `naive-median` rather
+#: than `naive-mean` because it is the harder of the two in section 4's paired test.
+TIME_FLOOR = "naive-median"
+
+#: One solar cycle, as a smoothing window on a yearly series.  Narrower and the
+#: curves are cycle-phase noise; wider and an era boundary smears across itself.
+CYCLE_YEARS = 11
+
+
+def _smooth(frame: pd.DataFrame, column: str, *, years=None) -> pd.Series:
+    """A cycle-long centred mean on a year-indexed series, gaps left as gaps.
+
+    Reindexed onto the full year range first, so a method that reports nothing for
+    a decade gets NaN there rather than having the window reach across the hole and
+    draw a line through an era it never entered.
+    """
+    if years is None:
+        years = np.arange(int(frame["year"].min()), int(frame["year"].max()) + 1)
+    series = frame.set_index("year")[column].reindex(years)
+    smoothed = series.rolling(CYCLE_YEARS, center=True, min_periods=CYCLE_YEARS // 2).mean()
+    smoothed[series.isna()] = np.nan
+    return smoothed
+
+
+def _window_rmse(frame: pd.DataFrame, *, years=None) -> pd.Series:
+    """RMSE over a cycle-long window: the squared error is pooled, then rooted.
+
+    Not the rolling mean of the yearly RMSE, and the difference is not cosmetic.
+    The floor's pooled RMSE passes through ~0.0008 in 1878 and ~0.0002 in 1968 --
+    years where the median of the raw counts happens to sit on the truth in every
+    world at once -- so a year-by-year ratio against it spikes past 1000 and buries
+    the comparison the panel exists to make.  Pooling the squared error across the
+    window first removes the singularity without clipping anything away.
+    """
+    return np.sqrt(_smooth(frame, "mse", years=years))
+
+
+def _era_bands(ax, mode: str, *, label: bool = False, first: int = 1610) -> None:
+    """The nine eras as alternating faint bands, so a boundary is read, not counted."""
+    theme = palette(mode)
+    for index, (name, start, end) in enumerate(ERAS):
+        if end < first:
+            continue
+        if index % 2:
+            ax.axvspan(max(start, first), end, color=theme["grid"], alpha=0.35, zorder=0, lw=0)
+        if name == "anchor-epoch":
+            # The era the whole figure turns on: the only window the reference
+            # observer actually sees (ADR-009, RGO cycles 15-19).
+            ax.axvspan(start, end, color=theme["categorical"][3], alpha=0.14, zorder=0, lw=0)
+        if label:
+            ax.annotate(
+                name.replace("-", "\n"),
+                xy=((max(start, first) + end) / 2, 1.02),
+                xycoords=("data", "axes fraction"),
+                ha="center",
+                va="bottom",
+                fontsize=5.6,
+                color=theme["text_secondary"],
+                linespacing=0.95,
+            )
+
+
+def _winner_by_year(pooled: pd.DataFrame) -> pd.DataFrame:
+    """The lowest-RMSE real method each year, and whether it beats the floor.
+
+    Floors are excluded from the ranking because they are the bar, not entrants;
+    ``beats_floor`` is what keeps the ribbon honest, since a method can lead the
+    seven in an era where all seven are worse than leaving the counts alone.
+    """
+    real = pooled[~pooled["method"].map(is_floor) & np.isfinite(pooled["rmse"])]
+    if real.empty:
+        return pd.DataFrame(columns=["year", "method", "rmse", "floor", "beats_floor"])
+    best = real.loc[real.groupby("year")["rmse"].idxmin(), ["year", "method", "rmse"]]
+    floor = (
+        pooled[pooled["method"] == TIME_FLOOR]
+        .set_index("year")["rmse"]
+        .rename("floor")
+        .reset_index()
+    )
+    out = best.merge(floor, on="year", how="left")
+    out["beats_floor"] = out["rmse"] < out["floor"]
+    return out.sort_values("year").reset_index(drop=True)
+
+
+def _draw_ribbon(ax, winners: pd.DataFrame, colors: dict[str, str], mode: str) -> None:
+    """One bar per year in the winner's own colour, hatched where no one beats the floor."""
+    theme = palette(mode)
+    for _, row in winners.iterrows():
+        ax.axvspan(
+            row["year"] - 0.5,
+            row["year"] + 0.5,
+            ymin=0.42,
+            ymax=1.0,
+            color=colors.get(row["method"], theme["text_secondary"]),
+            lw=0,
+        )
+        ax.axvspan(
+            row["year"] - 0.5,
+            row["year"] + 0.5,
+            ymin=0.0,
+            ymax=0.30,
+            color=theme["categorical"][0] if row["beats_floor"] else theme["grid"],
+            lw=0,
+        )
+
+
+def error_through_time_figure(
+    pooled: pd.DataFrame, mode: str = "light", *, first_year: int = 1645
+) -> plt.Figure:
+    """f41 -- where in the record each method's error actually sits.
+
+    Section 4's table is pooled over the whole record and says HoSc98 wins.  That
+    is true and it hides the mechanism: the methods that calibrate through overlap
+    are only good near the epoch the reference observer sees, and the pooled number
+    averages that over four centuries.
+    """
+    with figure_style(mode) as theme:
+        methods = _order(pooled["method"].unique())
+        colors = _method_colors(methods, mode)
+        # Five rows, the last one blank and holding the legend.  The house style
+        # turns constrained layout on globally, so tight_layout and subplots_adjust
+        # are both ignored at draw time, and an "outside" figure legend lands in the
+        # same strip as the caption.  A real axes is the one place the layout engine
+        # is guaranteed to reserve.
+        fig, axes = plt.subplots(
+            5,
+            1,
+            figsize=(9.2, 8.6),
+            sharex=True,
+            gridspec_kw={"height_ratios": [1.0, 2.1, 1.7, 0.42, 0.30], "hspace": 0.12},
+        )
+        top, absolute, relative, ribbon, legend_row = axes
+        legend_row.set_axis_off()
+
+        # (a) where we are: the activity level the errors sit on top of.
+        level = pooled[pooled["method"] == TIME_FLOOR]
+        _era_bands(top, mode, label=True, first=first_year)
+        top.plot(
+            level["year"],
+            _smooth(level, "truth").reindex(level["year"]).to_numpy(),
+            color=theme["text_primary"],
+            linewidth=1.3,
+        )
+        top.set_yscale("log")
+        top.set_ylabel("true groups/day")
+
+        # (b) the error itself, in groups.
+        _era_bands(absolute, mode, first=first_year)
+        span = np.arange(first_year, 2027)
+        floor_rmse = _window_rmse(
+            pooled[pooled["method"] == TIME_FLOOR].sort_values("year"), years=span
+        )
+        handles = []
+        for method in methods:
+            block = pooled[pooled["method"] == method].sort_values("year")
+            if block.empty:
+                continue
+            smoothed = _window_rmse(block, years=span)
+            absolute.plot(
+                smoothed.index,
+                smoothed.to_numpy(),
+                color=colors[method],
+                linestyle=_linestyle(method),
+                linewidth=1.9 if not is_floor(method) else 1.2,
+                alpha=1.0 if not is_floor(method) else 0.85,
+            )
+            handles.append(
+                Line2D(
+                    [],
+                    [],
+                    color=colors[method],
+                    linestyle=_linestyle(method),
+                    marker="" if is_floor(method) else _method_markers(methods)[method],
+                    markersize=4.6,
+                    label=method,
+                )
+            )
+            if is_floor(method):
+                continue
+            # A marker at the method's own best era, so the shape channel is present
+            # on a line chart too and the legend is not the only way in.
+            best = smoothed.idxmin()
+            if pd.notna(best):
+                absolute.plot(
+                    best,
+                    smoothed.loc[best],
+                    marker=_method_markers(methods)[method],
+                    markersize=_marker_size(_method_markers(methods)[method], 5.0),
+                    color=colors[method],
+                    linestyle="none",
+                    zorder=4,
+                )
+        absolute.set_yscale("log")
+        absolute.set_ylabel("pooled RMSE (groups)")
+
+        # (c) the same error against the floor, which removes the activity level.
+        _era_bands(relative, mode, first=first_year)
+        for method in methods:
+            if method == TIME_FLOOR:
+                continue
+            block = pooled[pooled["method"] == method].sort_values("year")
+            if block.empty:
+                continue
+            ratio = _window_rmse(block, years=span) / floor_rmse
+            relative.plot(
+                ratio.index,
+                ratio.to_numpy(),
+                color=colors[method],
+                linestyle=_linestyle(method),
+                linewidth=1.9 if not is_floor(method) else 1.2,
+                alpha=1.0 if not is_floor(method) else 0.85,
+            )
+        relative.axhline(
+            1.0, color=theme["text_secondary"], linestyle=(0, (4, 3)), linewidth=1.0, zorder=1
+        )
+        relative.annotate(
+            "below this line a method beats leaving the counts alone",
+            xy=(0.012, 0.035),
+            xycoords="axes fraction",
+            ha="left",
+            va="bottom",
+            fontsize=7.2,
+            color=theme["text_secondary"],
+        )
+        relative.set_yscale("log")
+        relative.set_ylabel("RMSE / naive-median")
+
+        # (d) who wins, and whether winning means anything.
+        winners = _winner_by_year(pooled)
+        _draw_ribbon(ribbon, winners, colors, mode)
+        ribbon.set_yticks([0.15, 0.71])
+        ribbon.set_yticklabels(["beats floor", "lowest RMSE"], fontsize=7)
+        ribbon.set_ylim(0, 1)
+        # sharex hides the tick labels on every row but the last, and the last row
+        # is the blank legend strip, so the ribbon has to ask for its own back.
+        ribbon.tick_params(labelbottom=True)
+        ribbon.set_xlabel("year")
+        for spine in ribbon.spines.values():
+            spine.set_visible(False)
+        ribbon.tick_params(length=0)
+
+        absolute.set_xlim(first_year, 2026)
+        legend_row.legend(
+            handles=handles,
+            ncol=6,
+            fontsize=7,
+            frameon=False,
+            loc="center",
+            borderaxespad=0.0,
+        )
+        caption(
+            fig,
+            "Scenario-balanced over S2/S3/S4 and pooled over one solar cycle; a line stops\n"
+            "where the method reports nothing, because absence is not zero error. The tinted\n"
+            "band is the anchor epoch -- the only window the reference observer sees -- and it\n"
+            "is the one era where a published method beats the median of the raw counts.",
+            mode,
+        )
+        return fig
+
+
+def bias_and_era_coverage_figure(
+    pooled: pd.DataFrame, era_table: pd.DataFrame, mode: str = "light", *, first_year: int = 1645
+) -> plt.Figure:
+    """f42 -- the sign of the error through time, and the intervals per era.
+
+    f19 reports one amplitude slope per method over the whole record; the left panel
+    is where in time that slope is earned.  The right panel is the era-stratified
+    coverage the Step 2 plan's criterion A5 asked for and the scorer never produced.
+    """
+    with figure_style(mode) as theme:
+        methods = _order(pooled["method"].unique())
+        colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
+        fig, (bias_ax, cover_ax) = plt.subplots(
+            1, 2, figsize=(11.4, 4.3), gridspec_kw={"width_ratios": [1.25, 1.0]}
+        )
+
+        _era_bands(bias_ax, mode, first=first_year)
+        for method in methods:
+            block = pooled[pooled["method"] == method].sort_values("year")
+            if block.empty:
+                continue
+            smoothed = _smooth(block, "bias")
+            bias_ax.plot(
+                smoothed.index,
+                smoothed.to_numpy(),
+                color=colors[method],
+                linestyle=_linestyle(method),
+                linewidth=1.8 if not is_floor(method) else 1.1,
+                alpha=1.0 if not is_floor(method) else 0.8,
+                label=method,
+            )
+        bias_ax.axhline(0.0, color=theme["text_secondary"], linewidth=1.0, zorder=2)
+        bias_ax.set_xlim(first_year, 2026)
+        bias_ax.set_xlabel("year")
+        bias_ax.set_ylabel("pooled bias (groups)")
+        bias_ax.set_title(
+            "sign of the error through time", fontsize=9, color=theme["text_secondary"]
+        )
+        # Lower left: the upper left is where UEA21 and GRP spend the whole record.
+        bias_ax.legend(ncol=3, fontsize=6.4, frameon=False, loc="lower left")
+
+        # Coverage per era, at the spec's headline level.  Methods that report no
+        # interval at all (the naive floors) have nothing to draw and are left out.
+        pooled_eras = era_table[era_table["scenario"] == "pooled"]
+        present = [e for e in ERA_ORDER if e in set(pooled_eras["era"])]
+        positions = {era: index for index, era in enumerate(present)}
+        drawn = [
+            m
+            for m in methods
+            if np.isfinite(pooled_eras.loc[pooled_eras["method"] == m, "coverage_50"]).any()
+        ]
+        for method in drawn:
+            block = pooled_eras[pooled_eras["method"] == method]
+            x = [positions[e] for e in block["era"] if e in positions]
+            y = [
+                v for e, v in zip(block["era"], block["coverage_50"], strict=True) if e in positions
+            ]
+            cover_ax.plot(
+                x,
+                y,
+                marker=markers[method],
+                markersize=_marker_size(markers[method], 5.4),
+                color=colors[method],
+                linestyle=_linestyle(method) if is_floor(method) else "-",
+                linewidth=1.4,
+                alpha=1.0 if not is_floor(method) else 0.8,
+                label=method,
+            )
+        annotate_target(cover_ax, 0.5, mode, label="nominal 50%")
+        cover_ax.set_xticks(list(positions.values()))
+        cover_ax.set_xticklabels(
+            [e.replace("-", " ") for e in present], fontsize=6.6, rotation=32, ha="right"
+        )
+        cover_ax.set_ylim(-0.03, 1.03)
+        cover_ax.set_ylabel("empirical coverage at nominal 50%")
+        cover_ax.set_title(
+            "are the intervals honest, era by era?", fontsize=9, color=theme["text_secondary"]
+        )
+
+        caption(
+            fig,
+            "Left: pooled yearly bias, cycle-smoothed -- a method can be centred over the\n"
+            "record and wrong in every era of it. Right: coverage at nominal 50% per era, the\n"
+            "stratification criterion A5 asked for; a point is missing where the method\n"
+            "reaches no year of that era.",
+            mode,
+        )
         return fig
 
 
