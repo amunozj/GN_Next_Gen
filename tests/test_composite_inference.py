@@ -291,3 +291,42 @@ def test_inflation_grows_with_how_much_the_network_double_counts():
     sparse, dense = inflations
     assert dense > sparse, "a denser network double-counts more and must inflate more"
     assert dense > 1.2, "a network with hundreds of pairs per day is not independent"
+
+
+@pytest.mark.parametrize("chunk", [1, 3, 8, 50])
+def test_chunked_hessian_is_exactly_jax_hessian(chunk):
+    """Batching tangents changes the memory, never the answer.
+
+    ``jax.hessian`` pushes every tangent through at once: on a real benchmark world
+    that is 699 tangents against a 4.7M-row objective and it never returned.  A
+    batch of 24 was measured at 157 GB resident; 8 costs 10 GB and 80 s.  Since
+    this is the only reason the correction is computable at all, the equality has
+    to be pinned rather than assumed.
+    """
+    from gn_next_gen.inference.composite import hessian_by_chunks
+
+    rng = np.random.default_rng(4)
+    matrix = rng.standard_normal((15, 15))
+    matrix = matrix @ matrix.T
+
+    def fun(x):
+        return -0.5 * jnp.dot(x, matrix @ x) + jnp.sum(jnp.cos(x))
+
+    x = rng.standard_normal(15)
+    exact = np.asarray(jax.hessian(fun)(jnp.asarray(x)))
+    got = hessian_by_chunks(fun, x, chunk=chunk)
+    assert np.abs(got - exact).max() == 0.0
+    assert got.shape == (15, 15)
+
+
+def test_chunked_hessian_is_symmetric_on_a_smooth_objective():
+    from gn_next_gen.inference.composite import hessian_by_chunks
+
+    rng = np.random.default_rng(9)
+    x = rng.standard_normal(9)
+
+    def fun(v):
+        return jnp.sum(jnp.sin(v) * jnp.cos(v[::-1])) - 0.5 * jnp.sum(v**2)
+
+    hessian = hessian_by_chunks(fun, x, chunk=2)
+    assert np.allclose(hessian, hessian.T, atol=1e-12)

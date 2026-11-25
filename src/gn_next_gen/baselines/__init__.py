@@ -30,6 +30,10 @@ from gn_next_gen.baselines.linear import (
     calibrate_svsc16,
     calibrate_vhs24,
 )
+from gn_next_gen.baselines.netcal import (
+    calibrate_netcal,
+    calibrate_netcal_marginal,
+)
 from gn_next_gen.baselines.nulls import (
     calibrate_naive_mean,
     calibrate_naive_median,
@@ -93,6 +97,9 @@ BASELINES: dict[str, Callable[..., CalibrationResult]] = {
     "UEA21": _uea21,
     "GRP": _grp,
     "Pathfinding": _pathfinding,
+    # Step 3: the concurrent fit, and its cross-check arm.
+    "NetCal": calibrate_netcal,
+    "NetCal-M": calibrate_netcal_marginal,
 }
 
 #: Floors, not methods.  Reported beside the baselines and never ranked with them.
@@ -114,6 +121,8 @@ __all__ = [
     "calibrate_acuity",
     "calibrate_naive_mean",
     "calibrate_naive_median",
+    "calibrate_netcal",
+    "calibrate_netcal_marginal",
     "calibrate_pathfinding",
     "calibrate_cea17",
     "calibrate_hosc98",

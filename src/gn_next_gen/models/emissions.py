@@ -498,6 +498,7 @@ def build_detection_grid(
     survey: str,
     *,
     catalogue: Catalogue | None = None,
+    law_survey: str | None = None,
     reference_threshold_msh: float | None = None,
     thresholds: np.ndarray | None = None,
     activities: np.ndarray | None = None,
@@ -543,7 +544,11 @@ def build_detection_grid(
     has nothing to say, something parametric has to speak, and this records which
     of the two is speaking in ``meta``.
     """
-    base = load_upstream_parameters(survey)
+    # ``survey`` names the run; ``law_survey`` names whose frozen law supplies the
+    # parametric *extrapolation* branch.  A benchmark world is called "benchmark"
+    # and has no frozen law of its own, but its truth was replayed from a donor
+    # survey, so that donor's law is the right thing to extrapolate with.
+    base = load_upstream_parameters(law_survey or survey)
     if reference_threshold_msh is None:
         reference_threshold_msh = float(base.threshold_msh)
     if source == "empirical" and catalogue is None:
@@ -592,7 +597,7 @@ def build_detection_grid(
         "grain_shift": float(
             grain_shift
             if grain_shift is not None
-            else GRAIN_SHIFT_MU.get(survey, GRAIN_SHIFT_DEFAULT)
+            else GRAIN_SHIFT_MU.get(law_survey or survey, GRAIN_SHIFT_DEFAULT)
         ),
         "n_threshold": len(thresholds),
         "n_activity": len(activities),
@@ -771,6 +776,59 @@ def log_emission_library(
         for j, split in enumerate(split_values):
             table[i, j] = emission_matrix(float(k), float(split), max_count=max_count)
     return np.log(np.maximum(table, floor)), k_values, split_values
+
+
+def count_pmf_from_counts(
+    counts: pd.DataFrame,
+    activity: pd.Series,
+    *,
+    n_bins: int = N_ACTIVITY_BINS,
+    max_count: int = MAX_COUNT,
+) -> tuple[np.ndarray, np.ndarray]:
+    """The anchor's own daily count distribution, binned by activity level.
+
+    The latent-count prior Kernel B and the occupancy term both read.  It is
+    measured from **the anchor's own record in the run under test** -- the frozen
+    survey for the real record, a synthetic world's own anchor for a benchmark
+    realization.  Taking it from the frozen reference in a synthetic world would
+    import the distribution of a different Sun, which is precisely the mistake
+    Step 2 measured in UEA21 and GRP: matching an observer against a library built
+    over another epoch, which is what makes their recovered acuity track era
+    activity at rho = -0.62 and -0.73.
+
+    **How much the shape can be worth, measured.**  Conditioned on activity the
+    reference's distribution is almost exactly Poisson -- variance-to-mean 0.88 to
+    1.17 across twelve bins -- and thinning a Poisson gives a Poisson, so the shape
+    carries almost no information about the thinning rate.  The term is kept and
+    the ``w``-ablation prices it.
+    """
+    day_activity = activity.reindex(counts["date_ord"].to_numpy()).to_numpy()
+    values = np.clip(counts["n_groups"].to_numpy(dtype=np.int64), 0, max_count)
+    usable = np.isfinite(day_activity)
+    values = values[usable]
+    day_activity = day_activity[usable]
+    if len(values) < MIN_GROUPS_PER_CELL:
+        pmf = np.full((1, max_count + 1), 1.0 / (max_count + 1))
+        return pmf, np.array([float(np.nanmedian(activity.to_numpy()))])
+
+    edges = np.unique(np.quantile(day_activity, np.linspace(0.0, 1.0, n_bins + 1)))
+    index = np.clip(np.searchsorted(edges, day_activity, side="right") - 1, 0, len(edges) - 2)
+    n_actual = max(len(edges) - 1, 1)
+    pmf = np.zeros((n_actual, max_count + 1))
+    centres = np.zeros(n_actual)
+    for b in range(n_actual):
+        selected = values[index == b]
+        if len(selected) == 0:
+            pmf[b] = 1.0 / (max_count + 1)
+            centres[b] = np.nan
+            continue
+        histogram = np.bincount(selected, minlength=max_count + 1).astype(float)
+        pmf[b] = histogram / histogram.sum()
+        centres[b] = float(np.median(day_activity[index == b]))
+    keep = np.isfinite(centres)
+    if not keep.any():
+        return np.full((1, max_count + 1), 1.0 / (max_count + 1)), np.array([np.nan])
+    return pmf[keep], centres[keep]
 
 
 def empirical_count_pmf(

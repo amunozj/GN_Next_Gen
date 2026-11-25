@@ -129,6 +129,64 @@ def fit_mode(
     )
 
 
+#: Hessian-vector products per batch.  **This is a memory knob, not a speed knob.**
+#: ``jax.hessian`` is ``jacfwd(jacrev(...))`` and pushes every tangent through at
+#: once: 699 tangents against a 4.7M-row objective never returned at all.  A batch
+#: of 24 was still wrong -- measured at 157 GB resident and thrashing -- because a
+#: forward pass over a beta-binomial carries a dozen temporaries of
+#: ``chunk x rows`` each.  Four is the default so a temporary is a few hundred
+#: megabytes rather than several gigabytes.  Measured on a benchmark world with
+#: 699 reduced parameters and 4.7M pair rows, which is where 8 comes from:
+#:
+#: =======  ================  ==============
+#: chunk    full Hessian      peak RSS
+#: =======  ================  ==============
+#: 2        196 s             6.8 GB
+#: 4        181 s             7.9 GB
+#: **8**    **80 s**          **10.0 GB**
+#: 24       never finished    157 GB
+#: =======  ================  ==============
+#:
+#: Memory, not cores, is therefore what caps ``--jobs`` on a grid.
+HESSIAN_CHUNK = 8
+
+
+def hessian_by_chunks(
+    fun: Callable,
+    x: np.ndarray,
+    *,
+    chunk: int = HESSIAN_CHUNK,
+    progress: bool = False,
+) -> np.ndarray:
+    """The Hessian of ``fun`` at ``x``, a batch of Hessian-vector products at a time.
+
+    Exact -- not an approximation, only a different evaluation order, and a test
+    pins it against ``jax.hessian`` at ``0.00e+00`` for every batch size.  What
+    changes is the memory: the footprint is bounded by ``chunk`` rather than by the
+    parameter count, which is the difference between minutes and not finishing.
+
+    Measured on a benchmark world with 699 reduced parameters and 4.7M pair rows:
+    one single-tangent product costs 0.60 s.
+    """
+    x = jnp.asarray(x)
+    n = int(x.shape[0])
+    gradient = jax.grad(fun)
+    chunk = max(1, min(int(chunk), n))
+
+    @jax.jit
+    def batch(tangents):
+        return jax.vmap(lambda v: jax.jvp(gradient, (x,), (v,))[1])(tangents)
+
+    columns = []
+    identity = jnp.eye(n)
+    for start in range(0, n, chunk):
+        stop = min(start + chunk, n)
+        columns.append(np.asarray(batch(identity[start:stop]), dtype=float))
+        if progress:
+            print(f"    hessian {stop}/{n}", flush=True)
+    return np.concatenate(columns, axis=0)
+
+
 @dataclass
 class Correction:
     """The Godambe sandwich and the diagnostics that say whether it was needed."""
@@ -198,7 +256,7 @@ def godambe_correction(
         return objective(full.at[indices].set(sub))
 
     sub_theta = jnp.asarray(theta[indices])
-    hessian = np.asarray(jax.hessian(reduced_objective)(sub_theta), dtype=float)
+    hessian = hessian_by_chunks(reduced_objective, sub_theta)
     curvature = -0.5 * (hessian + hessian.T)
     curvature = curvature + ridge * np.eye(len(indices)) * np.trace(curvature) / max(
         len(indices), 1
@@ -225,7 +283,7 @@ def godambe_correction(
         def reduced_prior(sub):
             return deterministic_objective(full.at[indices].set(sub))
 
-        prior_hessian = np.asarray(jax.hessian(reduced_prior)(sub_theta), dtype=float)
+        prior_hessian = hessian_by_chunks(reduced_prior, sub_theta)
         prior_curvature = -0.5 * (prior_hessian + prior_hessian.T)
 
     meat = score_variance + prior_curvature

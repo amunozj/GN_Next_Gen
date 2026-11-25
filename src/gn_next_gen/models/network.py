@@ -81,6 +81,7 @@ and a random segmentation already explains about half the break variance.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 import jax
@@ -269,7 +270,6 @@ def build_inputs(
     slot_of = {
         (int(s), int(y)): i for i, (s, y) in enumerate(zip(slot_station, slot_year, strict=True))
     }
-    station_row = {int(s): i for i, s in enumerate(stations)}
     starts = np.searchsorted(slot_station, stations, side="left")
     counts_per = np.searchsorted(slot_station, stations, side="right") - starts
 
@@ -304,26 +304,44 @@ def build_inputs(
     station_a, station_b = pairs.station_pairs()
     pair_station_a = station_a[pairs.edge]
     pair_station_b = station_b[pairs.edge]
-    pair_slot_a = np.array(
-        [slot_of[(int(s), int(y))] for s, y in zip(pair_station_a, pairs.year, strict=True)],
-        dtype=np.int64,
-    )
+
+    # Pack (station, year) into one sorted key and look both sides up with
+    # searchsorted.  A dict lookup per row is 4.7M Python iterations on the real
+    # network and was the single slowest thing in the assembly, at 15 s.
+    year_base = int(slot_year.min())
+    year_span = int(slot_year.max()) - year_base + 1
+
+    def pack(station, year):
+        return station.astype(np.int64) * year_span + (year.astype(np.int64) - year_base)
+
+    slot_keys = pack(slot_station, slot_year)
+    order = np.argsort(slot_keys, kind="stable")
+    sorted_keys = slot_keys[order]
+
+    def lookup(station, year):
+        wanted = pack(np.asarray(station), np.asarray(year))
+        position = np.searchsorted(sorted_keys, wanted)
+        clamped = np.clip(position, 0, len(sorted_keys) - 1)
+        found = sorted_keys[clamped] == wanted
+        return order[clamped], found
+
+    pair_slot_a, found_a = lookup(pair_station_a, pairs.year)
+    if not found_a.all():
+        raise AssertionError("observer a's slot must exist by construction")
+
     # Observer b's day can fall in the neighbouring year when the lag crosses a
-    # year boundary; the slot is looked up with a fallback to b's own nearest year.
-    pair_slot_b = np.empty(len(pair_slot_a), dtype=np.int64)
-    station_years: dict[int, np.ndarray] = {}
-    for station in stations:
-        station_years[int(station)] = slot_year[starts[station_row[int(station)]] :][
-            : counts_per[station_row[int(station)]]
-        ]
-    for i, (station, year) in enumerate(zip(pair_station_b, pairs.year, strict=True)):
-        key = (int(station), int(year))
-        if key in slot_of:
-            pair_slot_b[i] = slot_of[key]
-        else:
-            available = station_years[int(station)]
-            nearest = available[np.argmin(np.abs(available - int(year)))]
-            pair_slot_b[i] = slot_of[(int(station), int(nearest))]
+    # year boundary.  Those rows fall back to b's own nearest year.
+    pair_slot_b, found_b = lookup(pair_station_b, pairs.year)
+    if not found_b.all():
+        missing = np.flatnonzero(~found_b)
+        station_first = {
+            int(s): (int(starts[i]), int(counts_per[i])) for i, s in enumerate(stations)
+        }
+        for i in missing:
+            start, length = station_first[int(pair_station_b[i])]
+            available = slot_year[start : start + length]
+            nearest = int(np.argmin(np.abs(available - int(pairs.year[i]))))
+            pair_slot_b[i] = start + nearest
 
     acf = reference_autocorrelation(
         _anchor_daily(frame, int(anchor_station)), int(pairs.meta["tolerance"])
@@ -736,6 +754,7 @@ def make_static(
     lambda_penalty: float = LAMBDA_PENALTY,
     drift_log_sigma_mean: float = DRIFT_LOG_SIGMA_MEAN,
     max_count: int = MAX_COUNT,
+    count_pmf: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> dict:
     """Freeze every array the objective reads into JAX form, once."""
     from gn_next_gen.models.emissions import empirical_count_pmf, k_grid, log_emission_library
@@ -776,11 +795,14 @@ def make_static(
     )
     slot_n_zero[zeros.index.to_numpy()] = zeros.to_numpy()
 
-    pmf, pmf_activity = empirical_count_pmf(
-        inputs.detection.survey,
-        reference_threshold_msh=inputs.detection.reference_threshold_msh,
-        max_count=max_count,
-    )
+    if count_pmf is not None:
+        pmf, pmf_activity = count_pmf
+    else:
+        pmf, pmf_activity = empirical_count_pmf(
+            inputs.detection.survey,
+            reference_threshold_msh=inputs.detection.reference_threshold_msh,
+            max_count=max_count,
+        )
     bin_of = np.argmin(np.abs(slot_activity[:, None] - pmf_activity[None, :]), axis=1)
     slot_count_pmf = pmf[bin_of]
 
@@ -965,6 +987,7 @@ def observer_table(
     static,
     *,
     covariance: np.ndarray | None = None,
+    cov_indices: np.ndarray | None = None,
     diagnostics: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per observer: the calibration factor, its acuity, its diagnostics.
@@ -1004,7 +1027,7 @@ def observer_table(
     )
     per_station = per_station.reset_index()
 
-    sd = _factor_sd(theta, inputs, layout, static, covariance)
+    sd = _factor_sd(theta, inputs, layout, static, covariance, indices=cov_indices)
     per_station["factor_sd"] = per_station["station"].map(sd).to_numpy()
     per_station["reached"] = True
     per_station["n_hops"] = 0
@@ -1016,23 +1039,37 @@ def observer_table(
     return per_station
 
 
-def _factor_sd(theta, inputs, layout, static, covariance) -> pd.Series:
+def _factor_sd(theta, inputs, layout, static, covariance, indices=None) -> pd.Series:
     """Per-observer sd of the calibration factor, by the delta method.
 
     ``sd(1/r) = sd(log r) / r``.  With no covariance supplied the column is NaN,
     which the scorer reads as "this method reports no uncertainty" -- a finding in
     its own right rather than a zero.
+
+    The Jacobian is taken **only over the parameters that carry covariance**.
+    Differentiating over the whole vector means one forward pass per parameter --
+    5,688 of them on a real benchmark world against 699 that are not identically
+    zero -- and it was the dominant cost of a fit before this.
     """
     stations = np.unique(inputs.slot_station)
     if covariance is None:
         return pd.Series(np.nan, index=stations)
 
-    def log_r_of(vector):
-        out, _ = log_rate_ratio(vector, inputs, layout, static)
+    if indices is None:
+        indices = np.flatnonzero(np.diag(covariance) > 0)
+    indices = np.asarray(indices, dtype=np.int64)
+    if len(indices) == 0:
+        return pd.Series(np.nan, index=stations)
+
+    full = jnp.asarray(theta)
+
+    def log_r_of(sub):
+        out, _ = log_rate_ratio(full.at[indices].set(sub), inputs, layout, static)
         return out
 
-    jacobian = np.asarray(jax.jacfwd(log_r_of)(jnp.asarray(theta)))
-    variance = np.einsum("ij,jk,ik->i", jacobian, covariance, jacobian)
+    jacobian = np.asarray(jax.jacfwd(log_r_of)(jnp.asarray(theta[indices])))
+    block = covariance[np.ix_(indices, indices)]
+    variance = np.einsum("ij,jk,ik->i", jacobian, block, jacobian)
     frame = pd.DataFrame(
         {
             "station": inputs.slot_station,
@@ -1084,18 +1121,19 @@ def combine_series(
     if draws is None:
         factor_sd = pd.Series(np.nan, index=mean.index)
     else:
-        per_draw = np.empty((len(draws), len(mean)))
+        # One ``bincount`` per draw instead of one pandas ``groupby`` per draw.  On
+        # a real world that is ~10 ms against ~500 ms, i.e. seconds rather than
+        # minutes for a 400-draw ensemble.
+        days = mean.index.to_numpy()
+        codes = np.searchsorted(days, frame["date_ord"].to_numpy())
+        per_day = np.bincount(codes, minlength=len(days)).astype(float)
+        counts = observations["groups"].to_numpy(dtype=float)
+        per_draw = np.empty((len(draws), len(days)))
         for d, vector in enumerate(draws):
             log_r_d, _ = log_rate_ratio(jnp.asarray(vector), inputs, layout, static)
-            values = observations["groups"].to_numpy(dtype=float) / np.exp(
-                np.asarray(log_r_d)[inputs.obs_slot]
-            )
-            per_draw[d] = (
-                pd.DataFrame({"date_ord": frame["date_ord"], "value": values})
-                .groupby("date_ord")["value"]
-                .mean()
-                .reindex(mean.index)
-                .to_numpy()
+            values = counts / np.exp(np.asarray(log_r_d)[inputs.obs_slot])
+            per_draw[d] = np.bincount(codes, weights=values, minlength=len(days)) / np.maximum(
+                per_day, 1.0
             )
         factor_sd = pd.Series(per_draw.std(axis=0, ddof=1), index=mean.index)
 
@@ -1177,6 +1215,7 @@ def calibrate_network(
     kernel: str = "hybrid",
     metadata: pd.DataFrame | None = None,
     graph: OverlapGraph | None = None,
+    catalogue: object | None = None,
     fingerprint_weight: float = 1.0,
     lambda_penalty: float = LAMBDA_PENALTY,
     drift_log_sigma_mean: float = DRIFT_LOG_SIGMA_MEAN,
@@ -1219,6 +1258,12 @@ def calibrate_network(
         }
     )
 
+    count_pmf = None
+    if catalogue is not None:
+        from gn_next_gen.models.emissions import count_pmf_from_counts
+
+        count_pmf = count_pmf_from_counts(reference_counts, catalogue.activity)
+
     inputs = build_inputs(
         observations,
         detection=detection,
@@ -1236,6 +1281,8 @@ def calibrate_network(
 
     passes: list[dict] = []
     static = None
+    stage_seconds: dict[str, float] = {}
+    stage_start = time.time()
     for outer in range(max(int(n_outer), 1)):
         static = make_static(
             inputs,
@@ -1243,6 +1290,7 @@ def calibrate_network(
             fingerprint_weight=fingerprint_weight,
             lambda_penalty=lambda_penalty,
             drift_log_sigma_mean=drift_log_sigma_mean,
+            count_pmf=count_pmf,
         )
 
         def objective(vector, static=static, inputs=inputs, layout=layout):
@@ -1275,12 +1323,16 @@ def calibrate_network(
         if shift < 0.01:
             break
 
+    stage_seconds["mode"] = time.time() - stage_start
+    stage_start = time.time()
+
     static = make_static(
         inputs,
         kernel=kernel,
         fingerprint_weight=fingerprint_weight,
         lambda_penalty=lambda_penalty,
         drift_log_sigma_mean=drift_log_sigma_mean,
+        count_pmf=count_pmf,
     )
 
     def final_objective(vector, static=static):
@@ -1337,22 +1389,29 @@ def calibrate_network(
         covariance = expand_covariance(correction, layout.size)
         draws = draw_parameters(theta, covariance, n_draws=n_draws, seed=seed + 1)
 
+    stage_seconds["correction"] = time.time() - stage_start
+    stage_start = time.time()
+
     anchors = {"anchor": [anchor_station]}
     diagnostics = graph_diagnostics.observer_diagnostics(inputs.graph, anchors)
     diagnostics = diagnostics.rename(columns={"anchored_anchor": "anchored_to_anchor"})
 
     series = combine_series(theta, inputs, layout, static, draws=draws)
+    stage_seconds["series"] = time.time() - stage_start
+    stage_start = time.time()
     observers = observer_table(
         theta,
         inputs,
         layout,
         static,
         covariance=covariance,
+        cov_indices=correction.indices if correction is not None else None,
         diagnostics=diagnostics[
             ["station", "component", "degree", "on_bridge", "anchored", "fingerprint_only"]
         ],
     )
 
+    stage_seconds["observers"] = time.time() - stage_start
     empirical_share = float(
         np.mean(
             (inputs.activity >= detection.meta.get("coverage_lo", -np.inf))
@@ -1370,6 +1429,8 @@ def calibrate_network(
         "n_bootstrap": n_bootstrap if correct else 0,
         "activity_years_measured": empirical_share,
         "detection_source": detection.meta.get("source"),
+        "stage_seconds": stage_seconds,
+        "total_seconds": float(sum(stage_seconds.values())),
         "activity_map": activity_map.as_row(),
         **inputs.meta,
     }

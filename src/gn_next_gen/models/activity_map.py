@@ -229,3 +229,66 @@ def _fit_frame(survey: str, threshold_msh: float, sigma_days: float) -> pd.DataF
             "threshold_msh": [threshold_msh],
         }
     )
+
+
+def fit_activity_map_from_series(
+    counts: pd.DataFrame,
+    activity: pd.Series,
+    *,
+    survey: str = "supplied",
+    threshold_msh: float = float("nan"),
+    sigma_days: float = ACTIVITY_SIGMA_DAYS,
+) -> ActivityMap:
+    """Fit the map from supplied daily counts and an activity series.
+
+    The path a benchmark world takes: its anchor's own counts and the activity
+    level implied by its own ``reference_areas``.  A synthetic world has its own
+    Sun, so the map has to be measured on that Sun rather than borrowed from the
+    frozen reference -- borrowing would be reading the answer off the wrong record.
+
+    Falls back to the frozen RGO coefficients if the supplied overlap is too short
+    to fit, and says so in ``meta``, because a silent fallback in a calibration
+    input is the kind of thing that makes a result impossible to trace.
+    """
+    smoothed = smooth_counts(
+        counts["date_ord"].to_numpy(),
+        counts["n_groups"].to_numpy(),
+        sigma_days=sigma_days,
+    )
+    joined = pd.DataFrame({"gn": smoothed}).join(activity.rename("al"), how="inner")
+    usable = joined[
+        np.isfinite(joined["gn"])
+        & np.isfinite(joined["al"])
+        & (joined["gn"] > MIN_SMOOTHED_COUNT)
+        & (joined["al"] > 0)
+    ]
+    if len(usable) < 200:
+        return ActivityMap(
+            survey=survey,
+            amplitude=0.2155,
+            exponent=1.1414,
+            r_log=float("nan"),
+            residual_sd=float("nan"),
+            gn_lo=0.0,
+            gn_hi=np.inf,
+            n_days=int(len(usable)),
+            threshold_msh=threshold_msh,
+            meta={"fallback": "frozen RGO coefficients: supplied overlap too short"},
+        )
+
+    log_gn = np.log(usable["gn"].to_numpy())
+    log_al = np.log(usable["al"].to_numpy())
+    exponent, log_amplitude = np.polyfit(log_gn, log_al, 1)
+    residual = log_al - (log_amplitude + exponent * log_gn)
+    return ActivityMap(
+        survey=survey,
+        amplitude=float(np.exp(log_amplitude)),
+        exponent=float(exponent),
+        r_log=float(np.corrcoef(log_gn, log_al)[0, 1]),
+        residual_sd=float(np.std(residual)),
+        gn_lo=float(usable["gn"].min()),
+        gn_hi=float(usable["gn"].max()),
+        n_days=int(len(usable)),
+        threshold_msh=threshold_msh,
+        meta={"fallback": None},
+    )
