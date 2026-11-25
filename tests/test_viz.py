@@ -278,10 +278,29 @@ def test_a_method_keeps_its_colour_when_the_others_are_absent():
     subset = benchmark._method_colors(["UEA21", "GRP"], "light")
     assert subset["UEA21"] == full["UEA21"]
     assert subset["GRP"] == full["GRP"]
-    # The floors share one recessive grey by design, so what this pins is that the
-    # *methods* never collide.
-    coloured = [m for m in benchmark.METHOD_ORDER if not benchmark.is_floor(m)]
+    # The floors share one recessive grey by design, and a *variant* shares its
+    # parent's hue, so what this pins is that the independent *methods* never
+    # collide.
+    coloured = [
+        m
+        for m in benchmark.METHOD_ORDER
+        if not benchmark.is_floor(m) and not benchmark.is_variant(m)
+    ]
     assert len({full[m] for m in coloured}) == len(coloured)
+
+    # A variant takes its parent's colour exactly, and is told apart by shape and
+    # linestyle instead.
+    for variant, parent in benchmark.VARIANT_OF.items():
+        if variant in benchmark.METHOD_ORDER:
+            assert full[variant] == full[parent]
+            assert benchmark._linestyle(variant) != benchmark._linestyle(parent)
+
+    # The palette is eight slots and must never be cycled (CLAUDE.md). This is the
+    # guard that would have caught adding a ninth coloured method: NetCal-M was
+    # first added as one, and wrapped onto HoSc98's blue.
+    from gn_next_gen.viz.style import palette as _palette
+
+    assert len(coloured) <= len(_palette("light")["categorical"])
 
 
 # --- f41, f42: the error through time -------------------------------------
@@ -502,3 +521,107 @@ def test_reports_do_not_use_a_picture_embed():
             assert 'srcset="' not in stripped, (
                 f"{path.name}:{number} sets srcset, which GitHub leaves unresolved"
             )
+
+
+# --- Step 3's comparison figures -------------------------------------------
+
+
+def _forged_scores(n_methods_from: str = "HoSc98") -> pd.DataFrame:
+    """Real score columns with NetCal rows forged from an existing method.
+
+    The point is the *columns*: these figures run unattended at the end of a
+    multi-hour grid, so the thing worth pinning is that they accept the table the
+    scorer actually writes rather than a hand-made one that happens to fit.
+    """
+    import pandas as pd
+
+    from gn_next_gen.paths import OUTPUTS
+
+    path = OUTPUTS / "step2" / "scores" / "scores.csv"
+    if not path.is_file():
+        pytest.skip("no scored grid in this checkout")
+    scores = pd.read_csv(path)
+    if n_methods_from not in set(scores["method"]):
+        pytest.skip(f"{n_methods_from} absent from the score table")
+    forged = []
+    for name in ("NetCal", "NetCal-M"):
+        block = scores[scores["method"] == n_methods_from].copy()
+        block["method"] = name
+        forged.append(block)
+    return pd.concat([scores, *forged], ignore_index=True)
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_step3_comparison_figures_accept_the_real_score_columns(mode):
+    """f31-f34 draw Step 3's methods beside Step 2's, from the scorer's own table."""
+    import pandas as pd
+
+    from gn_next_gen.paths import OUTPUTS
+    from gn_next_gen.viz import benchmark as bviz
+    from gn_next_gen.viz import network as nviz
+
+    scores = _forged_scores()
+    assert scores["method"].nunique() >= 13
+
+    bviz.scores_figure(scores, mode)  # f32
+    era_path = OUTPUTS / "step2" / "scores" / "era_scores.csv"
+    era = pd.read_csv(era_path) if era_path.is_file() else None
+    nviz.reach_and_maunder_figure(scores, era, mode)  # f34
+    plt.close("all")
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_kernel_disagreement_figure_builds_and_reports_the_median(mode):
+    import pandas as pd
+
+    from gn_next_gen.viz import network as nviz
+
+    left = pd.DataFrame(
+        {"station": [1, 2, 3], "factor": [1.1, 0.9, 1.3], "first_year": [1800, 1900, 1950]}
+    )
+    right = pd.DataFrame(
+        {"station": [1, 2, 3], "factor": [1.05, 0.95, 1.9], "first_year": [1800, 1900, 1950]}
+    )
+    nviz.kernel_disagreement_figure(left, right, mode)
+    # An empty overlap is a legitimate state early in a grid, not a crash.
+    nviz.kernel_disagreement_figure(left.iloc[:0], right.iloc[:0], mode)
+    plt.close("all")
+
+
+def test_every_promised_step3_figure_has_a_builder():
+    """The gap this test exists because of.
+
+    The plan promised f29-f40 and the first implementation shipped seven of the
+    twelve -- missing exactly the five that compare Step 3 against Step 2's
+    methods, so the figure script printed "skipped" for them with no code behind
+    it.  This pins the mapping from every promised code to something callable.
+    """
+    from gn_next_gen.viz import benchmark as bviz
+    from gn_next_gen.viz import network as nviz
+
+    builders = {
+        "f29": nviz.resistance_figure,
+        "f30": nviz.loop_closure_figure,
+        "f31": bviz.acuity_recovery_figure,
+        "f32": bviz.scores_figure,
+        "f33": bviz.coverage_figure,
+        "f34": nviz.reach_and_maunder_figure,
+        "f35": nviz.series_figure,
+        "f36": nviz.series_figure,
+        "f37": nviz.parameter_figure,
+        "f38": nviz.kernel_disagreement_figure,
+        "f39": nviz.reach_figure,
+        "f40": nviz.runtime_figure,
+    }
+    for code in (f"f{n}" for n in range(29, 41)):
+        assert code in builders, f"{code} has no figure builder"
+        assert callable(builders[code])
+
+
+def test_the_figure_script_can_emit_every_promised_code():
+    """And that the script knows how to call them, not just that they exist."""
+    from gn_next_gen.paths import SCRIPTS
+
+    source = (SCRIPTS / "make_step3_figures.py").read_text()
+    for code in (f"f{n}" for n in range(29, 41)):
+        assert code in source, f"make_step3_figures.py never mentions {code}"

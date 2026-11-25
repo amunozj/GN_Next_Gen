@@ -140,16 +140,87 @@ def main(argv: list[str] | None = None) -> int:
     else:
         _skip("f37", "no primary run with slots.parquet")
 
-    # --- f31-f34, f35, f38: the benchmark grid and the sensitivities ---------
+    # --- f31-f34, f38: the comparison with Step 2's eleven -------------------
+    #
+    # f31, f32 and f33 reuse Step 2's own builders: they are method-generic and
+    # NetCal is registered in METHOD_ORDER, so they draw it with no new plotting
+    # code.  They are written under Step 3's codes into figures/step-3/, so Step
+    # 2's committed figures are never touched.
+    from gn_next_gen.viz import benchmark as bviz
+
     if not (SCORES / "scores.csv").is_file():
-        _skip("f31-f34", "no outputs/step2/scores/scores.csv")
+        _skip("f31-f34", "no outputs/step2/scores/scores.csv -- run score_benchmark.py")
     else:
         scores = pd.read_csv(SCORES / "scores.csv")
-        if not scores["method"].isin(["NetCal", "NetCal-M"]).any():
+        step3 = scores[scores["method"].isin(["NetCal", "NetCal-M"])]
+        if step3.empty:
             _skip(
                 "f31-f34",
                 "the grid has no NetCal cells yet (run_baselines.py --methods NetCal NetCal-M)",
             )
+        else:
+            print(
+                f"  scoring {scores['method'].nunique()} methods ({len(step3)} NetCal cells)",
+                flush=True,
+            )
+            save_both_modes(
+                lambda mode: bviz.scores_figure(scores, mode), out, "f32_baseline_scores"
+            )
+            made.append("f32")
+
+            era_path = SCORES / "era_scores.csv"
+            era = pd.read_csv(era_path) if era_path.is_file() else None
+            save_both_modes(
+                lambda mode: viz.reach_and_maunder_figure(scores, era, mode),
+                out,
+                "f34_reach_and_maunder",
+            )
+            made.append("f34")
+
+            coverage_path = SCORES / "coverage.csv"
+            if coverage_path.is_file():
+                coverage = pd.read_csv(coverage_path)
+                save_both_modes(
+                    lambda mode: bviz.coverage_figure(coverage, mode),
+                    out,
+                    "f33_interval_coverage",
+                )
+                made.append("f33")
+            else:
+                _skip("f33", "no coverage.csv")
+
+            cases_path = SCORES / "case_study_observers.csv"
+            if cases_path.is_file():
+                cases = pd.read_csv(cases_path)
+                save_both_modes(
+                    lambda mode: bviz.acuity_recovery_figure(cases, mode),
+                    out,
+                    "f31_acuity_recovery",
+                )
+                made.append("f31")
+            else:
+                _skip("f31", "no case_study_observers.csv")
+
+    # f38: the two kernels, on the first world that has both arms.
+    pair = None
+    baselines = OUTPUTS / "step2" / "baselines"
+    for directory in sorted(baselines.glob("*/seed-*")):
+        left_path = directory / "NetCal_observers.parquet"
+        right_path = directory / "NetCal-M_observers.parquet"
+        if left_path.is_file() and right_path.is_file():
+            pair = (pd.read_parquet(left_path), pd.read_parquet(right_path), directory.name)
+            break
+    if pair is not None:
+        left, right, label = pair
+        print(f"  f38 from {label}", flush=True)
+        save_both_modes(
+            lambda mode: viz.kernel_disagreement_figure(left, right, mode),
+            out,
+            "f38_kernel_disagreement",
+        )
+        made.append("f38")
+    else:
+        _skip("f38", "no world has both NetCal and NetCal-M observer tables yet")
 
     drift_runs = {
         info["meta"]["label"]: pd.read_parquet(info["dir"] / "series.parquet")

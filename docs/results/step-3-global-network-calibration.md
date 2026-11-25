@@ -32,6 +32,17 @@
 > the benchmark scores against the eleven Step 2 methods, the interval coverage,
 > the reach and Maunder level of the fitted series, and the two released series.
 > Acceptance criteria A14–A19 and the four spec criteria are **open**.
+>
+> **The comparison figures are wired and will appear here without further
+> work.** `NetCal` and `NetCal-M` are registered in `METHOD_ORDER` and
+> `METHOD_MARKERS`, so Step 2's own method-generic builders draw them: f31
+> (acuity recovery), f32 (point scores), f33 (coverage) and f34 (reach and
+> Maunder level) come out of the same `scores.csv` the eleven are scored from,
+> written under Step 3's codes into `figures/step-3/` so Step 2's committed
+> figures are never overwritten. An earlier version of this step shipped seven of
+> the twelve promised builders and printed "skipped" for the five that *are* the
+> comparison; `tests/test_viz.py` now pins every code f29–f40 to a callable
+> builder and to a mention in the figure script.
 
 ## Summary
 
@@ -417,6 +428,18 @@ cd /d0/amunozj/git_repos/GN_Next_Gen
 `scripts/run_network_calibration.py --list` prints the 14 runs; `--quick` is a
 smoke test and is not a result.
 
+**Two things this grid does not do**, both one command each if wanted:
+
+- **No structural ensemble for the new methods.** Step 2's f22 measures the spread
+  a method's own free graph choices produce, and `NetCal` does use the graph, so
+  it would be informative. Add with
+  `run_baselines.py --methods NetCal NetCal-M --structural`.
+- **Coverage is scored for the corrected intervals only.** The plan's criterion
+  asks for coverage under `H⁻¹` *and* under `V`; the measured inflation (3.53,
+  §7) is the size of the difference, but a separately scored uncorrected arm
+  would need a thirteenth registered method and another 51 cells. The decision is
+  the PI's, and the uncorrected coverage is not claimed anywhere until it is run.
+
 ## 10. What Step 4 inherits
 
 Even unfinished, this step hands Step 4 things it would otherwise have to
@@ -444,7 +467,8 @@ Stated plainly, because a half-run step that reads as finished is worse than one
 that says where it stopped.
 
 1. **No benchmark score exists yet.** Criteria A14–A19 and all four spec criteria
-   are open. Nothing in this document compares `NetCal` to any published method,
+   are open. The figures that will show them are wired and tested but have no data
+   behind them until the grid finishes. Nothing in this document compares `NetCal` to any published method,
    and §5's recovery numbers are from a *matched* simulation, which by
    construction cannot be a benchmark.
 2. **No series has been produced.** The two released anchorings, the

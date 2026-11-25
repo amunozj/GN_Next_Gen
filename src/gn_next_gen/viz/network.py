@@ -435,3 +435,194 @@ def series_figure(
             mode,
         )
     return fig
+
+
+# ---------------------------------------------------------------------------
+# The comparison against Step 2's methods
+#
+# Three of these reuse Step 2's own builders rather than re-implementing them.
+# ``scores_figure``, ``coverage_figure`` and ``acuity_recovery_figure`` are
+# method-generic: they read the score tables and draw whatever methods are in
+# them, with colour and marker from ``METHOD_ORDER``/``METHOD_MARKERS``.  Now that
+# ``NetCal`` and ``NetCal-M`` are registered there, those figures include them
+# with no new plotting code -- and a second implementation would be a second thing
+# to keep honest.  They are written under Step 3's own figure codes into
+# ``figures/step-3/``, so Step 2's committed figures are never overwritten.
+# ---------------------------------------------------------------------------
+
+
+def reach_and_maunder_figure(
+    scores: pd.DataFrame,
+    era_scores: pd.DataFrame | None = None,
+    mode: str = "light",
+) -> plt.Figure:
+    """f34 — how far back each method reaches, and what it says about the Maunder.
+
+    Step 2 reported both as tables.  As a figure the pairing is the point: the
+    methods that cannot reach the era and the methods that reach it and are wrong
+    by an order of magnitude are two different failures, and a reader should see
+    which one each method commits.
+    """
+    from gn_next_gen.viz.benchmark import (
+        _method_colors,
+        _method_markers,
+        _order,
+        is_floor,
+    )
+
+    with figure_style(mode) as theme:
+        methods = _order(scores["method"].unique())
+        colors = _method_colors(methods, mode)
+        markers = _method_markers(methods)
+        fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.0))
+
+        ax = axes[0]
+        if era_scores is not None and "era" in era_scores.columns:
+            reach = (
+                era_scores[era_scores["reached"].astype(bool)]
+                .groupby("method")["era"]
+                .apply(lambda block: sorted(block.astype(str))[0])
+            )
+            labels = [m for m in methods if m in reach.index]
+            ax.barh(
+                labels,
+                [1.0] * len(labels),
+                color=[colors[m] for m in labels],
+                alpha=0.85,
+            )
+            for index, method in enumerate(labels):
+                ax.text(0.02, index, str(reach[method]), va="center", fontsize=7.5)
+            ax.set_xticks([])
+            ax.set_xlabel("earliest era reached")
+        else:
+            earliest = scores.groupby("method")["trend_error_1610"].apply(
+                lambda block: float(np.isfinite(block).mean())
+            )
+            labels = [m for m in methods if m in earliest.index]
+            ax.barh(
+                labels,
+                [earliest[m] for m in labels],
+                color=[colors[m] for m in labels],
+                alpha=0.85,
+            )
+            ax.set_xlabel("fraction of worlds with an estimate back to 1610")
+        ax.set_title("reach", fontsize=9)
+
+        ax = axes[1]
+        maunder = scores[np.isfinite(scores["maunder_truth"]) & (scores["maunder_truth"] > 0)]
+        if maunder.empty:
+            ax.text(
+                0.5,
+                0.5,
+                "no world with a Maunder window scored",
+                ha="center",
+                va="center",
+                fontsize=8,
+                color=theme["text_secondary"],
+            )
+            ax.set_axis_off()
+        else:
+            ratio = (maunder["maunder_estimate"] / maunder["maunder_truth"]).rename("ratio")
+            frame = maunder.assign(ratio=ratio)
+            for method in methods:
+                block = frame[frame["method"] == method]["ratio"].dropna()
+                if block.empty:
+                    continue
+                ax.scatter(
+                    [np.median(block)],
+                    [method],
+                    marker=markers[method],
+                    s=60,
+                    color=colors[method],
+                    alpha=0.5 if is_floor(method) else 0.95,
+                    zorder=3,
+                )
+                ax.plot(
+                    [block.min(), block.max()],
+                    [method, method],
+                    color=colors[method],
+                    lw=1.2,
+                    alpha=0.6,
+                )
+            ax.axvline(1.0, color=theme["text_secondary"], ls="--", lw=1.0)
+            ax.set_xscale("log")
+            ax.set_xlabel("estimated / true Maunder level (median, with range)")
+        ax.set_title("Maunder level", fontsize=9)
+
+        caption(
+            fig,
+            "Not reaching the era and reaching it wrongly are different failures; "
+            "the dashed line is the truth, not a target.",
+            mode,
+        )
+    return fig
+
+
+def kernel_disagreement_figure(
+    netcal: pd.DataFrame,
+    marginal: pd.DataFrame,
+    mode: str = "light",
+) -> plt.Figure:
+    """f38 — where the two pairwise kernels disagree, which is the misfit signal.
+
+    Kernel A eliminates the latent level by conditioning on each pair's total;
+    Kernel B integrates it against a prior.  Where both are valid they should
+    agree, so a disagreement is informative about misspecification rather than
+    about arithmetic -- which is why the equating section asks for both to be kept
+    and for "disagreement between the two" to be treated as the signal.
+    """
+    with figure_style(mode) as theme:
+        merged = netcal.merge(marginal, on="station", suffixes=("_a", "_b"))
+        merged = merged[np.isfinite(merged["factor_a"]) & np.isfinite(merged["factor_b"])]
+        merged = merged[(merged["factor_a"] > 0) & (merged["factor_b"] > 0)]
+        difference = np.log(merged["factor_a"] / merged["factor_b"])
+
+        fig, axes = plt.subplots(1, 2, figsize=(10.0, 3.8))
+
+        ax = axes[0]
+        if merged.empty:
+            ax.text(0.5, 0.5, "no station in both arms", ha="center", va="center", fontsize=8)
+            ax.set_axis_off()
+        else:
+            ax.hist(difference, bins=40, color=theme["categorical"][7])
+            ax.axvline(0.0, color=theme["text_secondary"], ls="--", lw=1.0)
+            ax.set_xlabel("log(factor, Kernel A / Kernel B)")
+            ax.set_ylabel("observers")
+            ax.set_title(
+                f"median |disagreement| {float(np.abs(difference).median()):.3f}", fontsize=9
+            )
+
+        ax = axes[1]
+        if merged.empty or "first_year" not in merged.columns:
+            ax.text(
+                0.5,
+                0.5,
+                "per-era disagreement needs the observer diagnostics",
+                ha="center",
+                va="center",
+                fontsize=8,
+                color=theme["text_secondary"],
+            )
+            ax.set_axis_off()
+        else:
+            ax.scatter(
+                merged["first_year"],
+                np.abs(difference),
+                s=14,
+                alpha=0.7,
+                color=theme["categorical"][7],
+            )
+            ax.axhline(0.3, color=STATUS["serious"], ls=":", lw=1.0)
+            ax.set_yscale("symlog", linthresh=0.01)
+            ax.set_xlabel("observer's first year")
+            ax.set_ylabel("|log factor disagreement|")
+            ax.set_title("and when", fontsize=9)
+
+        caption(
+            fig,
+            "Both kernels are valid at moderate counts, so a disagreement is "
+            "misspecification rather than arithmetic; the dotted line is the 0.3 "
+            "the plan declares a finding.",
+            mode,
+        )
+    return fig

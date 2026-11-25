@@ -1429,7 +1429,16 @@ def calibrate_network(
         covariance=covariance,
         cov_indices=correction.indices if correction is not None else None,
         diagnostics=diagnostics[
-            ["station", "component", "degree", "on_bridge", "anchored", "fingerprint_only"]
+            [
+                "station",
+                "component",
+                "degree",
+                "on_bridge",
+                "anchored",
+                "fingerprint_only",
+                "first_year",
+                "last_year",
+            ]
         ],
     )
 

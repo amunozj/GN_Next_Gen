@@ -37,6 +37,10 @@ METHOD_ORDER = [
     "UEA21",
     "GRP",
     "Pathfinding",
+    # Step 3's concurrent fit and its cross-check arm, kept together and ahead of
+    # the floors so every figure orders methods the same way.
+    "NetCal",
+    "NetCal-M",
     "naive-median",
     "naive-mean",
     "null-segmentation",
@@ -49,6 +53,19 @@ FLOOR_PREFIXES = ("null-", "naive-")
 
 def is_floor(method: str) -> bool:
     return method.startswith(FLOOR_PREFIXES)
+
+
+#: A *variant* is a second arm of the same estimator rather than an independent
+#: method, so it takes its parent's colour and is told apart by shape and
+#: linestyle.  ``NetCal-M`` swaps only the pairwise kernel, and reporting it as a
+#: ninth colour would both overstate it and overflow the palette: the house rule
+#: is eight categorical slots, never cycled, and the seven published methods plus
+#: NetCal already fill eight exactly.
+VARIANT_OF = {"NetCal-M": "NetCal"}
+
+
+def is_variant(method: str) -> bool:
+    return method in VARIANT_OF
 
 
 UNIX_EPOCH_ORDINAL = 719_163
@@ -70,18 +87,28 @@ def _method_colors(methods, mode: str) -> dict[str, str]:
     """
     theme = palette(mode)
     categorical = theme["categorical"]
-    extras = [m for m in _order(methods) if m not in METHOD_ORDER]
+    # Slots are allocated over the *coloured* methods only -- floors share one grey
+    # and variants share their parent's hue -- so the count that has to fit in the
+    # eight-slot palette is the count of independent methods, and adding a variant
+    # can never push anything onto a second lap of the palette.
+    coloured = [m for m in METHOD_ORDER if not is_floor(m) and not is_variant(m)]
+    extras = [
+        m
+        for m in _order(methods)
+        if m not in METHOD_ORDER and not is_floor(m) and not is_variant(m)
+    ]
+    slot_of = {method: index for index, method in enumerate(coloured)}
+    for offset, method in enumerate(extras):
+        slot_of[method] = len(coloured) + offset
+
     colors = {}
     for method in _order(methods):
         if is_floor(method):
             colors[method] = theme["text_secondary"]
             continue
-        slot = (
-            METHOD_ORDER.index(method)
-            if method in METHOD_ORDER
-            else len(METHOD_ORDER) + extras.index(method)
-        )
-        colors[method] = categorical[slot % 8]
+        parent = VARIANT_OF.get(method, method)
+        slot = slot_of.get(parent, slot_of.get(method, 0))
+        colors[method] = categorical[slot % len(categorical)]
     return colors
 
 
@@ -92,6 +119,8 @@ NULL_LINESTYLE = {
     "null-segmentation": (0, (5, 2)),
     "naive-mean": (0, (3, 1, 1, 1)),
     "naive-median": (0, (6, 1, 1, 1)),
+    # A variant shares its parent's hue, so it needs the second channel too.
+    "NetCal-M": (0, (4, 2)),
 }
 
 
@@ -114,6 +143,8 @@ METHOD_MARKERS = {
     "UEA21": "v",
     "GRP": "P",
     "Pathfinding": "*",
+    "NetCal": "X",
+    "NetCal-M": "d",
     "naive-median": "p",
     "naive-mean": "h",
     "null-segmentation": ">",
