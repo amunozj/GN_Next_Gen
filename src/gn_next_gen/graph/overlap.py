@@ -375,3 +375,358 @@ def temporal_cut_profile(graph: OverlapGraph, years: np.ndarray | None = None) -
             "n_after": len(mid) - n_before,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Matched day pairs and their lags (Step 3)
+#
+# ``overlap`` above counts ``|dilate(a) & days(b)|``, which is what the legacy
+# MATLAB needed: a scalar edge weight.  A likelihood needs more than a weight --
+# it needs the actual matched observations and the lag between them, because the
+# pairwise kernel is a function of ``(y_a, y_b, dt)`` and the ``dt`` is what the
+# lifetime-based decorrelation acts on.
+#
+# Two things change from the legacy count.  **The matching is one-to-one**: a
+# dilated day can touch up to ``2*tolerance + 1`` of the partner's days, so the
+# dilation count double-uses observations and would enter a likelihood as though
+# one observer-day were several.  Each day is used at most once per edge here,
+# paired with the nearest unused partner day.  And **the lag is kept**, rather
+# than collapsed into "simultaneous", which is the assumption
+# ``docs/03_legacy/reuse_map.md`` puts on the Drop list.
+# ---------------------------------------------------------------------------
+
+#: Largest reported count the pair table represents, matching Step 1's state
+#: space (``K = 41``, issue D17).  Counts above it are clipped and the number
+#: clipped is reported, never silently dropped.
+PAIR_MAX_COUNT = 41
+
+
+def matched_pairs(
+    days_a: np.ndarray,
+    days_b: np.ndarray,
+    tolerance: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """One-to-one nearest matching of two observing calendars within a lag.
+
+    Returns ``(index_a, index_b, lag)`` into the two *sorted* day arrays, with
+    ``lag = days_b[index_b] - days_a[index_a]``.  Exact-day matches are taken
+    first, then the remaining days are paired with the nearest unused partner
+    within ``tolerance``; ties go to the earlier partner day, which makes the
+    result independent of input order.
+
+    Parameters
+    ----------
+    days_a, days_b
+        Sorted, unique day ordinals.
+    tolerance
+        Largest ``|lag|`` allowed.  ``0`` gives exact-day matching only.
+
+    Notes
+    -----
+    Greedy nearest matching is not the global minimum-cost assignment, but at
+    these tolerances the two coincide except in rare interleavings, and the
+    greedy version is linear rather than cubic.  The difference is reported by
+    :func:`pair_table` as ``n_unmatched`` so it can never hide.
+    """
+    days_a = np.asarray(days_a, dtype=np.int64)
+    days_b = np.asarray(days_b, dtype=np.int64)
+    if len(days_a) == 0 or len(days_b) == 0:
+        empty = np.empty(0, dtype=np.int64)
+        return empty, empty, empty.astype(np.int16)
+
+    used_a = np.zeros(len(days_a), dtype=bool)
+    used_b = np.zeros(len(days_b), dtype=bool)
+    out_a: list[np.ndarray] = []
+    out_b: list[np.ndarray] = []
+    out_lag: list[np.ndarray] = []
+
+    # Pass 0 is the exact-day intersection, which is the overwhelming majority of
+    # matches for calendars that overlap at all, and is vectorized.
+    shared, index_a, index_b = np.intersect1d(
+        days_a, days_b, assume_unique=True, return_indices=True
+    )
+    if len(shared):
+        used_a[index_a] = True
+        used_b[index_b] = True
+        out_a.append(index_a)
+        out_b.append(index_b)
+        out_lag.append(np.zeros(len(shared), dtype=np.int16))
+
+    # Then |lag| = 1, 2, ... so the nearest partner always wins, and within a lag
+    # the earlier partner wins because the scan runs in day order.
+    for distance in range(1, int(tolerance) + 1):
+        for sign in (-1, 1):
+            free_a = np.flatnonzero(~used_a)
+            if len(free_a) == 0:
+                break
+            targets = days_a[free_a] + sign * distance
+            position = np.searchsorted(days_b, targets)
+            valid = (position < len(days_b)) & (
+                days_b[np.minimum(position, len(days_b) - 1)] == targets
+            )
+            free_a = free_a[valid]
+            position = position[valid]
+            open_b = ~used_b[position]
+            free_a = free_a[open_b]
+            position = position[open_b]
+            if len(free_a) == 0:
+                continue
+            # A target day can be claimed by only one source day; keep the first.
+            _unique, first = np.unique(position, return_index=True)
+            free_a = free_a[first]
+            position = position[first]
+            used_a[free_a] = True
+            used_b[position] = True
+            out_a.append(free_a)
+            out_b.append(position)
+            out_lag.append(np.full(len(free_a), sign * distance, dtype=np.int16))
+
+    if not out_a:
+        empty = np.empty(0, dtype=np.int64)
+        return empty, empty, empty.astype(np.int16)
+    index_a = np.concatenate(out_a)
+    index_b = np.concatenate(out_b)
+    lag = np.concatenate(out_lag)
+    order = np.argsort(index_a, kind="stable")
+    return index_a[order], index_b[order], lag[order]
+
+
+@dataclass
+class PairTable:
+    """Every matched observation pair on the graph, in one long table.
+
+    One row per matched ``(observer a day, observer b day)``.  The columns are
+    compact on purpose: the real 1610-2026 network produces millions of rows, and
+    this table is read once per likelihood evaluation.
+
+    Attributes
+    ----------
+    edge
+        Row index into :attr:`edges` -- which pair of stations this row belongs to.
+    year
+        Calendar year of observer a's day, the resolution the drift prior works at.
+    count_a, count_b
+        Reported counts, clipped at :data:`PAIR_MAX_COUNT`.
+    lag
+        ``day_b - day_a``, in days.
+    weight
+        How many identical rows this one stands for.  ``1`` everywhere unless the
+        table was collapsed (:func:`collapse_pairs`).
+    edges
+        ``station_a, station_b`` per edge index.
+    meta
+        Construction parameters and the counts of what was clipped or unmatched.
+    """
+
+    edge: np.ndarray
+    year: np.ndarray
+    count_a: np.ndarray
+    count_b: np.ndarray
+    lag: np.ndarray
+    weight: np.ndarray
+    edges: pd.DataFrame
+    meta: dict = field(default_factory=dict)
+
+    @property
+    def n_rows(self) -> int:
+        return len(self.edge)
+
+    @property
+    def n_pairs(self) -> int:
+        """Matched observation pairs represented, counting collapsed weight."""
+        return int(self.weight.sum())
+
+    @property
+    def n_edges(self) -> int:
+        return len(self.edges)
+
+    def nbytes(self) -> int:
+        return int(
+            sum(
+                a.nbytes
+                for a in (
+                    self.edge,
+                    self.year,
+                    self.count_a,
+                    self.count_b,
+                    self.lag,
+                    self.weight,
+                )
+            )
+        )
+
+    def station_pairs(self) -> tuple[np.ndarray, np.ndarray]:
+        """``(station_a, station_b)`` arrays aligned with :attr:`edges`."""
+        return (
+            self.edges["station_a"].to_numpy(dtype=np.int64),
+            self.edges["station_b"].to_numpy(dtype=np.int64),
+        )
+
+
+def pair_table(
+    observations: pd.DataFrame,
+    graph: OverlapGraph,
+    *,
+    tolerance: int | None = None,
+    collapse: bool = True,
+    max_count: int = PAIR_MAX_COUNT,
+) -> PairTable:
+    """Build the matched-pair table the pairwise kernels consume.
+
+    Parameters
+    ----------
+    observations
+        Long format: ``date_ord, station, groups``.
+    graph
+        The overlap graph; only its kept edges are walked.
+    tolerance
+        Lag allowed, defaulting to the graph's own ``day_tolerance`` so the table
+        and the graph always describe the same overlap.
+    collapse
+        Aggregate identical ``(edge, year, count_a, count_b, lag)`` rows into one
+        weighted row.  **Lossless**, because the pairwise kernel depends on a row
+        only through those five numbers: the detection ratio is evaluated at the
+        year's drift knot and the year's activity level, not per day.  This is what
+        makes the real network affordable -- see the compression in ``meta``.
+    max_count
+        Counts above this are clipped, and ``meta["n_clipped"]`` says how many.
+        D17: the two largest reported counts in v1.3 are implausible outliers above
+        a tail that stops at 53, so a state space must never be sized from them.
+    """
+    if tolerance is None:
+        tolerance = graph.day_tolerance
+    series = {}
+    for station, frame in observations.groupby("station", sort=True):
+        ordered = frame.sort_values("date_ord")
+        series[int(station)] = (
+            ordered["date_ord"].to_numpy(dtype=np.int64),
+            ordered["groups"].to_numpy(dtype=np.int64),
+        )
+
+    edges = graph.edge_frame()
+    keep_edges: list[tuple[int, int]] = []
+    chunks: list[tuple[np.ndarray, ...]] = []
+    n_clipped = 0
+    n_unmatched = 0
+    for station_a, station_b in zip(
+        edges["station_a"].astype(int), edges["station_b"].astype(int), strict=True
+    ):
+        if station_a not in series or station_b not in series:
+            continue
+        days_a, counts_a = series[station_a]
+        days_b, counts_b = series[station_b]
+        index_a, index_b, lag = matched_pairs(days_a, days_b, tolerance)
+        if len(index_a) == 0:
+            continue
+        n_unmatched += (len(days_a) - len(index_a)) + (len(days_b) - len(index_b))
+        edge_index = len(keep_edges)
+        keep_edges.append((station_a, station_b))
+        year = np.floor(decimal_year(days_a[index_a])).astype(np.int32)
+        count_a = counts_a[index_a]
+        count_b = counts_b[index_b]
+        n_clipped += int(np.count_nonzero(count_a > max_count)) + int(
+            np.count_nonzero(count_b > max_count)
+        )
+        chunks.append(
+            (
+                np.full(len(index_a), edge_index, dtype=np.int32),
+                year,
+                np.clip(count_a, 0, max_count).astype(np.int16),
+                np.clip(count_b, 0, max_count).astype(np.int16),
+                lag.astype(np.int8),
+            )
+        )
+
+    if not chunks:
+        raise ValueError("no edge of the graph has a matched observation pair")
+
+    edge = np.concatenate([c[0] for c in chunks])
+    year = np.concatenate([c[1] for c in chunks])
+    count_a = np.concatenate([c[2] for c in chunks])
+    count_b = np.concatenate([c[3] for c in chunks])
+    lag = np.concatenate([c[4] for c in chunks])
+    weight = np.ones(len(edge), dtype=np.int32)
+
+    table = PairTable(
+        edge=edge,
+        year=year,
+        count_a=count_a,
+        count_b=count_b,
+        lag=lag,
+        weight=weight,
+        edges=pd.DataFrame(keep_edges, columns=["station_a", "station_b"]),
+        meta={
+            "tolerance": int(tolerance),
+            "max_count": int(max_count),
+            "n_clipped": int(n_clipped),
+            "n_unmatched_days": int(n_unmatched),
+            "n_rows_raw": int(len(edge)),
+            "collapsed": bool(collapse),
+        },
+    )
+    if collapse:
+        table = collapse_pairs(table)
+    return table
+
+
+def collapse_pairs(table: PairTable) -> PairTable:
+    """Aggregate identical ``(edge, year, count_a, count_b, lag)`` rows.
+
+    Lossless for the pairwise kernels, which read a row only through those five
+    numbers.  The legacy MATLAB did the same thing for its robust fits -- it
+    "collapse[d] matched (count_1, count_2) pairs to unique pairs weighted by
+    frequency" (``A1_Matrix_Calculation_weighted_fit.m``) -- for the same reason,
+    one era earlier.
+    """
+    # The five fields are packed into one int64 so the aggregation is a sort of a
+    # 1-D array rather than a lexicographic sort of an (n, 5) one.  On the real
+    # network that is the difference between 37 s and a few seconds, and the field
+    # widths are asserted rather than assumed.
+    year0 = int(table.year.min())
+    lag0 = int(table.lag.min())
+    fields = (
+        (table.edge.astype(np.int64), table.edges.shape[0], 21),
+        (table.year.astype(np.int64) - year0, int(table.year.max()) - year0 + 1, 11),
+        (table.count_a.astype(np.int64), int(table.count_a.max()) + 1, 7),
+        (table.count_b.astype(np.int64), int(table.count_b.max()) + 1, 7),
+        (table.lag.astype(np.int64) - lag0, int(table.lag.max()) - lag0 + 1, 7),
+    )
+    key = np.zeros(table.n_rows, dtype=np.int64)
+    for values, extent, bits in fields:
+        if extent > (1 << bits):
+            raise ValueError(
+                f"pair-table field needs more than {bits} bits (extent {extent}); "
+                "widen the packing in collapse_pairs"
+            )
+        key = (key << bits) | values
+    order = np.argsort(key, kind="stable")
+    key_sorted = key[order]
+    starts = np.flatnonzero(np.concatenate(([True], key_sorted[1:] != key_sorted[:-1])))
+    weight = np.add.reduceat(table.weight[order].astype(np.int64), starts).astype(np.int32)
+    first = order[starts]
+    unique = np.stack(
+        [
+            table.edge[first].astype(np.int64),
+            table.year[first].astype(np.int64),
+            table.count_a[first].astype(np.int64),
+            table.count_b[first].astype(np.int64),
+            table.lag[first].astype(np.int64),
+        ],
+        axis=1,
+    )
+    meta = dict(table.meta)
+    meta.update(
+        collapsed=True,
+        n_rows_collapsed=int(len(unique)),
+        compression=float(table.n_rows / max(len(unique), 1)),
+    )
+    return PairTable(
+        edge=unique[:, 0].astype(np.int32),
+        year=unique[:, 1].astype(np.int32),
+        count_a=unique[:, 2].astype(np.int16),
+        count_b=unique[:, 3].astype(np.int16),
+        lag=unique[:, 4].astype(np.int8),
+        weight=weight,
+        edges=table.edges,
+        meta=meta,
+    )

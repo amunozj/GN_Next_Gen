@@ -42,6 +42,7 @@ from gn_next_gen.baselines.base import (
     CalibrationResult,
     Series,
     combine_observers,
+    inverse_variance_daily,
     matched_counts,
     station_series,
 )
@@ -370,21 +371,7 @@ def calibrate_cea17(
         )
 
     stacked = pd.concat(calibrated, ignore_index=True)
-    grouped = stacked.groupby("date_ord")
-    weight = 1.0 / np.maximum(stacked["sd"].to_numpy(), 0.25) ** 2
-    stacked = stacked.assign(weight=weight)
-    grouped = stacked.groupby("date_ord")
-    series_out = pd.DataFrame(
-        {
-            "date_ord": grouped["value"].mean().index.to_numpy(),
-            "gn": grouped.apply(
-                lambda b: float(np.average(b["value"], weights=b["weight"])),
-                include_groups=False,
-            ).to_numpy(),
-            "gn_sd": np.sqrt(1.0 / grouped["weight"].sum().to_numpy()),
-            "n_observers": grouped.size().to_numpy(),
-        }
-    )
+    series_out = inverse_variance_daily(stacked, value="value", sd="sd", sd_floor=0.25)
 
     return CalibrationResult(
         series=series_out,

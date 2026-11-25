@@ -42,6 +42,18 @@ class CalibrationResult:
         ``date_ord, gn, gn_sd`` -- the reconstructed reference-equivalent count
         and its standard deviation.  ``gn_sd`` may be NaN for methods that report
         no uncertainty at all, which is itself a finding the coverage figure shows.
+
+        Two further columns say **how a day's uncertainty behaves over time**, which
+        the scorer needs and a single ``sd`` cannot carry: ``gn_sd_factor`` is the
+        part that comes from each observer's calibration factor, identical on every
+        day of that observer's career and therefore *correlated* within any
+        averaging window; ``gn_sd_spread`` is the part that comes from observers
+        disagreeing on the day itself, which *averages down*.  A yearly interval
+        that pools the two as though both averaged down is too narrow by up to
+        ``sqrt(n_days)`` -- see
+        :func:`gn_next_gen.benchmark.scoring.uncertainty_scores`.  ``gn_sd`` itself
+        is left exactly as each method reports it, so no point score and no
+        published interval width moves when these columns appear.
     observers
         ``station, factor, factor_sd, recovered_threshold_msh, n_hops, reached``.
         ``recovered_threshold_msh`` is NaN for methods that calibrate by scaling
@@ -298,6 +310,54 @@ def combine_observers(
             "date_ord": estimate.index.to_numpy(),
             "gn": estimate.to_numpy(),
             "gn_sd": combined,
+            # A decomposition, not a second opinion: `gn_sd` above is unchanged.  The
+            # propagated part is a function of the observers' factors, which do not
+            # change from one day to the next, so it is the correlated part; the
+            # between-observer disagreement is the part that averages down.
+            "gn_sd_factor": propagated,
+            "gn_sd_spread": np.where(n_observers > 1, spread.to_numpy(), 0.0),
             "n_observers": n_observers.to_numpy(),
         }
     ).reset_index(drop=True)
+
+
+def inverse_variance_daily(
+    frame: pd.DataFrame,
+    *,
+    value: str,
+    sd: str,
+    sd_floor: float,
+) -> pd.DataFrame:
+    """Inverse-variance combination of per-observer values into a daily series.
+
+    The shape CEA17, UEA21, GRP and the Pathfinding re-pool all share: one row per
+    observer-day carrying a calibrated ``value`` and the uncertainty ``sd`` that the
+    observer's own calibration implies, combined as ``1 / sum(1 / sd^2)``.
+
+    ``gn_sd`` is exactly what each of those four already produced, so adopting this
+    helper moves no score.  What it adds is the decomposition: for these four the
+    reported uncertainty is **entirely** a propagated per-observer calibration
+    uncertainty -- the per-row ``sd`` is a property of the observer's career, not of
+    the day -- so ``gn_sd_factor`` carries all of it and ``gn_sd_spread`` is zero.
+    The between-observer scatter is reported beside it as ``day_spread``, for
+    diagnostics only: it is deliberately not folded into ``gn_sd``, because these
+    methods do not claim it.
+    """
+    weight = 1.0 / np.maximum(frame[sd].to_numpy(), sd_floor) ** 2
+    frame = frame.assign(_weight=weight)
+    grouped = frame.groupby("date_ord")
+    propagated = np.sqrt(1.0 / grouped["_weight"].sum().to_numpy())
+    return pd.DataFrame(
+        {
+            "date_ord": grouped[value].mean().index.to_numpy(),
+            "gn": grouped.apply(
+                lambda block: float(np.average(block[value], weights=block["_weight"])),
+                include_groups=False,
+            ).to_numpy(),
+            "gn_sd": propagated,
+            "gn_sd_factor": propagated,
+            "gn_sd_spread": np.zeros(len(propagated)),
+            "day_spread": grouped[value].std(ddof=1).fillna(0.0).to_numpy(),
+            "n_observers": grouped.size().to_numpy(),
+        }
+    )

@@ -15,6 +15,16 @@
 
 ## Verdict: **Pass with caveats**
 
+> **Revised 2026-11-24, after four defects were found and the grid re-run.** The
+> verdict and every criterion's pass/fail are unchanged. Three measured numbers in
+> this document moved and are corrected in place: the coverage levels (A5), the
+> grid's size (A1: 561 cells over 11 methods, not 459 over 9), and the structural
+> ensemble's spread (A10). **The central claim of A5 changed direction for one
+> method** — CEA17's intervals are close to nominal once the scorer aggregates a
+> year correctly — which is recorded in §13.7 of
+> [the results doc](step-2-blind-benchmark.md) rather than hidden by a silent edit.
+> The plan is [`docs/plans/step-2-scorer-followups.md`](../plans/step-2-scorer-followups.md).
+
 The benchmark works, the grid is complete and reproducible, and its central
 claims hold on re-measurement. Three acceptance criteria do not pass as written.
 
@@ -40,30 +50,30 @@ in the results doc were **wrong and are corrected here** (F1, F2).
 |---|---|---|---|
 | Determinism: same config + seed → identical datasets | `generate_benchmark.py --check` regenerating S1–S5 into a scratch root, SHA-256 per file | **MATCH** on all five scenarios, every file | **Pass** |
 | Scorer unit-tested on hand-made cases | `tests/test_scoring.py` | 15 passed. Nominal-coverage case within ±0.03 of 50/68/90/95; CRPS matches a 400,000-draw Monte-Carlo estimate to 2% | **Pass** |
-| Every baseline scored on every scenario | `scores.csv` pivot | **459 cells**, 9 methods × 5 scenarios, **0 empty combinations** | **Pass** (the "42 cells" arithmetic is wrong — F3) |
+| Every baseline scored on every scenario | `scores.csv` pivot | **561 cells**, 11 methods × 51 worlds, **0 empty combinations** | **Pass** (the "42 cells" arithmetic is wrong — F3) |
 | A port reproduces legacy thresholds | Dropped by PI decision 7 | Deviation recorded in the plan; recovered `runcsvs/` parameters are in `docs/03_legacy/adfssn.md` | **Superseded** by A7 |
 | **A1** Truth sealed from fitting code | AST import audit over `src/`, plus `tests/test_benchmark_blindness.py` | **0** imports of `benchmark.truth` from `baselines`, `models` or `inference`; 10 tests pass, including one proving the audit catches a planted leak | **Pass** |
 | **A2** Truth carries real areas *and* real lifetimes | Two-sample KS of the generated truth against the donor survey | area **KS 0.0065** (verbatim era) and **0.0082** (resequenced); `obs_duration` **0.0016** and **0.0083**; threshold 0.05. D22-colliding ids absent | **Pass** |
-| **A3** Real calendars and the real graph | Per-station day sets, synthetic against real | **0 of 466** stations report a day they never had. 60 match exactly; 391 are strict subsets — MNAR omission and blanket conversion remove days by design. Graph: 423 stations, 16,858 edges, 14 components (largest 384), 20 bridges | **Pass on substance**, criterion mis-worded (F4) |
+| **A3** Real calendars and the real graph | Per-station day sets, synthetic against real | **0 of 466** stations report a day they never had. 63 match exactly; 388 are strict subsets — MNAR omission and blanket conversion remove days by design. Graph: 422 stations, 16,675 edges, 14 components (largest 383), 20 bridges | **Pass on substance**, criterion mis-worded (F4) |
 | **A4** Generator ≠ Step 4's model, four ways | The misspecification table, each switchable | All four present: disk-censored real lifetimes (median 5, max 15 days), donor-cycle emergence, 46 observers with breaks and 456 with drift, 23 copiers. Nine switches on `ObserverParams` | **Pass** |
-| **A5** Interval coverage for every baseline, stratified by era | Coverage at 50/68/90/95 | Finite for **459 of 459** cells; 180 rows in `coverage.csv`; era stratification in this document | **Pass** |
+| **A5** Interval coverage for every baseline, stratified by era | Coverage at 50/68/90/95 | Finite for every cell whose method reports an interval (the two naive floors do not, by construction). Era stratification was a hand computation in this document until 2026-11-24; it is now `scoring.era_errors`, written to `era_scores.csv` and committed as `step2_era_errors.csv` (F5, results §5) | **Pass** |
 | **A6** Hay sampling-only bias measured | Induced trend bias, bootstrapped | +0.0136 groups/century against a true 0.2865 (1610–); bootstrap sd falls 0.212 → 0.008 from 5 to 400 observers while the mean holds at +0.01 to +0.02 | **Pass**; range 5–400, not the planned 25–600 (only 467 observers exist) |
 | **A7** Ports reproduce A157's published behaviour | `validate_against_a157.py`, re-run | **Sign: 5 of 5 agree.** HoSc98 −0.00157 and SvSc16 −0.00076 fall (99.2% and 90.8% of steps non-increasing); CEA17, UEA21, VHS24 at +0.0003 to +0.0006. **Exclusion limits: HoSc98 73 msd against their 31, CEA17 300 against 87** | **Partial** — sign passes, exclusion limits do not |
 | **A8** A157's secular bias reproduces on the real graph | Cycle-amplitude slope, S2 | Linear **HoSc98 −0.023, SvSc16 −0.061** — the criterion requires positive. Non-parametric −0.218 to −0.412. Families separate strictly | **Fail as written** |
 | **A9** Published GN series acquired | Folder, manifest, checksum test | 5 files present but only **3 of the 5 named** (Hoyt & Schatten, the SvSc16 backbone, an unversioned Usoskin-family series) plus Vaquero and Zolotova. `role: comparison_only`; `--check` MATCH; `test_data_manifest.py` 35 passed | **Fail** — 3 of 5, **closed 2026-11-23** (addendum) |
-| **A10** Structural ensemble beside parametric uncertainty | Spread across 15 settings vs mean reported sd | 405 cells, 3 knobs × 5 settings × 3 worlds × 9 methods. **The ensemble is narrower than the reported uncertainty for every method** (e.g. Pathfinding 0.221 against 0.669) | **Pass** |
-| **A12** Ten case studies shown individually | `case_study_observers.csv`, 3,500 rows, summarised in committed `data/step2_case_study_observers.csv` | All ten present. Methods off by >2× in scale **in at least one of the fifty replicates**: `slow-drift` **7/7**, `clean-modern` 4, `copier` 4, `poor-instrument` 4, `leaf-node` 3, `break-undocumented` 2, `sparse-maunder` 1, `break-documented` 1, `zero-omitter` 1. Off by >2× **in the median**: `clean-modern` 4, `break-undocumented` 1, `poor-instrument` 1, `leaf-node` 1, the rest 0 | **Pass** — all four required kinds show a failure |
-| **A13** No long job run in session | `grid.log` | The grid was launched by the PI at 17:33:52 and ran 16 min detached. The session ran only S1 slices and 16-second validations | **Pass** |
-| **A11** Figure-first results doc | Folder scan against the doc | **14 figures** f13–f26, both modes, largest **86 kB** (limit 400), all embedded as plain Markdown and all captioned `**Figure fNN**`; `tests/test_viz.py` 16 passed | **Pass** |
+| **A10** Structural ensemble beside parametric uncertainty | Within-world spread across 15 settings vs mean reported sd | 495 cells, 3 knobs × 5 settings × 3 worlds × 11 methods. **The ensemble is narrower than the reported uncertainty for every method** (e.g. Pathfinding 0.081 against 0.694; UEA21 and GRP are exactly zero, since neither uses the graph) | **Pass** |
+| **A12** Ten case studies shown individually | `case_study_observers.csv`, 3,500 rows, summarised in committed `data/step2_case_study_observers.csv` | All ten present. Methods off by >2× in scale **in at least one of the fifty replicates**: `slow-drift` **6**, `copier` 5, `clean-modern` 4, `poor-instrument` 4, `leaf-node` 3, `break-undocumented` 2, `sparse-maunder` 1, `break-documented` 1, `zero-omitter` 1. Off by >2× **in the median**: `poor-instrument` 3, `clean-modern` 2, `copier` 2, `break-undocumented` 1, `leaf-node` 1, the rest 0 | **Pass** — all four required kinds show a failure |
+| **A13** No long job run in session | `grid.log` | The grid was launched by the PI — 17:33:52 on 2026-11-22 (16 min) and again at 12:25:57 on 2026-11-24 for the full re-run (18 min), both detached. The sessions ran only S1 slices and 16-second validations | **Pass** |
+| **A11** Figure-first results doc | Folder scan against the doc | **18 figures** f13–f28 and f41–f42, both modes, largest **304 kB** (limit 400), all embedded as plain Markdown and all captioned `**Figure fNN**`; `tests/test_viz.py` 26 passed | **Pass** |
 
 ## Test suite
 
 ```
 $ pytest -q
-345 passed, 11 deselected in 58.35s
+387 passed, 12 deselected in 60.85s
 
 $ pytest -m slow -q
-11 passed, 345 deselected in 402.53s (0:06:42)
+12 passed, 387 deselected in 399.68s (0:06:40)
 
 $ ruff check . && ruff format --check .
 All checks passed!
@@ -94,16 +104,17 @@ was simply not ported.
 
 ### F1 — the results doc understated the structural ensemble (corrected)
 
-§8 claimed the ensemble was "405 cells over four fast methods and one S2 world …
-a slice". Measured from `structural.csv`: **nine methods, three worlds, three
-knobs × five settings = 405 cells** — the full planned ensemble. The
-implementation session had run a four-method slice by hand earlier and then
-described the orchestrator's full run in the slice's terms.
+§9 claimed the ensemble was "405 cells over four fast methods and one S2 world …
+a slice". Measured from `structural.csv` at the time: **nine methods, three
+worlds, three knobs × five settings = 405 cells** — the full planned ensemble, now
+495 cells with the two naive floors registered. The implementation session had run
+a four-method slice by hand earlier and then described the orchestrator's full run
+in the slice's terms.
 
 Corrected in place, and the limitation "the structural ensemble is a slice" is
-removed from §11.
+removed from the limitations list (§13 since the 2026-11-24 restructure).
 
-### F2 — A10's actual answer was never given, and it sharpens §5
+### F2 — A10's actual answer was never given, and it sharpens §6
 
 The criterion asks whether the ensemble is wider than the parametric
 uncertainty. The results doc reported a magnitude and never answered the
@@ -120,7 +131,7 @@ question. Measured:
 That is a stronger statement than coverage alone: these intervals are not too
 narrow because the methods ignored their own free choices — the choices move the
 answer by less than the interval allows. Widening an interval to admit structural
-choices would not fix the coverage. §8 now says so.
+choices would not fix the coverage. §9 now says so.
 
 ### F3 — "7 baselines × 6 scenarios = 42 cells" is arithmetically impossible
 
@@ -140,23 +151,51 @@ property that matters — nothing invented — holds exactly: **0 stations repor
 day the real observer never had.** The criterion should have been written as
 subset-plus-zero-violations.
 
-### F5 — coverage gets *worse* toward the present
+### F5 — coverage gets *worse* toward the present *(recomputed 2026-11-24)*
 
-Not previously reported. Coverage at nominal 0.50, by era, on S2/S3:
+**The table first published here was stale and is replaced.** It was computed by
+hand on 2026-11-22 and never recomputed after the 2026-11-24 fix to `_yearly_sd`,
+which until then pooled a method's correlated and day-level uncertainty as if both
+averaged down. Its CEA17 row (0.016–0.100 at nominal 0.50) carries that bug's
+signature; CEA17's pooled coverage after the fix is 0.591. **The direction F5
+reported survives. Its numbers were low by roughly a factor of two.**
 
-| method | pre-1750 | 1750–1850 | 1850–1950 | post-1950 |
-|---|---|---|---|---|
-| HoSc98 | — | 0.218 | 0.170 | 0.082 |
-| SvSc16 | — | 0.223 | 0.175 | 0.098 |
-| Pathfinding | — | 0.185 | 0.155 | 0.098 |
-| CEA17 | — | 0.100 | 0.040 | 0.016 |
-| UEA21 | 0.034 | 0.045 | 0.010 | 0.000 |
-| GRP | 0.028 | 0.020 | 0.005 | 0.006 |
+The stratification is no longer a hand computation. `scoring.era_errors` builds it
+from the same per-year frame the pooled coverage table reads, so the two cannot
+drift apart again, and a unit test asserts that the per-year interval flags average
+to exactly what `uncertainty_scores` reports. Below are the pooled rows of
+[`step2_era_errors.csv`](data/step2_era_errors.csv), scenario-balanced over
+S2/S3/S4, at nominal 0.50:
 
-Every method is **least** honest where the data are **best**. The inverse-variance
+| method | maunder | 1st disc. | 2nd disc. | pre-modern | pre-anchor | anchor | post-anchor | extension |
+|---|---|---|---|---|---|---|---|---|
+| HoSc98 | — | — | 0.534 | 0.485 | 0.367 | 0.354 | 0.257 | — |
+| SvSc16 | — | — | 0.491 | 0.463 | 0.355 | 0.343 | 0.233 | — |
+| Pathfinding | — | — | 0.531 | 0.540 | 0.361 | 0.351 | 0.250 | — |
+| CEA17 | — | — | 0.609 | 0.626 | 0.464 | **0.888** | **0.224** | — |
+| VHS24 | — | — | 0.218 | 0.167 | 0.154 | 0.230 | 0.092 | — |
+| UEA21 | 0.079 | 0.207 | 0.172 | 0.079 | 0.010 | 0.086 | 0.054 | 0.119 |
+| GRP | 0.096 | 0.117 | 0.141 | 0.154 | 0.008 | 0.409 | 0.095 | 0.262 |
+
+The three chained scalings are **least** honest where the data are **best** —
+HoSc98 falls 0.534 → 0.257 between 1749 and 2010 — because inverse-variance
 combination narrows the interval as observers accumulate faster than the error
-actually falls, so overconfidence grows with network density. The dashes are the
-reach result (§6 of the results doc): five methods produce nothing before 1750.
+actually falls. That was F5's claim and it holds.
+
+**What the stale table could not show is CEA17.** It does not degrade toward the
+present: it *over*-covers at 0.888 inside the anchor epoch and under-covers at
+0.224 in the forty years after it. The pooled 0.591 is the average of the two, so
+"one method is close to calibrated" is a whole-record statement and not an era-wise
+one. §6 of the results doc now says so.
+
+The dashes are the reach result (§7 of the results doc): five methods produce
+nothing before 1774.
+
+![Two panels: pooled yearly bias per method against year with a zero line, and empirical coverage at nominal 50% per method across the eight populated eras.](figures/step-2/f42_bias_and_era_coverage_light.png)
+
+**Figure f42** — The right panel is the table above. CEA17's spike to 0.888 inside
+the anchor epoch and its fall to 0.224 after it are the shape no pooled number
+shows, which is why F5's replacement is a finding and not only a correction.
 
 ### F6 — A8's failure is informative and should not be smoothed away
 
@@ -176,9 +215,13 @@ carry a verification claim are below.
 
 ![Nominal against empirical interval coverage at 50, 68, 90 and 95 percent; every curve far below the diagonal.](figures/step-2/f20_interval_coverage_light.png)
 
-**Figure f20** — The step's central claim, re-measured: not one method's
-intervals are honest. At nominal 0.50 the best of the seven delivers 0.159 and
-the worst 0.009. F5 adds that this gets worse toward the present, which the
+**Figure f20** — The step's central claim, re-measured twice. **One** method's
+intervals are close to honest: CEA17 covers 0.591 and 0.862 against a nominal 0.50
+and 0.90, with the smallest PIT distance of any method. The other six are
+overconfident, by about 1.4× for the three chained scalings and 6.6× for UEA21.
+Read beside the width column in §6 of the results doc: the return-the-prior null
+also sits near the diagonal, with a 90% interval nineteen times wider than
+HoSc98's. F5 adds that overconfidence gets worse toward the present, which the
 pooled figure cannot show.
 
 ![Slope of estimated-minus-true cycle amplitude against true amplitude, per method, with error bars.](figures/step-2/f19_cycle_amplitude_light.png)
@@ -196,9 +239,10 @@ not reproduce, and `a157_catalogue.csv` carries the measured reason.
 
 ![Bars spanning each method's yearly bias across its own free graph choices.](figures/step-2/f22_structural_ensemble_light.png)
 
-**Figure f22** — Criterion **A10**, corrected by F1 and F2: the full 405-cell
-ensemble, and the ensemble is **narrower** than the uncertainty the methods
-already report.
+**Figure f22** — Criterion **A10**, corrected by F1, F2 and the 2026-11-24
+within-world fix: the full 495-cell ensemble, and the ensemble is **narrower** than
+the uncertainty the methods already report — for UEA21 and GRP, which never touch
+the overlap graph, it is exactly zero.
 
 CSVs behind every number: `outputs/step2/scores/{scores,coverage,structural,case_study_observers}.csv`,
 `outputs/step2/a157/{a157_validation,a157_verdict,a157_catalogue}.csv`,
@@ -219,10 +263,12 @@ in F1–F4. Beyond those:
 
 ## Findings that affect later steps
 
-1. **The bar and the floor, for Steps 3–4.** Yearly cRMSE **0.312** (HoSc98) and
-   a 50% coverage of **0.159** (Pathfinding) are the best of the seven. A random
-   segmentation scores **0.749**; four published methods are below it. A new
-   method that does not clear the floor has demonstrated nothing.
+1. **The bar and the floor, for Steps 3–4.** Yearly cRMSE **0.301** (HoSc98) is
+   the best point error; the only near-nominal coverage is CEA17's **0.591** at a
+   90% width of 1.92 groups — and they are different methods, which is the opening.
+   The floor is the daily **median of the uncalibrated counts** at **0.360**: it
+   beats six of the seven in most of the 51 worlds, paired. A new method that does
+   not clear *that* has demonstrated nothing.
 2. **Coverage is the open problem, and F5 says where it is worst.** Overconfidence
    grows with network density. A Step 3 composite-likelihood correction should be
    validated per era, not pooled, or it will be tuned on the easy end.
@@ -268,7 +314,7 @@ Two defects surfaced while adding them, both now fixed and pinned by tests:
 **D25**, the snapshot's `gn = -1` no-data sentinel being carried into the table
 as a negative group count (seven rows), and **D24**, the 12.08 scale trap in the
 Velasco Herrera supplement. Details and the figure are in
-[§11a of the results doc](step-2-blind-benchmark.md).
+[§11 of the results doc](step-2-blind-benchmark.md).
 
 A third was a rule that was documented but unenforced: `validate_run_config` now
 refuses a `kind: published_series` dataset in role `calibration` in **either**
@@ -302,7 +348,7 @@ behaviour, and they omitted `break-documented`, which qualifies at 1.
 | `summarise_case_studies` — median, quartiles, full range and finite-replicate count per (observer, method) | `src/gn_next_gen/benchmark/scoring.py` |
 | `f25`/`f26` redrawn: median marker (one shape per method), IQR bar, full-range whisker, finite-replicate count under each slot; legend from every method drawn anywhere, plus a `truth` entry | `src/gn_next_gen/viz/benchmark.py` |
 | The committed per-observer table the Step 2 plan asked for, written by the figure script from the same summary the figures use | `docs/results/data/step2_case_study_observers.csv` |
-| §7 rewritten around the two counts — typical (median) and occasional (worst replicate) — which disagree for eight of the ten observers | `docs/results/step-2-blind-benchmark.md` |
+| §8 rewritten around the two counts — typical (median) and occasional (worst replicate) — which disagree for eight of the ten observers | `docs/results/step-2-blind-benchmark.md` |
 | A12 restated with both counts and `break-documented` added | this document |
 
 The headline finding moves. On the **median**, `slow-drift` defeats nobody —
@@ -345,10 +391,10 @@ are rebuilt; no number in the prose depended on them.
 | f28 embedded and captioned after f15; f15, f17 captions corrected to what their panels now show | `docs/results/step-2-blind-benchmark.md` |
 | The year-by-year cut, as the file behind f28's numbers | `docs/results/data/step2_overlap_graph_cut.csv` |
 
-What f28 adds to the record: **39 of 423 observers never reach the anchor**, 20
+What f28 adds to the record: **39 of 422 observers never reach the anchor**, 20
 edges are bridges, and the cut is **empty in 1727–1745 and 1777–1798** — 41 years
 that no chain of overlaps crosses, with at most five edges across the whole
-1727–1801 stretch. The 1774 wall five of seven methods hit (§6 of the results) is
+1727–1801 stretch. The 1774 wall five of seven methods hit (§7 of the results) is
 therefore structural: it is where the real overlap pattern stops, not a choice any
 method made.
 

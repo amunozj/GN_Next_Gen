@@ -13,6 +13,15 @@ Outputs, all under ``outputs/step2/scores/``:
     the ten named observers, true against recovered acuity, per method.
 ``structural.csv``
     the S6 ensemble, when ``--structural`` outputs exist.
+``yearly_errors.csv``
+    one row per (scenario, realization, method, **year**) -- the residual with its
+    era and its interval flags.  The pooled tables above cannot say *when* a method
+    is wrong, and the era winner changes across the record, so the year axis is kept.
+``yearly_pooled.csv``
+    the scenario-balanced RMSE, bias and truth level per method and calendar year.
+``era_scores.csv``
+    the same per era, per scenario and pooled, with coverage and reach -- the
+    era stratification acceptance criterion A5 asks for.
 
 Usage
 -----
@@ -33,7 +42,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from gn_next_gen.baselines.base import CalibrationResult  # noqa: E402
 from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS  # noqa: E402
 from gn_next_gen.benchmark.progress import Progress  # noqa: E402
-from gn_next_gen.benchmark.scoring import COVERAGE_LEVELS, score  # noqa: E402
+from gn_next_gen.benchmark.scoring import (  # noqa: E402
+    COVERAGE_LEVELS,
+    align,
+    era_errors,
+    pool_yearly,
+    score,
+    yearly_errors,
+)
 from gn_next_gen.benchmark.store import (  # noqa: E402
     BENCHMARK_ROOT,
     read_observations,
@@ -73,12 +89,38 @@ def _load(seed_dir: Path, method: str) -> CalibrationResult:
     )
 
 
+def _observer_eras(truth, observations: pd.DataFrame) -> dict[int, tuple[float, float]]:
+    """How active the Sun truly was over each observer's own career window.
+
+    The covariate f23 and f25 need, because without it the acuity methods' error
+    looks like a property of the observer when it is mostly a property of the
+    window.  UEA21 and GRP match an observer's statistic against a library built
+    once over the anchor epoch, with no conditioning on activity or cycle phase, so
+    an observer whose era is quieter than that epoch reads as having a high
+    threshold whatever its acuity really was.
+    """
+    reference = truth.reference_counts()
+    days = reference.index.to_numpy()
+    counts = reference.to_numpy(dtype=float)
+    out: dict[int, tuple[float, float]] = {}
+    for station, block in observations.groupby("station"):
+        own = block["date_ord"].to_numpy()
+        first, last = int(own.min()), int(own.max())
+        inside = (days >= first) & (days <= last)
+        if not inside.any():
+            continue
+        window = counts[inside]
+        out[int(station)] = (float(window.mean()), float((window == 0).mean()))
+    return out
+
+
 def _case_study_rows(
     result: CalibrationResult,
     parameters: pd.DataFrame,
     scenario,
     seed,
     true_factors: dict[int, float],
+    eras: dict[int, tuple[float, float]] | None = None,
 ):
     """The ten named observers (f25/f26): acuity *and* scale, per method.
 
@@ -110,6 +152,12 @@ def _case_study_rows(
                 "true_factor": implied,
                 "factor_ratio": recovered / implied if implied and implied == implied else np.nan,
                 "reached": bool(getattr(row, "reached", False)),
+                # The window the observer actually looked at, not the observer.
+                "era_mean_truth": (eras or {}).get(station, (np.nan, np.nan))[0],
+                "era_spotless_fraction": (eras or {}).get(station, (np.nan, np.nan))[1],
+                "n_observing_days": int(row.n_observing_days)
+                if hasattr(row, "n_observing_days")
+                else -1,
             }
         )
     return rows
@@ -155,23 +203,33 @@ def main() -> None:
     )
 
     truths: dict[tuple[str, int], tuple] = {}
-    rows, case_rows = [], []
+    rows, case_rows, yearly_rows = [], [], []
     for scenario, seed, method, tag, seed_dir in cells:
         key = (scenario, seed)
         if key not in truths:
             sealed = read_sealed_truth(scenario, seed, root=args.data_root)
+            observations = read_observations(scenario, seed, root=args.data_root)
             truths[key] = (
                 sealed,
                 read_sealed_parameters(scenario, seed, root=args.data_root),
-                _implied_factors(sealed, read_observations(scenario, seed, root=args.data_root)),
+                _implied_factors(sealed, observations),
+                _observer_eras(sealed, observations),
             )
-        truth, parameters, factors = truths[key]
+        truth, parameters, factors, eras = truths[key]
         try:
             result = _load(seed_dir, method)
-            row = score(truth, result, parameters, scenario=scenario, seed=seed)
+            aligned = align(truth, result)
+            row = score(truth, result, parameters, scenario=scenario, seed=seed, aligned=aligned)
             row["perturbation"] = tag
             rows.append(row)
-            case_rows += _case_study_rows(result, parameters, scenario, seed, factors)
+            case_rows += _case_study_rows(result, parameters, scenario, seed, factors, eras)
+            if not args.structural and not aligned.empty:
+                # The structural ensemble is 495 more cells and asks a question about
+                # a method's own free choices, not about the record's eras, so it gets
+                # no per-year table.
+                yearly_rows.append(
+                    yearly_errors(aligned, scenario=scenario, seed=seed, method=method)
+                )
         except Exception as error:  # noqa: BLE001
             progress.record(failure=f"{scenario}/{seed}/{method}: {error!r}")
             print(f"FAILED {scenario} {seed} {method}: {error!r}", flush=True)
@@ -187,6 +245,23 @@ def main() -> None:
         coverage = _coverage_table(scores)
         coverage.to_csv(args.out_dir / "coverage.csv", index=False, lineterminator="\n")
         print(f"wrote {args.out_dir / 'coverage.csv'}")
+
+        floors = _floor_comparison(scores)
+        floors.to_csv(args.out_dir / "floors.csv", index=False, lineterminator="\n")
+        print(f"wrote {args.out_dir / 'floors.csv'}")
+
+        if yearly_rows:
+            yearly = pd.concat(yearly_rows, ignore_index=True)
+            yearly.to_csv(args.out_dir / "yearly_errors.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'yearly_errors.csv'} ({len(yearly)} rows)")
+
+            pooled = pool_yearly(yearly)
+            pooled.to_csv(args.out_dir / "yearly_pooled.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'yearly_pooled.csv'} ({len(pooled)} rows)")
+
+            by_era = era_errors(yearly)
+            by_era.to_csv(args.out_dir / "era_scores.csv", index=False, lineterminator="\n")
+            print(f"wrote {args.out_dir / 'era_scores.csv'} ({len(by_era)} rows)")
 
         if case_rows:
             cases = pd.DataFrame(case_rows)
@@ -210,6 +285,51 @@ def _coverage_table(scores: pd.DataFrame) -> pd.DataFrame:
     return melted[["scenario", "method", "nominal", "empirical"]].sort_values(
         ["scenario", "method", "nominal"], ignore_index=True
     )
+
+
+#: The floors, in increasing hardness.  `naive-median` is the hard one: a method
+#: that loses to it has made the series worse than not calibrating at all.
+FLOORS = ("null-prior", "null-segmentation", "naive-mean", "naive-median")
+
+
+def _floor_comparison(scores: pd.DataFrame, metric: str = "crmse_yearly") -> pd.DataFrame:
+    """Per-world paired comparison of every method against every floor.
+
+    Comparing two pooled means says which number is larger; it does not say whether
+    a method beats a floor *on the same world*, which is the claim a score table
+    makes when it writes "beats the null". So the comparison is paired: for each
+    (scenario, seed) both must have scored, and the fraction of those worlds where
+    the method wins is reported beside the median paired difference.
+
+    Lower ``metric`` is better, so a method "wins" when its value is the smaller.
+    """
+    present = [f for f in FLOORS if f in set(scores["method"])]
+    methods = [m for m in scores["method"].unique() if m not in FLOORS]
+    key = ["scenario", "seed"]
+    rows = []
+    for floor in present:
+        reference = scores[scores["method"] == floor].set_index(key)[metric]
+        for method in methods:
+            theirs = scores[scores["method"] == method].set_index(key)[metric]
+            paired = pd.concat({"method": theirs, "floor": reference}, axis=1).dropna()
+            if paired.empty:
+                rows.append(
+                    {"method": method, "floor": floor, "n_worlds": 0, "win_fraction": np.nan}
+                )
+                continue
+            wins = (paired["method"] < paired["floor"]).mean()
+            rows.append(
+                {
+                    "method": method,
+                    "floor": floor,
+                    "metric": metric,
+                    "n_worlds": int(len(paired)),
+                    "n_wins": int((paired["method"] < paired["floor"]).sum()),
+                    "win_fraction": float(wins),
+                    "median_difference": float((paired["method"] - paired["floor"]).median()),
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def _headline(scores: pd.DataFrame) -> pd.DataFrame:

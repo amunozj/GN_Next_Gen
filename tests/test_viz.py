@@ -278,8 +278,135 @@ def test_a_method_keeps_its_colour_when_the_others_are_absent():
     subset = benchmark._method_colors(["UEA21", "GRP"], "light")
     assert subset["UEA21"] == full["UEA21"]
     assert subset["GRP"] == full["GRP"]
-    coloured = [m for m in benchmark.METHOD_ORDER if not m.startswith("null-")]
+    # The floors share one recessive grey by design, so what this pins is that the
+    # *methods* never collide.
+    coloured = [m for m in benchmark.METHOD_ORDER if not benchmark.is_floor(m)]
     assert len({full[m] for m in coloured}) == len(coloured)
+
+
+# --- f41, f42: the error through time -------------------------------------
+
+
+def _pooled_frame():
+    """A pooled table where HoSc98 leads early and CEA17 leads in the anchor epoch."""
+    rows = []
+    for year in range(1700, 2027):
+        anchor = 1912 <= year <= 1969
+        for method, early, late in (
+            ("HoSc98", 0.30, 0.30),
+            ("CEA17", 1.50, 0.10),
+            ("naive-median", 0.40, 0.40),
+            ("null-prior", 2.40, 2.40),
+        ):
+            # GRP and UEA21 are the only two that reach the 17th century; here
+            # CEA17 is given the same gap so the "line stops" behaviour is covered.
+            if method == "CEA17" and year < 1774:
+                continue
+            rmse = late if anchor else early
+            rows.append(
+                {
+                    "method": method,
+                    "year": year,
+                    "mse": rmse**2,
+                    "rmse": rmse,
+                    "bias": -0.1,
+                    "truth": 2.0,
+                    "n_scenarios": 3,
+                    "n_worlds": 30,
+                    "n_years": 30,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _era_frame():
+    from gn_next_gen.benchmark.scoring import ERA_ORDER
+
+    rows = []
+    for era in ERA_ORDER:
+        for method in ("HoSc98", "CEA17", "naive-median", "null-prior"):
+            rows.append(
+                {
+                    "scenario": "pooled",
+                    "method": method,
+                    "era": era,
+                    "rmse": 0.3,
+                    "bias": -0.1,
+                    "truth": 2.0,
+                    "reached": 1.0,
+                    "coverage_50": np.nan if method == "naive-median" else 0.4,
+                    "coverage_90": np.nan if method == "naive-median" else 0.8,
+                    "n_years": 30,
+                    "n_worlds": 30,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_the_time_figures_build_in_both_modes(mode):
+    from gn_next_gen.viz import benchmark
+
+    for figure in (
+        benchmark.error_through_time_figure(_pooled_frame(), mode),
+        benchmark.bias_and_era_coverage_figure(_pooled_frame(), _era_frame(), mode),
+    ):
+        assert figure.get_facecolor()[:3] == matplotlib.colors.to_rgb(palette(mode)["surface"])
+        plt.close(figure)
+
+
+def test_the_winner_ribbon_ranks_only_the_real_methods_and_checks_the_floor():
+    """A method can lead the seven in an era where all seven are worse than the floor."""
+    from gn_next_gen.viz import benchmark
+
+    winners = benchmark._winner_by_year(_pooled_frame()).set_index("year")
+    # HoSc98 at 0.30 leads outside the anchor epoch; CEA17 at 0.10 leads inside it.
+    assert winners.loc[1800, "method"] == "HoSc98"
+    assert winners.loc[1940, "method"] == "CEA17"
+    # Never a floor, however good it is: null-prior and naive-median are the bar.
+    assert not winners["method"].map(benchmark.is_floor).any()
+    # 0.30 beats the 0.40 floor; and inside the anchor epoch 0.10 beats it by more.
+    assert bool(winners.loc[1800, "beats_floor"])
+    assert bool(winners.loc[1940, "beats_floor"])
+
+
+def test_a_year_no_method_wins_outright_still_reports_whether_the_floor_was_beaten():
+    from gn_next_gen.viz import benchmark
+
+    pooled = _pooled_frame()
+    # Make the floor better than every real method in 1800.
+    pooled.loc[(pooled["year"] == 1800) & (pooled["method"] == "naive-median"), "rmse"] = 0.01
+    winners = benchmark._winner_by_year(pooled).set_index("year")
+    assert winners.loc[1800, "method"] == "HoSc98"
+    assert not bool(winners.loc[1800, "beats_floor"])
+
+
+def test_the_ribbon_paints_each_winner_in_that_methods_own_colour():
+    from gn_next_gen.viz import benchmark
+
+    figure = benchmark.error_through_time_figure(_pooled_frame(), "light")
+    ribbon = figure.axes[3]
+    colors = benchmark._method_colors(["HoSc98", "CEA17", "naive-median", "null-prior"], "light")
+    painted = {matplotlib.colors.to_hex(patch.get_facecolor()) for patch in ribbon.patches}
+    assert matplotlib.colors.to_hex(colors["HoSc98"]) in painted
+    assert matplotlib.colors.to_hex(colors["CEA17"]) in painted
+    plt.close(figure)
+
+
+def test_a_cycle_window_ratio_survives_a_floor_that_passes_through_zero():
+    """The year-by-year ratio spiked past 1000 where the floor's RMSE crossed ~0."""
+    from gn_next_gen.viz import benchmark
+
+    pooled = _pooled_frame()
+    floor = (pooled["method"] == "naive-median") & (pooled["year"] == 1878)
+    pooled.loc[floor, ["rmse", "mse"]] = [0.0008, 0.0008**2]
+    figure = benchmark.error_through_time_figure(pooled, "light")
+    relative = figure.axes[2]
+    drawn = np.concatenate(
+        [line.get_ydata() for line in relative.lines if len(line.get_ydata()) > 2]
+    )
+    assert np.nanmax(drawn) < 50.0
+    plt.close(figure)
 
 
 def test_save_both_modes_writes_one_file_per_mode(tmp_path):

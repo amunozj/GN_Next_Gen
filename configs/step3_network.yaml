@@ -1,0 +1,108 @@
+# Step 3 -- global network calibration.  See docs/plans/step-3-plan.md.
+#
+# Two methods share one likelihood and differ only in the pairwise kernel:
+# NetCal (Kernel A, with Kernel B below the low-count threshold) and NetCal-M
+# (Kernel B everywhere, the misspecification cross-check).
+name: step3_network
+variant: sunspot_only
+seed: 20261124
+
+release: v1.3_4
+duplicate_rule: max
+
+# ADR-009's single-use rule: KMAS is observer *counts* here, not reference areas,
+# so cycle 20 is bridged and the anchor-to-anchor resistance is meaningful rather
+# than degenerate.  Its areas go unused in every run in this file.
+kmas_role: observer_counts
+
+# KMAS is deliberately absent: it supplies observer counts in this run, so under
+# the single-use rule it may not also be read as a reference survey.  The config
+# validator refuses the combination, and it refused this file's first draft.
+surveys: [rgo, debrecen]
+thresholds: [30.0]          # D14: T >= 30 MSH is the trustworthy band
+
+datasets:
+  - path: gn_database_v1.3
+    role: calibration
+    kind: sunspot
+  - path: gn_observer_extension_2026-10
+    role: calibration       # KMAS + SWPC counts, carrying the record to 2026
+    kind: sunspot
+  - path: reference_groups_2026-10
+    role: calibration       # the anchor survey's own areas define the estimand
+    kind: sunspot
+  - path: area_law_2026-11
+    role: diagnostic        # only the extrapolation branch of the detection grid
+    kind: sunspot
+  - path: silso_2026-11
+    role: comparison        # never calibration (ADR-002, ADR-003)
+    kind: silso
+
+params:
+  # The observer network.  extension_post_v13_only is false on purpose: the
+  # default keeps only post-2010 rows, which would throw away exactly the
+  # 1954-2010 KMAS coverage that makes cycle 20 a bridge.
+  observations:
+    include_extension: true
+    extension_post_v13_only: false
+    extension_threshold: anchor
+
+  # Graph construction.  The legacy defaults, kept so the comparison with Step 2's
+  # eleven methods is like-for-like; S-tol varies them.
+  graph:
+    day_tolerance: 2         # legacy DayTol
+    min_overlap_days: 60     # legacy MinOvr
+    min_distinct_values: 4   # legacy minObVal
+
+  model:
+    kernel: hybrid           # Kernel A, with Kernel B below the low-count threshold
+    fingerprint_weight: 1.0  # PI decision 4; the ablation prices it
+    lambda_penalty: 20.0     # what ties a non-overlapping observer to the record
+    drift_log_sigma_mean: -2.0   # Uto (2023): -5 over-shrinks, 0 is unstable
+    n_outer: 4               # the activity fixed point; it settles in 2-3
+    maxiter: 600
+
+  uncertainty:
+    n_bootstrap: 200         # year blocks resampled for the Godambe meat
+    n_draws: 400             # parameter draws that become the series ensemble
+    block: year              # the pair table is collapsed, so a year is the block
+
+  # Released series, one per ADR-009 anchor, reported side by side.
+  released:
+    - anchoring: debrecen_21_23
+      label: primary
+    - anchoring: rgo_15_19
+      label: secondary
+
+  # Sensitivities.  Each is a delta against R1 unless it says otherwise; none is a
+  # released series.
+  sensitivities:
+    anchor_extension:
+      anchoring: rgo_12_19   # ADR-009's named Step 3 task; D5 caveat stated
+      against: rgo_15_19
+    drift_prior:
+      drift_log_sigma_mean: [-5.0, 0.0]   # Uto's two failure modes
+    fingerprint_ablation:
+      fingerprint_weight: [0.0, 0.5, 2.0]
+    activity_tilt:
+      # The SDSS lesson: a term "held fixed rather than fitted" became their worst
+      # systematic.  ADR-011 holds the activity exponents, so the consequence is
+      # measured rather than assumed.
+      exponent_scale: [0.5, 1.5]
+    smoothness:
+      # The research warning this knob carries: "that prior then becomes the
+      # dominant source of information. It must be stated explicitly and tested
+      # in sensitivity runs."
+      lambda_penalty: [5.0, 80.0]
+    day_tolerance:
+      # The lag kernel down-weights honestly now, so +/-2 is no longer forced.
+      day_tolerance: [5, 10]
+
+  # Benchmark scoring: the two methods over Step 2's existing worlds, written into
+  # the same tree so score_benchmark.py discovers them by glob with no change.
+  benchmark:
+    methods: [NetCal, NetCal-M]
+    n_bootstrap: 100         # the grid multiplies this by 51 worlds
+    n_draws: 200
+    n_outer: 3
+    maxiter: 400

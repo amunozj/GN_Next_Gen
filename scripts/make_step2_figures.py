@@ -1,4 +1,4 @@
-"""Build f13-f28 from whatever the grid has produced.
+"""Build f13-f28 and f41-f42 from whatever the grid has produced.
 
 Short (< 3 minutes) and safe to re-run: each figure is skipped, with a reason, if
 its inputs are not on disk yet, so the session can build the set from a two-world
@@ -232,6 +232,46 @@ def main() -> None:
         written += save_both_modes(
             lambda mode: viz.published_series_figure(published, mode), out, "f27_published_series"
         )
+
+    # f41, f42: the error resolved in time.  These need the per-year table, which
+    # only the plain (non-structural) scoring pass writes.
+    pooled = _read(SCORE_DIR / "yearly_pooled.csv")
+    era_table = _read(SCORE_DIR / "era_scores.csv")
+    if pooled is None or pooled.empty or era_table is None or era_table.empty:
+        skipped.append("f41, f42: no yearly_pooled.csv / era_scores.csv; re-run score_benchmark.py")
+    else:
+        written += save_both_modes(
+            lambda mode: viz.error_through_time_figure(pooled, mode),
+            out,
+            "f41_error_through_time",
+        )
+        written += save_both_modes(
+            lambda mode: viz.bias_and_era_coverage_figure(pooled, era_table, mode),
+            out,
+            "f42_bias_and_era_coverage",
+        )
+        # The committed table behind every number in the new section: the pooled
+        # rows only, which is 11 methods x the eras they reach.
+        DATA_OUT.mkdir(parents=True, exist_ok=True)
+        era_out = DATA_OUT / "step2_era_errors.csv"
+        columns = [
+            "method",
+            "era",
+            "rmse",
+            "bias",
+            "truth",
+            "reached",
+            "coverage_50",
+            "coverage_90",
+            "n_years",
+            "n_worlds",
+        ]
+        (
+            era_table[era_table["scenario"] == "pooled"][columns]
+            .round(4)
+            .to_csv(era_out, index=False, lineterminator="\n")
+        )
+        print(f"wrote {era_out}")
 
     oversized = [p for p in written if p.stat().st_size > 400_000]
     print(f"wrote {len(written)} files to {out}")

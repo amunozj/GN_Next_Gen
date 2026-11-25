@@ -17,7 +17,10 @@ datasets:
 
 params:
   methods: [HoSc98, SvSc16, VHS24, CEA17, UEA21, GRP, Pathfinding]
-  nulls: [null-prior, null-segmentation]
+  # Floors, not methods.  Two keep the methods' form with the content randomised;
+  # two do not calibrate at all and are the harder floor -- a method that loses to
+  # `naive-median` has made the series worse than leaving the counts alone.
+  nulls: [null-prior, null-segmentation, naive-mean, naive-median]
 
   # Graph construction is a free choice shared by the chained methods.
   graph:

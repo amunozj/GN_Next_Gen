@@ -228,3 +228,64 @@ def test_the_orchestrator_exports_a_run_id_before_any_stage():
     text = ORCHESTRATOR.read_text()
     assert "export GN_RUN_ID=" in text
     assert text.index("export GN_RUN_ID=") < text.index("stage a157")
+
+
+# --- staleness: a resumed run must not reuse work the current code would not write
+
+
+def test_a_world_from_an_older_generator_is_not_complete(tmp_path):
+    """The guard that makes the re-run safe to launch without --force.
+
+    `is_complete` used to ask only whether the files were there, so changing the
+    generator left every stage skipping worlds it would no longer produce, and the
+    scores came out of a mixture of two generators with nothing to say which.
+    """
+    import json
+
+    from gn_next_gen.benchmark.store import (
+        GENERATOR_VERSION,
+        OPEN_FILES,
+        SEALED_FILES,
+        is_complete,
+        realization_dir,
+    )
+
+    base = realization_dir("S1", 7, root=tmp_path)
+    (base / "open").mkdir(parents=True)
+    (base / "sealed").mkdir(parents=True)
+    for name in OPEN_FILES:
+        (base / "open" / name).write_bytes(b"")
+    for name in SEALED_FILES:
+        (base / "sealed" / name).write_bytes(b"")
+
+    (base / "config.json").write_text(json.dumps({"generator_version": GENERATOR_VERSION - 1}))
+    assert not is_complete("S1", 7, root=tmp_path)
+
+    (base / "config.json").write_text(json.dumps({"generator_version": GENERATOR_VERSION}))
+    assert is_complete("S1", 7, root=tmp_path)
+
+    (base / "config.json").write_text("{not json")
+    assert not is_complete("S1", 7, root=tmp_path)
+
+
+def test_a_fit_without_the_uncertainty_columns_is_rerun(tmp_path):
+    """Same argument one layer up: the files exist, the information does not."""
+    import importlib.util
+
+    import pandas as pd
+
+    spec = importlib.util.spec_from_file_location(
+        "run_baselines", Path(__file__).resolve().parents[1] / "scripts" / "run_baselines.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    cell = module.cell_dir("S1", 7, root=tmp_path)
+    cell.mkdir(parents=True)
+    old = pd.DataFrame({"date_ord": [1], "gn": [1.0], "gn_sd": [0.5]})
+    old.to_parquet(cell / "HoSc98_series.parquet", index=False)
+    assert not module.cell_done("S1", 7, "HoSc98", root=tmp_path)
+
+    current = old.assign(gn_sd_factor=0.4, gn_sd_spread=0.3)
+    current.to_parquet(cell / "HoSc98_series.parquet", index=False)
+    assert module.cell_done("S1", 7, "HoSc98", root=tmp_path)

@@ -39,6 +39,7 @@ from gn_next_gen.benchmark.observers import (
     draw_population,
     observe,
 )
+from gn_next_gen.benchmark.store import GENERATOR_VERSION
 from gn_next_gen.benchmark.truth import ANCHORINGS, Truth
 
 #: Station id of the reference observer.  Far above any real station number so it
@@ -267,6 +268,7 @@ def build_realization(
 
     config = {
         **scenario.as_dict(),
+        "generator_version": GENERATOR_VERSION,
         "seed": seed,
         "n_observers": len(population),
         "n_groups": truth.n_groups,

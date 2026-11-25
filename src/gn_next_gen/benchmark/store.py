@@ -31,6 +31,17 @@ from gn_next_gen.paths import OUTPUTS
 #: Default root for generated worlds.  Git-ignored, like everything in outputs/.
 BENCHMARK_ROOT = OUTPUTS / "benchmark"
 
+#: Bumped whenever a change to the generator makes an existing world stale.  It is
+#: written into every ``config.json`` and checked by :func:`is_complete`, because
+#: "the files are all there" is not the same as "the files are what this code would
+#: write".  Without it a resumed run silently reuses worlds the current generator
+#: would not produce -- the files exist, so every stage skips them, and the scores
+#: come out of a mixture of two generators with nothing to say which.
+#:
+#: 1 -> 2 (2026-11-24): ``clean-modern`` is selected with a minimum career length,
+#: which moves the station and so reshuffles the whole population's draws.
+GENERATOR_VERSION = 2
+
 OPEN_FILES = (
     "observations.parquet",
     "statements.parquet",
@@ -95,9 +106,20 @@ def write_dataset(
 
 
 def is_complete(scenario: str, seed: int, *, root: Path | str = BENCHMARK_ROOT) -> bool:
-    """Whether a realization is already on disk, so a resumed run can skip it."""
+    """Whether a realization on disk is complete *and* current.
+
+    A world written by an older generator is not complete for this one's purposes,
+    so it reports False and the run regenerates it rather than skipping it.
+    """
     base = realization_dir(scenario, seed, root=root)
-    if not (base / "config.json").is_file():
+    config_file = base / "config.json"
+    if not config_file.is_file():
+        return False
+    try:
+        written = json.loads(config_file.read_text()).get("generator_version")
+    except (json.JSONDecodeError, OSError):
+        return False
+    if written != GENERATOR_VERSION:
         return False
     return all((base / "open" / name).is_file() for name in OPEN_FILES) and all(
         (base / "sealed" / name).is_file() for name in SEALED_FILES

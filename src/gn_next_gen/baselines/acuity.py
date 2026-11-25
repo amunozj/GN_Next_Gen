@@ -29,7 +29,11 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from gn_next_gen.baselines.base import CalibrationResult, station_series
+from gn_next_gen.baselines.base import (
+    CalibrationResult,
+    inverse_variance_daily,
+    station_series,
+)
 from gn_next_gen.baselines.pmf import MAX_COUNT, conversion_matrix
 
 #: Acuity grid searched, in MSH.  Dense where real observers sit (A157: most real
@@ -217,19 +221,7 @@ def calibrate_acuity(
         )
 
     stacked = pd.concat(calibrated, ignore_index=True)
-    stacked["weight"] = 1.0 / np.maximum(stacked["sd"].to_numpy(), 0.25) ** 2
-    grouped = stacked.groupby("date_ord")
-    series_out = pd.DataFrame(
-        {
-            "date_ord": grouped["value"].mean().index.to_numpy(),
-            "gn": grouped.apply(
-                lambda b: float(np.average(b["value"], weights=b["weight"])),
-                include_groups=False,
-            ).to_numpy(),
-            "gn_sd": np.sqrt(1.0 / grouped["weight"].sum().to_numpy()),
-            "n_observers": grouped.size().to_numpy(),
-        }
-    )
+    series_out = inverse_variance_daily(stacked, value="value", sd="sd", sd_floor=0.25)
     return CalibrationResult(
         series=series_out,
         observers=pd.DataFrame(observer_rows),

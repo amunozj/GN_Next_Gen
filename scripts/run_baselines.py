@@ -31,6 +31,8 @@ import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+import pyarrow.parquet as pq
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from gn_next_gen.baselines import ALL_METHODS  # noqa: E402
@@ -54,9 +56,24 @@ def cell_dir(scenario: str, seed: int, *, root: Path = BASELINE_ROOT, tag: str =
     return Path(root) / scenario / name
 
 
+#: Columns a current fit carries.  A fit written before the uncertainty
+#: decomposition existed has the files but not the information the scorer now reads,
+#: and "the file is there" would otherwise skip it forever.  Checking the parquet
+#: *schema* costs one footer read and needs no version bookkeeping.
+REQUIRED_SERIES_COLUMNS = frozenset({"gn_sd_factor", "gn_sd_spread"})
+
+
 def cell_done(scenario: str, seed: int, method: str, *, root=BASELINE_ROOT, tag="") -> bool:
+    """Whether this cell's fit is on disk *and* carries what the scorer reads."""
     base = cell_dir(scenario, seed, root=root, tag=tag)
-    return (base / f"{method}_series.parquet").is_file()
+    series = base / f"{method}_series.parquet"
+    if not series.is_file():
+        return False
+    try:
+        columns = set(pq.read_schema(series).names)
+    except Exception:  # noqa: BLE001 -- an unreadable fit is a fit to redo
+        return False
+    return REQUIRED_SERIES_COLUMNS <= columns
 
 
 def run_cell(

@@ -190,7 +190,22 @@ def calibrate_pathfinding(
 
     stacked = pd.concat(composites, ignore_index=True)
     stacked["weight"] = 1.0 / np.maximum(stacked["gn_sd"].to_numpy(), 1e-3) ** 2
+    # Each pass contributes a composite that already carries the decomposition, so
+    # the re-pool combines the two parts separately rather than re-deriving them:
+    # the correlated parts pool like the total does, and the day-level parts stay
+    # day-level.  `gn_sd` is the same inverse-variance pool as before.
+    weights = stacked["weight"].to_numpy()
+    stacked = stacked.assign(
+        _wf=weights * np.square(stacked.get("gn_sd_factor", stacked["gn_sd"]).to_numpy()),
+        _ws=weights * np.square(stacked.get("gn_sd_spread", 0.0 * stacked["gn_sd"]).to_numpy()),
+    )
     grouped = stacked.groupby("date_ord")
+    total_weight = grouped["weight"].sum().to_numpy()
+    pooled = np.sqrt(1.0 / total_weight)
+    share_factor = np.sqrt(grouped["_wf"].sum().to_numpy() / total_weight)
+    share_spread = np.sqrt(grouped["_ws"].sum().to_numpy() / total_weight)
+    total_share = np.sqrt(np.square(share_factor) + np.square(share_spread))
+    scale = np.divide(pooled, total_share, out=np.zeros_like(pooled), where=total_share > 0)
     series_out = pd.DataFrame(
         {
             "date_ord": grouped["gn"].mean().index.to_numpy(),
@@ -198,7 +213,9 @@ def calibrate_pathfinding(
                 lambda b: float(np.average(b["gn"], weights=b["weight"])),
                 include_groups=False,
             ).to_numpy(),
-            "gn_sd": np.sqrt(1.0 / grouped["weight"].sum().to_numpy()),
+            "gn_sd": pooled,
+            "gn_sd_factor": share_factor * scale,
+            "gn_sd_spread": share_spread * scale,
             "n_observers": grouped["n_observers"].max().to_numpy(),
         }
     )
