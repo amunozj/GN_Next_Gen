@@ -65,9 +65,20 @@ done
 
 mkdir -p "$LOGS"
 
+# Every stage runs JAX. JAX takes the GPU by default and preallocates most of its
+# memory, so parallel workers cannot share one: the first real grid lost 101 of
+# 102 benchmark cells to CUDA_ERROR_OUT_OF_MEMORY while reporting success. CPU is
+# also faster here (Step 1 measured the GPU 4.8x slower for a sequential scan).
+export JAX_PLATFORMS="${JAX_PLATFORMS:-cpu}"
+export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
+export GN_DEVICE="${GN_DEVICE:-cpu}"
+# Six JAX workers each spawning a thread per core is how a 64-core box reaches a
+# load average of 147. Give each worker a slice.
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-8}"
+
 if [[ "$STATUS" == "1" ]]; then
   echo "=== Step 3 status (run id $RUN_ID) ==="
-  for progress in outputs/step3/runs/progress.json outputs/step2/baselines/progress.json; do
+  for progress in outputs/step3/runs/progress.json outputs/step2/logs/baselines_progress.json; do
     [[ -f "$progress" ]] && { echo "--- $progress"; "$PYTHON" - "$progress" <<'PY'
 import json, sys
 data = json.loads(open(sys.argv[1]).read())
@@ -131,13 +142,38 @@ stage() {
   # inside the else branch and faithfully reported every failure as "exit 0".
   local status=0
   "$@" || status=$?
-  if [[ "$status" -eq 0 ]]; then
+  local recorded
+  recorded="$(stage_failures "$name")"
+  if [[ "$status" -eq 0 && "${recorded:-0}" -eq 0 ]]; then
     echo "[$(date +%H:%M:%S)] $name ok"
+  elif [[ "$status" -eq 0 ]]; then
+    echo "[$(date +%H:%M:%S)] $name FAILED: exit 0 but $recorded unit(s) failed"
+    FAILED+=("$name")
   else
     echo "[$(date +%H:%M:%S)] $name FAILED (exit $status)"
     FAILED+=("$name")
   fi
 }
+
+# How many units a stage recorded as failed, from whichever progress file it owns.
+# An exit code is not enough: run_baselines.py collects per-cell failures and
+# still exits 0, so the first real grid printed "benchmark ok" after losing 101
+# of 102 cells.
+stage_failures() {
+  local name="$1" progress=""
+  case "$name" in
+    benchmark) progress="outputs/step2/logs/baselines_progress.json" ;;
+    runs)      progress="outputs/step3/runs/progress.json" ;;
+    *)         echo 0; return 0 ;;
+  esac
+  if [[ ! -f "$progress" ]]; then echo 0; return 0; fi
+  "$PYTHON" -c "import json,sys
+try:
+    print(int(json.load(open(sys.argv[1])).get('failed', 0)))
+except Exception:
+    print(0)" "$progress" 2>/dev/null || echo 0
+}
+
 
 # 1. Graph diagnostics.  Minutes, needs no fit, and f29/f39 come from it.
 stage graph "$PYTHON" -u scripts/graph_diagnostics.py --config "$CONFIG"

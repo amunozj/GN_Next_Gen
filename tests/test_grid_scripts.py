@@ -150,11 +150,35 @@ def _dry_run(*args: str) -> str:
     return result.stdout
 
 
-def test_a_dry_run_lists_every_stage_in_order():
+def test_a_dry_run_lists_every_stage_and_respects_the_real_barriers():
+    """Every stage appears, and the orderings the script actually promises hold.
+
+    This asserted a strict source order of all seven and was **flaky**: three of
+    the stages are launched as a concurrent group, so their lines interleave
+    nondeterministically.  It passed on an idle machine and failed twice in three
+    runs at a load average of 147, which is exactly the sort of failure that gets
+    dismissed as noise.
+
+    What the script does promise is the barrier structure, and that is what is
+    pinned here: nothing that reads a world may start before `generate`, scoring
+    comes after the fits it scores, and figures come last.
+    """
     out = _dry_run()
-    order = ["a157", "generate", "baselines", "structural", "sampling", "score", "figures"]
-    positions = [out.index(f"would run  {name}") for name in order]
-    assert positions == sorted(positions), out
+    stages = ["a157", "generate", "baselines", "structural", "sampling", "score", "figures"]
+    at = {}
+    for name in stages:
+        token = f"would run  {name}"
+        assert token in out, f"{name} missing from the dry run:\n{out}"
+        at[name] = out.index(token)
+
+    # The one hard dependency: generation is a barrier for everything that reads a
+    # world.  A runner started early globs for *complete* realizations and would
+    # quietly process a subset while looking finished.
+    for reader in ("baselines", "structural", "sampling"):
+        assert at["generate"] < at[reader], f"{reader} must come after generate:\n{out}"
+    assert at["baselines"] < at["score"], out
+    assert at["score"] < at["figures"], out
+    assert at["figures"] == max(at.values()), out
 
 
 def test_repeated_name_flags_are_emitted_once_for_argparse():

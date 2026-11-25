@@ -21,8 +21,24 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
+
+# Pin the device **before** anything imports JAX.  JAX takes the GPU by default
+# and preallocates most of its memory, so N parallel workers cannot share four
+# A100s: every one dies with CUDA_ERROR_OUT_OF_MEMORY, which is how the first real
+# grid lost 101 of 102 benchmark cells while the stage still reported "ok".  CPU
+# is also the right default on merit -- Step 1 measured the GPU 4.8x slower at
+# this shape and `check_a_dynamics.py` pins itself to the CPU for the same reason.
+# `--device gpu` exists to be measured, not assumed.
+if "--device" in sys.argv:
+    _device = sys.argv[sys.argv.index("--device") + 1]
+else:
+    _device = os.environ.get("GN_DEVICE", "cpu")
+if _device == "cpu":
+    os.environ.setdefault("JAX_PLATFORMS", "cpu")
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -238,6 +254,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--out", default=str(RUN_ROOT))
+    parser.add_argument(
+        "--device",
+        default=os.environ.get("GN_DEVICE", "cpu"),
+        choices=("cpu", "gpu"),
+        help="cpu by default: the GPU is 4.8x slower at this shape (Step 1) and "
+        "parallel workers cannot share it",
+    )
     args = parser.parse_args(argv)
 
     config = load_run_config(args.config)
