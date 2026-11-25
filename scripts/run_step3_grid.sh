@@ -34,9 +34,11 @@ if [[ -z "$PYTHON" ]]; then
 fi
 
 CONFIG="configs/step3_network.yaml"
-# Memory, not cores, caps these.  A worker peaks near 10 GB during the Hessian
-# (see inference/composite.HESSIAN_CHUNK), so 6 workers is about 60 GB and 16
-# would be 160 GB.  Raise it only after checking free memory.
+# Cores cap these, not memory -- a correction to this file's first version, which
+# blamed memory. A worker peaks near 10 GB during the Hessian, which on this
+# machine's 1 TB is nothing; what it does use is about 8.5 cores (OMP_NUM_THREADS
+# below), so six workers already occupy ~51 of 64. Measured: six workers, ~13 min
+# per benchmark cell. Raising this past 8 oversubscribes and buys nothing.
 JOBS=4
 BENCH_JOBS=6
 LOGS="outputs/step3/logs"
@@ -104,11 +106,33 @@ fi
 
 if [[ "$DETACH" == "1" ]]; then
   DETACH=0
-  GN_PYTHON="$PYTHON" nohup "$0" --config "$CONFIG" --jobs "$JOBS" \
-        --bench-jobs "$BENCH_JOBS" ${ONLY:+--only "$ONLY"} \
-        > "$LOGS/grid.log" 2>&1 &
+  # `setsid` as well as `nohup`, and it is not belt-and-braces. nohup only blocks
+  # SIGHUP; it does not move the job out of the launching shell's session or
+  # process group, so when that session is torn down -- a terminal closing, a
+  # container stopping, an agent process exiting -- the whole group goes with it.
+  # That is how the second launch of this grid died eight minutes in, after the
+  # graph stage, with zero cells written and nothing in the log to say why.
+  # setsid gives the child its own session, so it has no controlling terminal to
+  # lose.
+  launcher=()
+  if command -v setsid >/dev/null 2>&1; then
+    launcher=(setsid)
+  else
+    echo "note: setsid not found; the run may not survive this shell closing"
+  fi
+  # Keep the previous log. `> grid.log` truncated it, and the post-mortem of a run
+  # that dies without a message is the one time the old log is the only evidence
+  # there is -- which is exactly the situation it was destroyed in.
+  if [[ -s "$LOGS/grid.log" ]]; then
+    mv "$LOGS/grid.log" "$LOGS/grid-$(date +%Y%m%d-%H%M%S).log"
+  fi
+  GN_PYTHON="$PYTHON" "${launcher[@]}" nohup "$0" --config "$CONFIG" \
+        --jobs "$JOBS" --bench-jobs "$BENCH_JOBS" ${ONLY:+--only "$ONLY"} \
+        > "$LOGS/grid.log" 2>&1 < /dev/null &
+  disown 2>/dev/null || true
   echo "launched: run id $RUN_ID, pid $!, log $LOGS/grid.log"
   echo "watch with: $0 --status"
+  echo "it now has its own session, so closing this shell will not stop it"
   exit 0
 fi
 
