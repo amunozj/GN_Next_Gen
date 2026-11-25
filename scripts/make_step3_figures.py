@@ -201,15 +201,29 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _skip("f31", "no case_study_observers.csv")
 
-    # f38: the two kernels, on the first world that has both arms.
+    # f38: the two kernels, on a world that has both arms.  Worlds whose tables
+    # carry `first_year` are preferred, because that is what the per-era panel is
+    # drawn against and a cell surviving from an older run may not have it -- one
+    # such cell does survive the first grid's failure.  A world without it still
+    # works; the panel says so rather than drawing nothing.
     pair = None
+    fallback = None
     baselines = OUTPUTS / "step2" / "baselines"
     for directory in sorted(baselines.glob("*/seed-*")):
         left_path = directory / "NetCal_observers.parquet"
         right_path = directory / "NetCal-M_observers.parquet"
-        if left_path.is_file() and right_path.is_file():
-            pair = (pd.read_parquet(left_path), pd.read_parquet(right_path), directory.name)
+        if not (left_path.is_file() and right_path.is_file()):
+            continue
+        left = pd.read_parquet(left_path)
+        right = pd.read_parquet(right_path)
+        candidate = (left, right, directory.name)
+        if "first_year" in left.columns and "first_year" in right.columns:
+            pair = candidate
             break
+        fallback = fallback or candidate
+    pair = pair or fallback
+    if pair is not None and "first_year" not in pair[0].columns:
+        print("  f38: no world carries first_year; the per-era panel will say so", flush=True)
     if pair is not None:
         left, right, label = pair
         print(f"  f38 from {label}", flush=True)
