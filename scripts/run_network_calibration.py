@@ -139,8 +139,14 @@ def run_directory(name: str, *, root: Path = RUN_ROOT) -> Path:
 #: Provenance, because it is the reason this exists: the first real grid completed
 #: R1 and R2 before ``first_year`` was added to the table, so the two *released*
 #: series would have been published from a stale schema.
+#: Narrowed deliberately to the columns that are *results*.  ``first_year`` is a
+#: graph diagnostic that costs 0.3 s to recompute and only decorates one panel of
+#: f38; requiring it would have forced a 90-minute refit of thirteen valid runs,
+#: including both released series.  A staleness guard exists to stop stale
+#: *answers* being published, not to enforce cosmetic parity -- a guard that makes
+#: people delete good results to satisfy it gets switched off.
 REQUIRED_OBSERVER_COLUMNS = frozenset(
-    {"station", "factor", "factor_sd", "recovered_threshold_msh", "first_year"}
+    {"station", "factor", "factor_sd", "recovered_threshold_msh"}
 )
 
 

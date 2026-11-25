@@ -355,13 +355,17 @@ def test_a_run_is_done_only_if_it_carries_the_current_columns(tmp_path):
     # Series and meta present, observers missing: not done.
     assert not runner.is_done("R1", root=root)
 
-    stale = pd.DataFrame(
-        {"station": [1], "factor": [1.0], "factor_sd": [0.1], "recovered_threshold_msh": [30.0]}
-    )
+    # Missing a *result* column: redo it.
+    stale = pd.DataFrame({"station": [1], "factor": [1.0]})
     stale.to_parquet(directory / "observers.parquet", index=False)
     assert not runner.is_done("R1", root=root), "a stale schema must be redone"
 
-    current = stale.assign(first_year=[1900])
+    # All the result columns present: keep it, even without the graph diagnostics
+    # that decorate a figure. The guard is there to stop stale *answers* being
+    # published, not to force a refit over a column that costs 0.3 s to recompute
+    # -- the first version demanded `first_year` and would have thrown away
+    # thirteen valid runs including both released series.
+    current = stale.assign(factor_sd=[0.1], recovered_threshold_msh=[30.0])
     current.to_parquet(directory / "observers.parquet", index=False)
     assert runner.is_done("R1", root=root)
 

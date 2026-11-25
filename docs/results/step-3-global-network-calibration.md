@@ -18,7 +18,7 @@
 > grid and the real-data runs are not.** Step 2's decision 10 stands — no run
 > over ~15 minutes is launched from a Claude Code session — and a single network
 > fit is minutes to tens of minutes, so the 102 benchmark cells and the 14
-> real-data runs are the PI's to launch (§9 is the command).
+> real-data runs are the PI's to launch (§10 is the command).
 >
 > What is measured here: the overlap graph's diagnostics on the real
 > 1610–2026 record (§2), the detection model and its validation (§3), the
@@ -368,7 +368,98 @@ Hessian, so the orchestrator defaults to 6 benchmark workers and 4 run workers
 rather than the 16 the core count would allow. At 772 s and 6 workers the 102
 benchmark cells are roughly 4 hours.
 
-## 8. What is implemented
+## 8. The real-data runs: both anchorings, and the sensitivities
+
+Thirteen of the fourteen planned runs completed, 82 minutes in total
+([`step3_runs.csv`](data/step3_runs.csv)). Only `R3`, the RGO 12–19 anchor
+extension, failed — of CUDA out-of-memory, not of anything about the model (§12).
+**These are fits, not scores**: the real record has no truth, so nothing below is
+a statement that the answer is right. What they do establish is that the
+estimator runs end to end on 1610–2026 and what it is sensitive to.
+
+![Top: the two released series as yearly means over 1610-2026 with 2-sigma ensemble bands, Debrecen-anchored and RGO-anchored lying close together. Bottom: their difference, scattering about zero with no secular trend.](figures/step-3/f36_series_light.png)
+
+**Figure f36** — The two released series, and the number ADR-003 has been asking
+for since Step 1. Anchored on Debrecen cycles 21–23 the mean reference-equivalent
+count over the whole record is **3.818**; anchored on RGO cycles 15–19 it is
+**3.915**. The two **agree to 2.5%**, which is the anchor-sensitivity result, and
+it is small — the graph diagnostics said why in §2, where the resistance between
+the two anchorings came out finite at 5.6×10⁻⁶ through the KMAS bridge. Anchorings
+that are tied together cannot drift far apart.
+
+**Both series start in 1610, and §2 said overlap stops at 1774.** So everything
+before 1774 is carried by the activity-smoothness prior, not by any chain of
+observers. That is the mechanism §4 predicted would have to do the work, and the
+honest reading of the early record is that it is prior-dominated. The
+`lambda_penalty` sensitivity below is how much that matters.
+
+| Run | Anchoring | Observers | Mean GN | Median inflation | Weak modes | Activity-years measured |
+|---|---|---|---|---|---|---|
+| **R1** released, primary | Debrecen 21–23 | 508 | **3.818** | 10.02 | 277 | 58% |
+| **R2** released, secondary | RGO 15–19 | 508 | **3.915** | 3.77 | 510 | 69% |
+| R3 sensitivity | RGO 12–19 | — | — | — | — | failed (OOM) |
+
+Two columns there deserve reading. **Weak modes differ by a factor of two between
+the two anchorings** — 277 against 510 of roughly a thousand parameter directions
+— so which anchor is chosen changes how much of the network the data constrains
+rather than merely where the scale is pinned. And **42% and 31% of observer-years
+fall outside the reference catalogue's own activity range**, so for those years
+the detection ratio comes from the extrapolated parametric branch of §3 rather
+than from measurement. Both numbers belong in any later claim about the early
+record.
+
+![Two panels of the series under the two extreme drift priors, overlaid, with their difference below.](figures/step-3/f35_drift_prior_light.png)
+
+**Figure f35** — Drift reported as prior sensitivity, which is the only honest way
+to report it: era-wide drift is not identified from sunspot data (identifiability
+trap 2). Over Uto's full recommended range the mean moves **3.98 → 3.82 → 3.76**
+for `μ_σ` = −5, −2, 0 — about **6%**, and in the direction a looser drift prior
+predicts, since letting observers drift absorbs signal that would otherwise be
+attributed to the Sun.
+
+**The fingerprint ablation is the sharpest result of the four sensitivities, and
+it confirms §4 on real data.**
+
+| fingerprint weight `w` | Mean GN |
+|---|---|
+| 0.0 | 3.628 |
+| 0.5 | 3.608 |
+| **1.0** (released) | **3.818** |
+| 2.0 | **7.676** |
+
+Doubling the occupancy term's weight **doubles the series**. Turning it off
+entirely moves the answer by 5%. That is what a term with almost no information
+and a real capacity for harm looks like from the outside: §4 measured the
+reference's activity-conditional count distribution as almost exactly Poisson
+(variance/mean median 1.014), so thinning it carries no acuity signal, and on a
+matched network the term doubled the scatter without reducing bias. On the real
+record it does worse than that. **The evidence now favours `w = 0`**, and the
+decision belongs to the PI since `w = 1` was a planning decision taken before any
+of this was measured.
+
+The other two knobs are better behaved. Smoothness moves the mean by 5%
+(`λ` = 5 → 4.009, 20 → 3.818, 80 → 3.970, non-monotone), and widening the day
+tolerance raises it monotonically as more edges enter (2 → 3.818, 5 → 3.950,
+10 → 4.103), which is the direction more overlap should push a chained quantity.
+Perturbing the ADR-011 activity exponents by ±50% — the SDSS drift-tilt analogue —
+moves it by under 2% (3.898 and 3.816), so the exponents being held rather than
+fitted is not where the risk is.
+
+![Three panels: fitted acuity thresholds against year for every observer-year, the distribution of how much each career drifts, and the calibration factor against the fitted threshold.](figures/step-3/f37_parameters_light.png)
+
+**Figure f37** — The observer parameter table as a picture, for the primary run.
+The right panel is the caveat §5 measured: the factor and the threshold are not
+independent, and `d log k / d log T ≈ −0.24` means the threshold is the weakly
+identified one of the pair. Read the factor.
+
+**One number not to trust yet.** R1's median inflation is **10.02** where every
+other run at the same anchoring sits at 3.3–4.2, including runs differing only in
+one knob. That is more likely bootstrap noise or GPU contention during the run
+than a property of the primary configuration, and it is flagged rather than
+quoted: the correction's size on the real network should be taken as the **3.3–4.2**
+the replicates agree on until R1 is re-run on CPU.
+
+## 9. What is implemented
 
 | Module | What |
 |---|---|
@@ -397,7 +488,7 @@ each is a general lesson rather than a local tweak:
   row objective — and never returns. `hessian_by_chunks` is exact (identical to
   `jax.hessian` to 0.00e+00) with memory bounded by the batch.
 
-## 9. Reproducing this, and what the PI needs to launch
+## 10. Reproducing this, and what the PI needs to launch
 
 Quick, and all of it runs in a session:
 
@@ -440,7 +531,7 @@ smoke test and is not a result.
   would need a thirteenth registered method and another 51 cells. The decision is
   the PI's, and the uncorrected coverage is not claimed anywhere until it is run.
 
-## 10. What Step 4 inherits
+## 11. What Step 4 inherits
 
 Even unfinished, this step hands Step 4 things it would otherwise have to
 discover. Several are warnings.
@@ -461,7 +552,7 @@ discover. Several are warnings.
 | Emission module | `models.emissions` | The module `inference.forward_filter.count_emissions` promised Step 4; it is built and tested |
 | Cost shape | mode 344 s, correction 401 s, ~10 GB peak | Memory caps parallelism, not cores (§7) |
 
-## 11. What this step does not establish
+## 12. What this step does not establish
 
 Stated plainly, because a half-run step that reads as finished is worse than one
 that says where it stopped.
