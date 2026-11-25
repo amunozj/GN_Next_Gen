@@ -17,6 +17,22 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
+# The environment's interpreter, resolved explicitly.  A bare `python` is whatever
+# is on PATH, and a detached launch from a shell that never ran
+# `conda activate gn-next-gen` gets a system python with no scipy -- which is
+# exactly how the first launch of this script died, five stages in five seconds.
+# run_step2_grid.sh already did it this way; this one did not, and should have.
+PYTHON="${GN_PYTHON:-}"
+if [[ -z "$PYTHON" ]]; then
+    for candidate in \
+        "$HOME/.conda/envs/gn-next-gen/bin/python" \
+        "/d0/amunozj/.conda/envs/gn-next-gen/bin/python" \
+        "$(command -v python3 || true)"
+    do
+        [[ -x "$candidate" ]] && PYTHON="$candidate" && break
+    done
+fi
+
 CONFIG="configs/step3_network.yaml"
 # Memory, not cores, caps these.  A worker peaks near 10 GB during the Hessian
 # (see inference/composite.HESSIAN_CHUNK), so 6 workers is about 60 GB and 16
@@ -52,7 +68,7 @@ mkdir -p "$LOGS"
 if [[ "$STATUS" == "1" ]]; then
   echo "=== Step 3 status (run id $RUN_ID) ==="
   for progress in outputs/step3/runs/progress.json outputs/step2/baselines/progress.json; do
-    [[ -f "$progress" ]] && { echo "--- $progress"; python - "$progress" <<'PY'
+    [[ -f "$progress" ]] && { echo "--- $progress"; "$PYTHON" - "$progress" <<'PY'
 import json, sys
 data = json.loads(open(sys.argv[1]).read())
 mine = str(data.get("run_id", "")) == str(__import__("os").environ.get("GN_RUN_ID", ""))
@@ -66,7 +82,7 @@ PY
     }
   done
   echo "--- graph"
-  [[ -f outputs/step3/graph/summary.json ]] && python -c "
+  [[ -f outputs/step3/graph/summary.json ]] && "$PYTHON" -c "
 import json; d=json.load(open('outputs/step3/graph/summary.json'))
 print('  ', {k: d[k] for k in ('n_stations','n_edges','n_components','n_fingerprint_only')})" \
     || echo "   not run"
@@ -77,11 +93,30 @@ fi
 
 if [[ "$DETACH" == "1" ]]; then
   DETACH=0
-  nohup "$0" --config "$CONFIG" --jobs "$JOBS" --bench-jobs "$BENCH_JOBS" \
-        ${ONLY:+--only "$ONLY"} > "$LOGS/grid.log" 2>&1 &
+  GN_PYTHON="$PYTHON" nohup "$0" --config "$CONFIG" --jobs "$JOBS" \
+        --bench-jobs "$BENCH_JOBS" ${ONLY:+--only "$ONLY"} \
+        > "$LOGS/grid.log" 2>&1 &
   echo "launched: run id $RUN_ID, pid $!, log $LOGS/grid.log"
   echo "watch with: $0 --status"
   exit 0
+fi
+
+echo "=============================================================="
+echo "Step 3 grid starting"
+echo "  run id  $RUN_ID"
+echo "  python  ${PYTHON:-<none found>}"
+echo "  jobs    runs=$JOBS benchmark=$BENCH_JOBS"
+echo "  disk    $(df -h "$REPO" | awk 'NR==2 {print $4" free on "$6}')"
+
+if [[ -z "$PYTHON" ]] || ! "$PYTHON" -c "import gn_next_gen" 2>/dev/null; then
+  echo "FATAL: '${PYTHON:-<none>}' cannot import gn_next_gen."
+  echo "       Set GN_PYTHON to the environment's python, or activate it first:"
+  echo "         conda activate gn-next-gen"
+  exit 1
+fi
+if ! "$PYTHON" -c "import scipy, jax, pandas" 2>/dev/null; then
+  echo "FATAL: '$PYTHON' is missing scipy/jax/pandas; it is not the gn-next-gen env."
+  exit 1
 fi
 
 FAILED=()
@@ -92,32 +127,36 @@ stage() {
     return 0
   fi
   echo "[$(date +%H:%M:%S)] === $name ==="
-  if "$@"; then
+  # Capture the status before `if` consumes it: the first version read `$?`
+  # inside the else branch and faithfully reported every failure as "exit 0".
+  local status=0
+  "$@" || status=$?
+  if [[ "$status" -eq 0 ]]; then
     echo "[$(date +%H:%M:%S)] $name ok"
   else
-    echo "[$(date +%H:%M:%S)] $name FAILED (exit $?)"
+    echo "[$(date +%H:%M:%S)] $name FAILED (exit $status)"
     FAILED+=("$name")
   fi
 }
 
 # 1. Graph diagnostics.  Minutes, needs no fit, and f29/f39 come from it.
-stage graph python -u scripts/graph_diagnostics.py --config "$CONFIG"
+stage graph "$PYTHON" -u scripts/graph_diagnostics.py --config "$CONFIG"
 
 # 2. The benchmark cells, through Step 2's own runner -- the integration is one
 #    flag, because the scorer discovers cells by glob and needs no change.
-stage benchmark python -u scripts/run_baselines.py \
+stage benchmark "$PYTHON" -u scripts/run_baselines.py \
       --config configs/step2_baselines.yaml \
       --methods NetCal NetCal-M --jobs "$BENCH_JOBS"
 
 # 3. The real-data runs: both released anchorings plus the sensitivities.
-stage runs python -u scripts/run_network_calibration.py \
+stage runs "$PYTHON" -u scripts/run_network_calibration.py \
       --config "$CONFIG" --jobs "$JOBS"
 
 # 4. Re-score, so Step 3's cells land in the same tables as Step 2's eleven.
-stage score python -u scripts/score_benchmark.py
+stage score "$PYTHON" -u scripts/score_benchmark.py
 
 # 5. Figures last; it skips with a reason rather than failing.
-stage figures python -u scripts/make_step3_figures.py
+stage figures "$PYTHON" -u scripts/make_step3_figures.py
 
 echo
 if [[ ${#FAILED[@]} -gt 0 ]]; then
