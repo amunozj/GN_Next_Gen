@@ -559,6 +559,43 @@ change the grid reproduces the count ratio to 0.1–0.8% out to 100 MSH.
 **Not a change to:** the estimand, the anchor identity (`k(T_ref) ≡ 1`, now exact
 to 1e-12 rather than 0.9988), the firewall lineage, or any acceptance criterion.
 
+### D2 — file list, three differences from the plan's table
+
+No design change; recorded so the plan and the tree agree.
+
+- **`scripts/run_step3_benchmark.py` was not written.** It is unnecessary:
+  `score_benchmark.py` discovers cells by glob and `run_baselines.py` dispatches
+  through `ALL_METHODS`, so `run_baselines.py --methods NetCal NetCal-M` scores
+  Step 3's methods against the eleven with no new code. Strictly less to maintain.
+- **`scripts/graph_diagnostics.py` was added**, which the plan's table did not
+  list. The graph diagnostics need no fit and take about six minutes, so they
+  belong in a script a session can run rather than inside the hours-long runner.
+  It is what f29, f30 and f39 are built from.
+- **`io/cache.py` gained `cached_arrays`**, the array-valued sibling of
+  `cached_frame`, because the detection grid is arrays rather than a table and
+  rebuilding it costs 4 s per worker.
+
+### D3 — three performance faults, and what they cost
+
+Recorded because each was found by running rather than by reading, and each is a
+general trap rather than a local slip.
+
+1. **`jax.hessian` cannot be used here at all.** It is `jacfwd(jacrev(...))` and
+   materializes every tangent at once: 699 tangents against a 4.7M-row objective
+   never returned. `hessian_by_chunks` is exact (identical to `jax.hessian` to
+   `0.00e+00` at every batch size) and makes it a memory knob — measured at
+   196 s / 6.8 GB for chunk 2, **80 s / 10 GB for chunk 8**, and 157 GB with no
+   result for chunk 24. Memory, not cores, therefore caps `--jobs`.
+2. **Kernel B built a 66 GB intermediate.** It needs two columns of each
+   `(K, K)` emission table and was building the whole table per row and slicing
+   it; the hybrid kernel then did that for *every* row and multiplied the
+   high-count ones by zero. Gathering the two columns directly, and giving
+   Kernel B a real row subset, took a gradient from "44 GB and climbing" to
+   0.529 s at 6.5 GB.
+3. **The bootstrap recompiled on every resample**, because the block weights were
+   a closure variable rather than a traced argument. 200 cheap gradients had
+   become 200 compilations.
+
 ## Approval
 
 **Approved 2026-11-24** by the PI, in session, together with the eight decisions in the table above.
