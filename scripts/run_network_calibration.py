@@ -128,9 +128,39 @@ def run_directory(name: str, *, root: Path = RUN_ROOT) -> Path:
     return Path(root) / name.replace("/", "_")
 
 
+#: Columns a *current* run's observer table carries.  "The file is there" is not
+#: the same as "the file is what this code would write": a run finished before a
+#: column existed has the files but not the information, and a resumable grid
+#: would skip it forever.  Step 2 hit this exactly once and fixed it the same way
+#: -- ``run_baselines.cell_done`` refuses a fit whose parquet lacks the
+#: uncertainty-decomposition columns -- and checking the schema costs one footer
+#: read with no version bookkeeping.
+#:
+#: Provenance, because it is the reason this exists: the first real grid completed
+#: R1 and R2 before ``first_year`` was added to the table, so the two *released*
+#: series would have been published from a stale schema.
+REQUIRED_OBSERVER_COLUMNS = frozenset(
+    {"station", "factor", "factor_sd", "recovered_threshold_msh", "first_year"}
+)
+
+
 def is_done(name: str, *, root: Path = RUN_ROOT) -> bool:
+    """Whether this run is on disk *and* carries what the figures and scorer read."""
     directory = run_directory(name, root=root)
-    return (directory / "series.parquet").is_file() and (directory / "meta.json").is_file()
+    if not (directory / "series.parquet").is_file():
+        return False
+    if not (directory / "meta.json").is_file():
+        return False
+    observers = directory / "observers.parquet"
+    if not observers.is_file():
+        return False
+    try:
+        import pyarrow.parquet as pq
+
+        columns = set(pq.read_schema(observers).names)
+    except Exception:  # noqa: BLE001 -- an unreadable run is a run to redo
+        return False
+    return REQUIRED_OBSERVER_COLUMNS <= columns
 
 
 def execute(spec: dict, config, *, root: Path, quick: bool = False) -> str:

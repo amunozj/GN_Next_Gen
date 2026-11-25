@@ -313,3 +313,83 @@ def test_a_fit_without_the_uncertainty_columns_is_rerun(tmp_path):
     current = old.assign(gn_sd_factor=0.4, gn_sd_spread=0.3)
     current.to_parquet(cell / "HoSc98_series.parquet", index=False)
     assert module.cell_done("S1", 7, "HoSc98", root=tmp_path)
+
+
+# --- Step 3's runner: staleness, not just presence ------------------------
+
+
+def _load_runner():
+    import importlib.util
+
+    from gn_next_gen.paths import SCRIPTS
+
+    spec = importlib.util.spec_from_file_location(
+        "run_network_calibration", SCRIPTS / "run_network_calibration.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_a_run_is_done_only_if_it_carries_the_current_columns(tmp_path):
+    """ "The file is there" is not "the file is what this code would write".
+
+    Provenance: the first real Step 3 grid finished R1 and R2 -- the two
+    *released* series -- before ``first_year`` was added to the observer table. A
+    presence-only check would have skipped them on every relaunch and published
+    the stale schema. Step 2 hit the same thing once and fixed it the same way.
+    """
+    import pandas as pd
+
+    runner = _load_runner()
+    root = tmp_path / "runs"
+
+    assert not runner.is_done("R1", root=root)
+
+    directory = root / "R1"
+    directory.mkdir(parents=True)
+    pd.DataFrame({"date_ord": [1], "gn": [1.0]}).to_parquet(
+        directory / "series.parquet", index=False
+    )
+    (directory / "meta.json").write_text("{}")
+    # Series and meta present, observers missing: not done.
+    assert not runner.is_done("R1", root=root)
+
+    stale = pd.DataFrame(
+        {"station": [1], "factor": [1.0], "factor_sd": [0.1], "recovered_threshold_msh": [30.0]}
+    )
+    stale.to_parquet(directory / "observers.parquet", index=False)
+    assert not runner.is_done("R1", root=root), "a stale schema must be redone"
+
+    current = stale.assign(first_year=[1900])
+    current.to_parquet(directory / "observers.parquet", index=False)
+    assert runner.is_done("R1", root=root)
+
+
+def test_the_runner_pins_the_cpu_before_importing_jax():
+    """The bug that lost 101 of 102 benchmark cells to CUDA OOM.
+
+    The pin has to happen before *anything* imports JAX, so it lives above the
+    package imports rather than inside ``main``. Pinning it afterwards is a no-op
+    that looks correct.
+    """
+    from gn_next_gen.paths import SCRIPTS
+
+    source = (SCRIPTS / "run_network_calibration.py").read_text()
+    pin = source.index('os.environ.setdefault("JAX_PLATFORMS"')
+    first_package_import = source.index("from gn_next_gen")
+    assert pin < first_package_import, "the device pin must precede any JAX import"
+    assert "XLA_PYTHON_CLIENT_PREALLOCATE" in source
+
+
+def test_the_orchestrator_exports_the_device_and_checks_progress_files():
+    """A stage that achieved nothing must not be able to print "ok"."""
+    from gn_next_gen.paths import SCRIPTS
+
+    source = (SCRIPTS / "run_step3_grid.sh").read_text()
+    assert "export JAX_PLATFORMS=" in source
+    assert "stage_failures" in source
+    # The path the failures are actually recorded at, which the first version got
+    # wrong and so reported nothing.
+    assert "outputs/step2/logs/baselines_progress.json" in source
+    assert "outputs/step3/runs/progress.json" in source
