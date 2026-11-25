@@ -18,13 +18,15 @@
 > grid and the real-data runs are not.** Step 2's decision 10 stands — no run
 > over ~15 minutes is launched from a Claude Code session — and a single network
 > fit is minutes to tens of minutes, so the 102 benchmark cells and the 14
-> real-data runs are the PI's to launch (§8 is the command).
+> real-data runs are the PI's to launch (§9 is the command).
 >
 > What is measured here: the overlap graph's diagnostics on the real
 > 1610–2026 record (§2), the detection model and its validation (§3), the
-> activity map (§4), parameter recovery on a matched network (§5), and the
-> composite-likelihood correction (§6). Every number below comes from a
-> committed script and a committed CSV.
+> activity map (§4), parameter recovery on a matched network (§5), the
+> composite-likelihood correction (§6), and **one complete fit on a real
+> benchmark world** — 350 observers, 17,442 edges, 16.2M matched pair
+> observations — which gives the runtime and the size of the correction (§7).
+> Every number below comes from a committed script and a committed CSV.
 >
 > What is **not** yet measured, and is therefore not claimed anywhere below:
 > the benchmark scores against the eleven Step 2 methods, the interval coverage,
@@ -43,6 +45,8 @@
 | Can the ADF-style fingerprint identify acuity once activity is conditioned on? | **Essentially no**, and this is the sharpest available account of why the published acuity methods fail (§4) |
 | Does the estimator recover what it should? | **Yes for the quantity that matters.** On a matched network `log r` recovers with bias **−0.020** and scatter **0.033**. The *threshold* looks worse and that is prior shrinkage of a parameter the data barely constrains (§5) |
 | Does the uncertainty correction work? | **Yes, validated against a closed form** (√m at m = 1, 4, 9, 25) and against the property it exists for: p90 inflation rises **1.19 → 2.01** as a network goes from 4.6 to 259 pairs per day (§6) |
+| How overconfident is the uncorrected composite likelihood on a *real* network? | **3.5× too narrow.** Measured on a 350-observer world with 16.2M matched pairs: median inflation **3.53**, and **233 of 699** parameter directions turn out to be prior- rather than data-constrained (§7) |
+| What does a fit cost? | **772 s** on one CPU process for that world — 344 s to the mode, 401 s for the correction (§7) |
 
 ## 1. What this step builds
 
@@ -303,9 +307,57 @@ Two things had to be right and were found by testing rather than by reading:
 
 And it behaves as it must on real networks: p90 inflation rises
 **1.19 → 1.32 → 1.38 → 2.01** as a matched network goes from 4.6 to 259 pairs per
-day.
+day. On an actual benchmark world it lands at a median **3.53** (§7), so this is
+not a small correction being applied for tidiness.
 
-## 7. What is implemented
+## 7. One complete fit, and what it cost
+
+A single `NetCal` fit was run to completion on a real benchmark world (S1, seed
+20261122: 350 observers, 17,442 edges, **16.2M matched pair observations**,
+5,688 parameters), on one CPU process
+([`timing.json`](../../outputs/step3/timing.json)). This is a runtime and
+uncertainty measurement, **not a score** — the truth stays sealed and nothing
+here says whether the answer is good.
+
+![Horizontal bars of measured wall clock per stage on a log axis: graph 0.2 s, observers 4.9 s, series 5.2 s, mode 344 s, correction 401 s, every bar inside its budget.](figures/step-3/f40_runtime_light.png)
+
+**Figure f40** — Measured, not estimated. The mode and the correction dominate
+and are the same order as each other; the series and the per-observer
+uncertainty are rounding errors beside them. Every stage sits inside the budget
+the plan set, so the spec's "minutes on CPU" target is met for the fit itself —
+**344 s to the mode** — with the correction a further 401 s.
+
+| Stage | Seconds | Budget |
+|---|---|---|
+| graph construction | 0.2 | 60 |
+| **mode** (2 outer passes, L-BFGS) | **344** | 600 |
+| **correction** (chunked Hessian + 100-block bootstrap) | **401** | 3600 |
+| series + ensemble (200 draws) | 5.2 | 120 |
+| per-observer uncertainty | 4.9 | 300 |
+| **total** | **772** | — |
+
+**The correction is not a formality on a real network: it widens the intervals by
+3.5×.** Median inflation is **3.53**, so the uncompensated composite likelihood
+was overconfident by that factor — larger than the 1.4× Step 2 measured for the
+chained baselines and in the same direction. That is what sixty-six pairwise
+terms per shared day does, and it is the single strongest argument for the
+correction being load-bearing rather than cosmetic.
+
+**And a third of the parameter directions are held by the prior, not the data.**
+233 of 699 eigenmodes of the curvature fall below the weak-mode threshold. SDSS
+handled exactly this by projecting out the weakly constrained modes and restoring
+them with Gaussian priors; here they are reported rather than hidden, and they are
+the quantitative form of "this observer's acuity is not identified". The
+uncertainty split is both non-zero and of comparable size — `gn_sd_factor` median
+**0.213**, `gn_sd_spread` median **0.155** — so the correlated and averaging-down
+parts are both real, which is the contract Step 2's scorer needs.
+
+**Memory, not cores, is what caps a grid.** A worker peaks near 10 GB during the
+Hessian, so the orchestrator defaults to 6 benchmark workers and 4 run workers
+rather than the 16 the core count would allow. At 772 s and 6 workers the 102
+benchmark cells are roughly 4 hours.
+
+## 8. What is implemented
 
 | Module | What |
 |---|---|
@@ -334,7 +386,7 @@ each is a general lesson rather than a local tweak:
   row objective — and never returns. `hessian_by_chunks` is exact (identical to
   `jax.hessian` to 0.00e+00) with memory bounded by the batch.
 
-## 8. Reproducing this, and what the PI needs to launch
+## 9. Reproducing this, and what the PI needs to launch
 
 Quick, and all of it runs in a session:
 
@@ -365,7 +417,28 @@ cd /d0/amunozj/git_repos/GN_Next_Gen
 `scripts/run_network_calibration.py --list` prints the 14 runs; `--quick` is a
 smoke test and is not a result.
 
-## 9. What this step does not establish
+## 10. What Step 4 inherits
+
+Even unfinished, this step hands Step 4 things it would otherwise have to
+discover. Several are warnings.
+
+| Setting | Value | Why |
+|---|---|---|
+| Detection ratio | **measure it in the catalogue**, binned by activity; keep the parametric law only to extrapolate | The law is biased one way by 4–13% (§3). Deviation D1 |
+| Grain correction | **does not apply** to a measured ratio | Counting rows above a threshold is already per-group-day; Step 1 §2.4's shift converts the *published* law only |
+| Activity weighting | **instantaneous**, one scale shared by the detection grid, the activity map and the count PMF | The two weightings differ by about six; mixing them misplaces every observer on the activity axis, and a stale test bound caught exactly that |
+| Activity before 1874 | `AL = 0.2155·GN^1.1414` (RGO), `0.2038·GN^1.1600` (Debrecen) | Tight (r > 0.994), agrees across a century, and passes through the origin so a grand minimum has no area (§5) |
+| Latent count distribution | **almost exactly Poisson at fixed activity** — var/mean median 1.014 over 24 bins | So the ADF-style fingerprint carries almost no acuity information, and a shape-based term should not be relied on (§4) |
+| Acuity identifiability | `d log k / d log T` ≈ **−0.24** | The threshold is constrained four times less well than the rate; report the rate, and read any acuity-recovery panel as a picture of a weakly identified parameter (§5) |
+| Composite likelihood | needs the sandwich, and the meat is `G_lik + H_penalty` | Uncorrected it is **3.5× overconfident** on a real network (§7); the plain sandwich runs 12× the wrong way (§6) |
+| Weak directions | **233 of 699** on a real world | A third of the parameter space is prior-held. Step 4's contraction map should expect the same and report it |
+| Reach | **1774** is the overlap limit, for both anchorings | Anything earlier comes from a prior, not from overlap (§2) |
+| Anchors | **tied**, resistance 5.6×10⁻⁶ through KMAS | The anchor-sensitivity difference will be a measurement (§2) |
+| Floating observers | **83 of 509**, 59 components | Each is one exact Laplacian null mode (§2) |
+| Emission module | `models.emissions` | The module `inference.forward_filter.count_emissions` promised Step 4; it is built and tested |
+| Cost shape | mode 344 s, correction 401 s, ~10 GB peak | Memory caps parallelism, not cores (§7) |
+
+## 11. What this step does not establish
 
 Stated plainly, because a half-run step that reads as finished is worse than one
 that says where it stopped.

@@ -29,7 +29,7 @@ Update this table at the end of every `/implement-step` and `/verify-step`.
 | 0 | Clean slate (this repository's initial content) | — | Done (2026-10-28) | — |
 | 1 | [step-1-data-foundation-and-viability.md](step-1-data-foundation-and-viability.md) | [step-1-plan.md](../plans/step-1-plan.md) | **Pass with caveats** (verified 2026-11-22) | [results](../results/step-1-data-foundation.md) · [verification](../results/step-1-verification.md) |
 | 2 | [step-2-blind-benchmark.md](step-2-blind-benchmark.md) | [step-2-plan.md](../plans/step-2-plan.md) | **Pass with caveats** (verified 2026-11-22) | [results](../results/step-2-blind-benchmark.md) · [verification](../results/step-2-verification.md) |
-| 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | [step-3-plan.md](../plans/step-3-plan.md) | **In progress** (plan approved 2026-11-24) | — |
+| 3 | [step-3-global-network-calibration.md](step-3-global-network-calibration.md) | [step-3-plan.md](../plans/step-3-plan.md) | **Implemented, runs pending** (2026-11-24) — code, tests and graph diagnostics complete; the 102 benchmark cells and 14 real-data runs await a detached launch | [results](../results/step-3-global-network-calibration.md) |
 | 4 | [step-4-joint-latent-population-model.md](step-4-joint-latent-population-model.md) | — | Not started | — |
 | 5 | [step-5-neural-emission-calibrator.md](step-5-neural-emission-calibrator.md) | — | Not started (conditional) | — |
 | 6 | [step-6-proxy-informed-variant.md](step-6-proxy-informed-variant.md) | — | Not started | — |
@@ -98,8 +98,8 @@ Running list of paper items (add as steps produce them):
       overlap-based method stops at 1774 and covers 46% of the record — and the two that
       do reach it overestimate the Maunder level 23-25x (Step 2 §6)
 - [x] Four of seven score worse than a random segmentation of the same data (Step 2 §4)
-- [ ] Overlap-graph diagnostics through time (Step 3)
-- [ ] Benchmark comparison of all methods incl. coverage (Steps 3–4)
+- [x] Overlap-graph diagnostics through time (Step 3) — [results](../results/step-3-global-network-calibration.md) §2, figures f29, f30, f39: the two ADR-009 anchors are **tied** (resistance 5.6e-06 through KMAS), overlap reaches **1774 and no earlier** for both, **83 of 509** observers float, **120 of 393** years are severed, and 3,586 loops close only to a median **0.060** in log
+- [ ] Benchmark comparison of all methods incl. coverage (Steps 3–4) — Step 3's two methods are registered and scored by `run_baselines.py --methods NetCal NetCal-M`; the grid is not run
 - [ ] GN posterior ensemble 1610–present, sunspot-only (Step 4)
 - [ ] Maunder Minimum: blanket-statement and MNAR sensitivity, contraction map (Step 4)
 - [ ] Proxy-informed variant and leave-one-proxy-type-out comparison (Step 6)
