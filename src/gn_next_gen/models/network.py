@@ -589,7 +589,7 @@ def pairwise_loglik_conditional(log_r, inputs_static):
     return jnp.sum(weight * resample * term)
 
 
-def pairwise_loglik_marginal(log_r, inputs_static):
+def pairwise_loglik_marginal(log_r, inputs_static, *, rows=None):
     """Kernel B: the exact marginalization over the latent count.
 
     ``P(y_b | y_a) = sum_N P(y_b | N, b) P(N | y_a, a)`` with ``P(N | y_a)``
@@ -605,6 +605,13 @@ def pairwise_loglik_marginal(log_r, inputs_static):
     sensitive to a misspecified prior in a way Kernel A is not.  Their disagreement
     is therefore informative about misspecification rather than about arithmetic.
 
+    ``rows`` restricts the term to a subset, which the hybrid kernel uses.  It is a
+    real restriction and not a weight of zero: only two columns of each
+    ``(K, K)`` emission table are ever read, but materializing the tables for
+    every row anyway would be a ``4.7M x 42 x 42`` tensor -- 66 GB on a real
+    benchmark world.  :func:`_emission_column` gathers the two columns directly,
+    and ``rows`` keeps even that to the pairs that need it.
+
     One stated approximation: the emission library is indexed by the rate ratio
     ``r`` with the split rate folded in, rather than on a two-dimensional
     ``(k, s)`` grid.  In the low-count regime this kernel serves, ``N`` is 0-3 and
@@ -615,34 +622,45 @@ def pairwise_loglik_marginal(log_r, inputs_static):
     log_prior_n = inputs_static["log_prior_n"]
     k_grid_log = inputs_static["k_grid_log"]
 
-    table_a = _emission_rows(log_emission, k_grid_log, log_r[inputs_static["slot_a"]])
-    table_b = _emission_rows(log_emission, k_grid_log, log_r[inputs_static["slot_b"]])
-
-    prior = log_prior_n[inputs_static["slot_a"]]
-    log_post = prior + _column(table_a, inputs_static["count_a"])
-    log_post = log_post - logsumexp(log_post, axis=1, keepdims=True)
-    log_term = logsumexp(log_post + _column(table_b, inputs_static["count_b"]), axis=1)
+    slot_a = inputs_static["slot_a"]
+    slot_b = inputs_static["slot_b"]
+    count_a = inputs_static["count_a"]
+    count_b = inputs_static["count_b"]
+    weight = inputs_static["weight"]
     resample = inputs_static["year_weight"][inputs_static["pair_year"]]
-    return jnp.sum(inputs_static["weight"] * resample * log_term)
+    if rows is not None:
+        slot_a = slot_a[rows]
+        slot_b = slot_b[rows]
+        count_a = count_a[rows]
+        count_b = count_b[rows]
+        weight = weight[rows]
+        resample = resample[rows]
+
+    column_a = _emission_column(log_emission, k_grid_log, log_r[slot_a], count_a)
+    column_b = _emission_column(log_emission, k_grid_log, log_r[slot_b], count_b)
+
+    log_post = log_prior_n[slot_a] + column_a
+    log_post = log_post - logsumexp(log_post, axis=1, keepdims=True)
+    log_term = logsumexp(log_post + column_b, axis=1)
+    return jnp.sum(weight * resample * log_term)
 
 
-def _column(tables, index):
-    """``tables[row, :, index[row]]`` -- emission of a given reported count for all N.
+def _emission_column(log_emission, k_grid_log, log_r, counts):
+    """``log P(y = counts[i] | N, r_i)`` for every ``N``, one row per pair.
 
-    ``index`` arrives as a float because the conditional kernel wants it that way
-    for its ``gammaln`` arithmetic; it is cast here rather than stored twice.
+    Gathers the two needed columns straight out of the library instead of
+    building each row's whole ``(K, K)`` table and then slicing it.  The slice was
+    always what got used; the table was a 66 GB intermediate on a real benchmark
+    world, and it is the reason the first hybrid fit never finished.
     """
-    rows = jnp.arange(tables.shape[0])
-    return tables[rows, :, index.astype(jnp.int32)]
-
-
-def _emission_rows(log_emission, k_grid_log, log_r):
-    """Interpolate the emission library in ``log k`` for each row."""
     position = jnp.clip(jnp.searchsorted(k_grid_log, log_r) - 1, 0, len(k_grid_log) - 2)
     lo = k_grid_log[position]
     hi = k_grid_log[position + 1]
-    t = jnp.clip((log_r - lo) / (hi - lo), 0.0, 1.0)[:, None, None]
-    return log_emission[position] * (1.0 - t) + log_emission[position + 1] * t
+    t = jnp.clip((log_r - lo) / (hi - lo), 0.0, 1.0)[:, None]
+    index = counts.astype(jnp.int32)
+    low = log_emission[position, :, index]
+    high = log_emission[position + 1, :, index]
+    return low * (1.0 - t) + high * t
 
 
 def occupancy_loglik(log_r, inputs_static):
@@ -679,8 +697,8 @@ def occupancy_loglik(log_r, inputs_static):
     k_grid_log = inputs_static["k_grid_log"]
     pmf = inputs_static["slot_count_pmf"]
 
-    tables = _emission_rows(log_emission, k_grid_log, log_r)
-    p_zero = jnp.clip(jnp.sum(pmf * jnp.exp(tables[:, :, 0]), axis=1), 1e-9, 1.0 - 1e-9)
+    zero_column = _emission_column(log_emission, k_grid_log, log_r, jnp.zeros(log_r.shape[0]))
+    p_zero = jnp.clip(jnp.sum(pmf * jnp.exp(zero_column), axis=1), 1e-9, 1.0 - 1e-9)
     resample = inputs_static["year_weight"][inputs_static["slot_year_index"]]
     n_days = inputs_static["slot_n_days"] * resample
     n_zero = inputs_static["slot_n_zero"] * resample
@@ -833,6 +851,7 @@ def make_static(
         "weight": jnp.asarray(inputs.pair_weight),
         "rho": jnp.asarray(inputs.pair_rho),
         "low_count": jnp.asarray(inputs.pair_low_count),
+        "low_count_rows": jnp.asarray(np.flatnonzero(inputs.pair_low_count)),
         "obs_counts": jnp.asarray(observations["groups"].to_numpy(dtype=float)),
         "obs_slot": jnp.asarray(inputs.obs_slot),
         "obs_year": jnp.asarray(obs_year),
@@ -874,14 +893,17 @@ def composite_loglik(theta, inputs: NetworkInputs, layout: ParameterLayout, stat
     elif static["kernel"] == "marginal":
         pairwise = pairwise_loglik_marginal(log_r, pair_static)
     elif static["kernel"] == "hybrid":
+        # Kernel A on every pair with the low-count rows zero-weighted (cheap: the
+        # conditional kernel is a few scalars per row), and Kernel B on the
+        # low-count rows *only*, as a real row subset -- see
+        # ``pairwise_loglik_marginal`` on why a zero weight is not enough there.
         low = static["low_count"]
         high_static = dict(pair_static)
         high_static["weight"] = jnp.where(low, 0.0, pair_static["weight"])
-        low_static = dict(pair_static)
-        low_static["weight"] = jnp.where(low, pair_static["weight"], 0.0)
-        pairwise = pairwise_loglik_conditional(log_r, high_static) + (
-            pairwise_loglik_marginal(log_r, low_static)
-        )
+        pairwise = pairwise_loglik_conditional(log_r, high_static)
+        rows = static["low_count_rows"]
+        if rows is not None and len(rows):
+            pairwise = pairwise + pairwise_loglik_marginal(log_r, pair_static, rows=rows)
     else:
         raise ValueError(
             f"unknown kernel {static['kernel']!r}; expected 'conditional', 'marginal' or 'hybrid'"
