@@ -37,10 +37,12 @@
 > wired. Criteria **A14 (reach), the spec's point-error and coverage criteria,
 > and A18 (concurrent beats chained) are measured and fail**; see §9.
 >
-> Three figures carry defects or caveats worth knowing before reading them:
-> f34's reach panel sorted eras alphabetically until it was fixed in this pass;
-> f31's inset ρ is pooled over four methods and is not any one method's value;
-> and the structural-ensemble comparison does not exist for NetCal at all.
+> Four figures carry defects or caveats worth knowing before reading them:
+> **f36's wide modern band is a numerical defect of the R1 fit, not a result**
+> (§8 — read its means, not its bands); f34's reach panel sorted eras
+> alphabetically until it was fixed in this pass; f31's inset ρ is pooled over
+> four methods and is not any one method's value; and the structural-ensemble
+> comparison does not exist for NetCal at all.
 
 ## Summary
 
@@ -372,9 +374,10 @@ benchmark cells are roughly 4 hours.
 
 ## 8. The real-data runs: both anchorings, and the sensitivities
 
-Thirteen of the fourteen planned runs completed, 82 minutes in total
-([`step3_runs.csv`](data/step3_runs.csv)). Only `R3`, the RGO 12–19 anchor
-extension, failed — of CUDA out-of-memory, not of anything about the model (§13).
+All fourteen planned runs completed ([`step3_runs.csv`](data/step3_runs.csv)):
+thirteen in 82 minutes on 2026-11-24, and `R3` on the second pass, after the
+grid was pinned to the CPU — its first attempt died of CUDA out-of-memory, which
+was the launcher's fault and not the model's (§13).
 **These are fits, not scores**: the real record has no truth, so nothing below is
 a statement that the answer is right. What they do establish is that the
 estimator runs end to end on 1610–2026 and what it is sensitive to.
@@ -399,7 +402,7 @@ honest reading of the early record is that it is prior-dominated. The
 |---|---|---|---|---|---|---|
 | **R1** released, primary | Debrecen 21–23 | 508 | **3.818** | 10.02 | 277 | 58% |
 | **R2** released, secondary | RGO 15–19 | 508 | **3.915** | 3.77 | 510 | 69% |
-| R3 sensitivity | RGO 12–19 | — | — | — | — | failed (OOM) |
+| R3 sensitivity | RGO 12–19 | 508 | 3.864 | 2.61 | 353 | 69% |
 
 Two columns there deserve reading. **Weak modes differ by a factor of two between
 the two anchorings** — 277 against 510 of roughly a thousand parameter directions
@@ -439,6 +442,11 @@ record it does worse than that. **The evidence now favours `w = 0`**, and the
 decision belongs to the PI since `w = 1` was a planning decision taken before any
 of this was measured.
 
+**The anchor extension ADR-009 named is small.** Lengthening the RGO anchor from
+cycles 15–19 to 12–19 moves the mean from **3.915 to 3.864**, −1.3%, with the
+same 69% of observer-years inside the catalogue's activity range. The D5 caveat
+on the early RGO areas therefore costs about a percent, not a rescaling.
+
 The other two knobs are better behaved. Smoothness moves the mean by 5%
 (`λ` = 5 → 4.009, 20 → 3.818, 80 → 3.970, non-monotone), and widening the day
 tolerance raises it monotonically as more edges enter (2 → 3.818, 5 → 3.950,
@@ -454,12 +462,38 @@ The right panel is the caveat §5 measured: the factor and the threshold are not
 independent, and `d log k / d log T ≈ −0.24` means the threshold is the weakly
 identified one of the pair. Read the factor.
 
-**One number not to trust yet.** R1's median inflation is **10.02** where every
-other run at the same anchoring sits at 3.3–4.2, including runs differing only in
-one knob. That is more likely bootstrap noise or GPU contention during the run
-than a property of the primary configuration, and it is flagged rather than
-quoted: the correction's size on the real network should be taken as the **3.3–4.2**
-the replicates agree on until R1 is re-run on CPU.
+**R1's ensemble is not trustworthy, and f36's wide modern band is that defect,
+not a result.** R1's median inflation is **10.02** where every other run at the
+same anchoring sits at 3.3–4.2, and the same anomaly is what widens the blue band
+in f36 after 1930: R1's mean relative uncertainty after 1950 is **1.40**, against
+**0.064–0.105** for the eleven other Debrecen-anchored runs, and **263 of 508**
+observers carry a `factor_sd` above 1 against 25–50 elsewhere. The bulge is not a
+property of the Debrecen anchoring or of the modern record: it **moves between
+runs** — modern in R1, around 1900 in R2, and in the 17th century under
+`λ = 80` — which is the signature of a numerical pathology rather than of the
+data. Read f36's *means*, which the bootstrap does not touch, and not its bands.
+
+Two causes, both in `inference/composite.py` and both structural rather than
+unlucky:
+
+- **The bootstrap meat cannot be full rank.** Every resampled score is a weighted
+  sum of the 417 per-year block scores, so `G` lives in a space of dimension at
+  most ~416 inside a **1,015-dimensional** parameter block (507 thresholds, 507
+  splits, `κ₀`). Raising `n_bootstrap` reduces the noise in `G`; it cannot fill
+  the ~600 directions a year-block bootstrap is blind to, where the meat is the
+  prior curvature alone — 2.3×10⁻⁴ of the total.
+- **The pseudo-inverse is sitting on non-positive curvature.** `pinv` runs at its
+  default `rcond` (~10⁻¹⁵) while `WEAK_MODE_RATIO = 1e-8` only *counts* weak
+  modes. For R1 the arithmetic settles it: `condition_number` = 2.39×10⁶ is taken
+  over positive eigenvalues only, so the smallest positive eigenvalue is
+  4.2×10⁻⁷·λ_max — above the threshold. Yet 277 modes are flagged weak, so **all
+  277 must have λ ≤ 0**. The sandwich then squares what `pinv` makes of them. The
+  same arithmetic flags seven other runs.
+
+The fix is the one §7 already cites and does not implement — SDSS truncated the
+weakly constrained modes and restored them from the prior — and until it is made,
+the correction's size on the real network should be taken as the **3.3–4.2** the
+replicates agree on.
 
 ## 9. The benchmark comparison: Step 2's eleven, with NetCal in
 
@@ -715,14 +749,17 @@ discover. Several are warnings.
 Stated plainly, because a half-run step that reads as finished is worse than one
 that says where it stopped.
 
-1. **No benchmark score exists yet.** Criteria A14–A19 and all four spec criteria
-   are open. The figures that will show them are wired and tested but have no data
-   behind them until the grid finishes. Nothing in this document compares `NetCal` to any published method,
-   and §5's recovery numbers are from a *matched* simulation, which by
-   construction cannot be a benchmark.
-2. **No series has been produced.** The two released anchorings, the
-   anchor-sensitivity comparison ADR-003 asks for, and the Maunder-era level are
-   all pending the real-data runs.
+1. **Three arms of the comparison are missing, not merely unfavourable.** There is
+   no structural ensemble for the new methods (Step 2's f22 has no twin), no
+   uncorrected-coverage arm to price the Godambe correction on the benchmark, and
+   **A21 is not wired** — `scoring.break_detection_skill` exists and is tested but
+   is never called from `scoring.score()`, so no `break_*` column exists to read.
+2. **The released series' intervals are not yet trustworthy run to run.** The
+   means are stable — two anchorings agree to 2.5% and the anchor extension costs
+   1.3% — but the ensemble width is produced by a sandwich whose meat is rank-capped
+   by the year blocks and whose pseudo-inverse keeps non-positive curvature
+   directions (§8). f36's bands, and any coverage claim resting on them, wait on
+   that fix.
 3. **The reported interval will not cover drift.** The covariance is computed over
    the per-observer level parameters and the global overdispersion, with the drift
    trajectory held at its posterior mode. Drift's effect is reported as prior
