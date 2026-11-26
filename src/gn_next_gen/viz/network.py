@@ -463,6 +463,7 @@ def reach_and_maunder_figure(
     by an order of magnitude are two different failures, and a reader should see
     which one each method commits.
     """
+    from gn_next_gen.benchmark.scoring import ERA_ORDER
     from gn_next_gen.viz.benchmark import (
         _method_colors,
         _method_markers,
@@ -478,22 +479,38 @@ def reach_and_maunder_figure(
 
         ax = axes[0]
         if era_scores is not None and "era" in era_scores.columns:
+            # Eras must be ordered in TIME, not alphabetically.  Sorting the
+            # labels as strings puts "anchor-epoch" first for every method,
+            # which silently drew thirteen identical bars.
+            rank = {era: index for index, era in enumerate(ERA_ORDER)}
+            reached = era_scores[era_scores["reached"].astype(bool)].copy()
+            reached = reached[reached["era"].astype(str).isin(rank)]
             reach = (
-                era_scores[era_scores["reached"].astype(bool)]
-                .groupby("method")["era"]
-                .apply(lambda block: sorted(block.astype(str))[0])
+                reached.assign(_rank=reached["era"].astype(str).map(rank))
+                .groupby("method")["_rank"]
+                .min()
             )
             labels = [m for m in methods if m in reach.index]
+            # Bar length is how far back the method gets: the full span of eras
+            # when it reaches the earliest one, nothing when it reaches only the
+            # last.  Longer is further back.
+            depth = [len(ERA_ORDER) - int(reach[m]) for m in labels]
             ax.barh(
                 labels,
-                [1.0] * len(labels),
+                depth,
                 color=[colors[m] for m in labels],
                 alpha=0.85,
             )
             for index, method in enumerate(labels):
-                ax.text(0.02, index, str(reach[method]), va="center", fontsize=7.5)
+                ax.text(
+                    0.15,
+                    index,
+                    ERA_ORDER[int(reach[method])],
+                    va="center",
+                    fontsize=7.5,
+                )
             ax.set_xticks([])
-            ax.set_xlabel("earliest era reached")
+            ax.set_xlabel("earliest era reached (longer bar = further back)")
         else:
             earliest = scores.groupby("method")["trend_error_1610"].apply(
                 lambda block: float(np.isfinite(block).mean())

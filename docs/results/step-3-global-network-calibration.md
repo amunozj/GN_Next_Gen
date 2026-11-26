@@ -14,35 +14,33 @@
 
 > ### Scope of what follows — read this first
 >
-> **The code, the tests and the graph diagnostics are complete. The benchmark
-> grid and the real-data runs are not.** Step 2's decision 10 stands — no run
-> over ~15 minutes is launched from a Claude Code session — and a single network
-> fit is minutes to tens of minutes, so the 102 benchmark cells and the 14
-> real-data runs are the PI's to launch (§10 is the command).
+> **The grid is complete.** It ran 2026-11-25 16:14 to 2026-11-26 06:21 (14 h
+> 7 m) and produced all 102 benchmark cells, the 14 real-data runs, the
+> re-scoring and the figures. Step 2's decision 10 still stands — no run over
+> ~15 minutes is launched from a Claude Code session — and the PI launched it
+> detached (§11 is the command).
 >
 > What is measured here: the overlap graph's diagnostics on the real
 > 1610–2026 record (§2), the detection model and its validation (§3), the
 > activity map (§4), parameter recovery on a matched network (§5), the
-> composite-likelihood correction (§6), and **one complete fit on a real
-> benchmark world** — 350 observers, 17,442 edges, 16.2M matched pair
-> observations — which gives the runtime and the size of the correction (§7).
-> Every number below comes from a committed script and a committed CSV.
+> composite-likelihood correction (§6), **one complete fit on a real benchmark
+> world** — 350 observers, 17,442 edges, 16.2M matched pair observations (§7) —
+> the two released series and the sensitivities (§8), and **the full comparison
+> against Step 2's eleven methods on the same 51 worlds** (§9). Every number
+> below comes from a committed script and a committed CSV.
 >
-> What is **not** yet measured, and is therefore not claimed anywhere below:
-> the benchmark scores against the eleven Step 2 methods, the interval coverage,
-> the reach and Maunder level of the fitted series, and the two released series.
-> Acceptance criteria A14–A19 and the four spec criteria are **open**.
+> What is **still not** established, and is therefore not claimed below: a
+> structural ensemble for the new methods (Step 2's f22 has no twin), an
+> uncorrected-coverage arm, and break-detection skill — `break_detection_skill`
+> is implemented and tested but is not called from `scoring.score()`, so
+> criterion **A21 cannot be read off `scores.csv`** and is recorded as not
+> wired. Criteria **A14 (reach), the spec's point-error and coverage criteria,
+> and A18 (concurrent beats chained) are measured and fail**; see §9.
 >
-> **The comparison figures are wired and will appear here without further
-> work.** `NetCal` and `NetCal-M` are registered in `METHOD_ORDER` and
-> `METHOD_MARKERS`, so Step 2's own method-generic builders draw them: f31
-> (acuity recovery), f32 (point scores), f33 (coverage) and f34 (reach and
-> Maunder level) come out of the same `scores.csv` the eleven are scored from,
-> written under Step 3's codes into `figures/step-3/` so Step 2's committed
-> figures are never overwritten. An earlier version of this step shipped seven of
-> the twelve promised builders and printed "skipped" for the five that *are* the
-> comparison; `tests/test_viz.py` now pins every code f29–f40 to a callable
-> builder and to a mention in the figure script.
+> Three figures carry defects or caveats worth knowing before reading them:
+> f34's reach panel sorted eras alphabetically until it was fixed in this pass;
+> f31's inset ρ is pooled over four methods and is not any one method's value;
+> and the structural-ensemble comparison does not exist for NetCal at all.
 
 ## Summary
 
@@ -58,6 +56,10 @@
 | Does the uncertainty correction work? | **Yes, validated against a closed form** (√m at m = 1, 4, 9, 25) and against the property it exists for: p90 inflation rises **1.19 → 2.01** as a network goes from 4.6 to 259 pairs per day (§6) |
 | How overconfident is the uncorrected composite likelihood on a *real* network? | **3.5× too narrow.** Measured on a 350-observer world with 16.2M matched pairs: median inflation **3.53**, and **233 of 699** parameter directions turn out to be prior- rather than data-constrained (§7) |
 | What does a fit cost? | **772 s** on one CPU process for that world — 344 s to the mode, 401 s for the correction (§7) |
+| Does the concurrent fit beat the chained methods? | **Not pooled, yes where it matters.** Pooled yearly cRMSE **0.446** against HoSc98's 0.272 — it loses, and loses to the raw-median floor too. Resolved by era it is **the best method in the four sparsest eras**, including the Maunder window (0.396 against the floor's 0.534), and holds the lowest-error ribbon across 1650–1850 (§9) |
+| Is the Maunder Minimum finally estimated correctly? | **Yes. 0.94×** the true level, against **24.1×** for GRP and **25.9×** for UEA21 — the step's clearest win (§9) |
+| Is the activity confound in recovered acuity removed? | **Yes.** Spearman ρ falls to **+0.129** from −0.621 (UEA21) and −0.730 (GRP); more than 2× threshold errors fall to **3.0%** of observers from 40.7% (§9) |
+| Are the intervals honest? | **Closer than anything but CEA17, and still not within tolerance.** 0.584 / 0.682 / 0.797 / 0.834 at nominal 0.50 / 0.68 / 0.90 / 0.95, but 3.60 groups wide against a 1.92 bar, and over-covering early while under-covering after 1950 (§9) |
 
 ## 1. What this step builds
 
@@ -372,7 +374,7 @@ benchmark cells are roughly 4 hours.
 
 Thirteen of the fourteen planned runs completed, 82 minutes in total
 ([`step3_runs.csv`](data/step3_runs.csv)). Only `R3`, the RGO 12–19 anchor
-extension, failed — of CUDA out-of-memory, not of anything about the model (§12).
+extension, failed — of CUDA out-of-memory, not of anything about the model (§13).
 **These are fits, not scores**: the real record has no truth, so nothing below is
 a statement that the answer is right. What they do establish is that the
 estimator runs end to end on 1610–2026 and what it is sensitive to.
@@ -459,7 +461,163 @@ than a property of the primary configuration, and it is flagged rather than
 quoted: the correction's size on the real network should be taken as the **3.3–4.2**
 the replicates agree on until R1 is re-run on CPU.
 
-## 9. What is implemented
+## 9. The benchmark comparison: Step 2's eleven, with NetCal in
+
+The grid finished 2026-11-26 06:21 after 14 h 7 m: 101 benchmark cells (plus one
+surviving an earlier failed attempt), the 14 real-data runs, re-scoring and the
+figures. All thirteen methods are scored on the **identical 51 worlds**, and only
+the `NetCal` / `NetCal-M` cell files were written — the eleven methods' cells are
+untouched on disk, so their Step 2 numbers cannot have moved.
+
+Step 2 compared the eleven on six method-generic figures. All six are redrawn
+here with the two new methods present, under Step 3 codes into
+`figures/step-3/`, so Step 2's committed figures are never overwritten. **One
+has no twin**: Step 2's f22, the structural ensemble, re-runs a method over its
+*own* free graph choices, and that arm was not run for NetCal — an open PI
+decision, not a missing input.
+
+**The headline is that the pooled score and the era-resolved score say different
+things, and the era-resolved one is the one this project is about.**
+
+![Bars of centred RMSE with bias markers at daily, monthly and yearly averaging, for thirteen methods; NetCal sits mid-table, above HoSc98 and Pathfinding and above the naive-median floor.](figures/step-3/f32_baseline_scores_light.png)
+
+**Figure f32** — Point error at three averaging scales, pooled over all 51
+worlds (Step 2's f18 with the new methods). **NetCal loses this comparison.**
+Yearly cRMSE is **0.446** against HoSc98's 0.272, Pathfinding's 0.302 and the
+raw-median floor's 0.341; paired per world, NetCal beats Pathfinding in only
+**15 of 51** worlds and the floor in **12 of 51**. Its bias is **+0.18** where
+the three chained methods sit near **−0.22** — it overestimates where they
+underestimate. Read alone, this figure says the step's thesis failed.
+
+![Four stacked panels on a 1650-2026 axis: true activity, pooled RMSE per method on a log axis, RMSE relative to the naive-median floor, and a ribbon naming the lowest-RMSE method each year. The red NetCal line is the only non-floor line present before 1774 and holds the winner ribbon across 1650-1850.](figures/step-3/f44_error_through_time_light.png)
+
+**Figure f44** — The same error resolved in time (Step 2's f41), and the reason
+f32 is misleading on its own. **NetCal holds the lowest-RMSE ribbon across
+essentially all of 1650–1850**, and in the third panel it is the only method
+that goes *below* the floor line in the Maunder window. The five chained methods
+do not exist before 1774 — their lines simply start. The pooled number in f32 is
+dominated by the data-rich years after 1850, where the floor and the chains are
+strong and NetCal is not; the eras this project exists to reconstruct are the
+ones where it wins. Both statements are true, and reporting only the first would
+be as dishonest as reporting only the second.
+
+| Era | NetCal | best published | floor (`naive-median`) |
+|---|---|---|---|
+| maunder-window | **0.396** | — *(none reach it)* | 0.534 |
+| first-disconnection | **0.577** | — *(none reach it)* | 0.606 |
+| second-disconnection | **0.512** | HoSc98 0.746 | 0.534 |
+| pre-modern | 0.592 | HoSc98 0.469 | **0.414** |
+| pre-anchor | 0.678 | HoSc98 0.401 | **0.259** |
+| anchor-epoch | 0.525 | **CEA17 0.125** | 0.235 |
+| post-anchor | 0.715 | Pathfinding 0.341 | **0.284** |
+| extension-only | **0.823** | UEA21 2.221 | 0.858 |
+
+Pooled RMSE per era, from [`step3_era_errors.csv`](data/step3_era_errors.csv).
+NetCal is best in four of the eight eras and beats the floor in exactly those
+four — the four with the least data.
+
+![Left: pooled yearly bias against year, NetCal near zero before 1850 while UEA21 and GRP sit 1.5 to 2 groups high. Right: empirical coverage at nominal 50% per era, NetCal above the line in the early eras and falling to 0.31 post-anchor.](figures/step-3/f45_bias_and_era_coverage_light.png)
+
+**Figure f45** — Bias and coverage era by era (Step 2's f42). Left: NetCal's
+bias is near zero through the early record where UEA21 and GRP are **+1.5 to
++2 groups** — the error that made their Maunder estimates 24× high. Right: the
+intervals are **honest in the wrong direction**. NetCal over-covers early
+(0.60–0.79 against a nominal 0.50) and under-covers late (**0.31** post-anchor).
+A single pooled coverage number hides both.
+
+![Empirical against nominal coverage at 50, 68, 90 and 95 percent; NetCal and NetCal-M track just below CEA17 and far above the three chained methods, which sit near half the nominal value.](figures/step-3/f33_interval_coverage_light.png)
+
+**Figure f33** — Interval coverage (Step 2's f20). NetCal is the
+**second-best-calibrated method in the benchmark**: 0.584 / 0.682 / 0.797 /
+0.834 against nominal 0.50 / 0.68 / 0.90 / 0.95, with 68% essentially exact.
+It still **fails the acceptance criterion** on both halves — the 90% and 95%
+deviations are 0.103 and 0.116 against a tolerance of 0.10, and the mean 90%
+width is **3.60 groups** against the 1.92 bar. CEA17 passes both where NetCal
+does not. The Godambe correction gets the shape of the uncertainty right and its
+tails still too thin.
+
+![Left: earliest era reached per method; NetCal, NetCal-M, UEA21, GRP and the four floors reach pre-network while the five chained methods stop at second-disconnection. Right: estimated over true Maunder level on a log axis; NetCal at 1.0 with a tight range, GRP and UEA21 near 2.4 with ranges running past 10.](figures/step-3/f34_reach_and_maunder_light.png)
+
+**Figure f34** — Reach and Maunder level, the two criteria the step was built
+for. Left: NetCal reaches the **earliest era**, where five of the seven published
+methods stop at `second-disconnection`; its median earliest year is **1682**
+against **1774** for those five. Right: on the Maunder scenario NetCal is at
+**0.94×** the true level and NetCal-M at **0.97×**, against **24.1×** for GRP
+and **25.9×** for UEA21. Criterion A15 asked for ≤ 3× and this is the step's
+clearest win. Reach still misses A14's 1660 target by 22 years, and the four
+floors reach further back than any fitted method — reaching an era and being
+right about it are different things, which is why both panels are shown.
+
+![Horizontal bars of the slope of estimated-minus-true cycle amplitude against true amplitude; NetCal at +0.06 near the zero line, CEA17, UEA21, VHS24 and GRP between -0.21 and -0.38.](figures/step-3/f43_cycle_amplitude_light.png)
+
+**Figure f43** — The secular-bias signature (Step 2's f19). A negative slope
+damps strong cycles relative to weak ones, which is the shape a spurious secular
+trend takes. NetCal is at **+0.055**, inside the band the linear scalings occupy
+(HoSc98 −0.000, Pathfinding +0.000) and clear of the four non-parametric methods
+at **−0.21 to −0.38**. NetCal-M at **+0.136** is the one arm that visibly
+inflates strong cycles.
+
+![Left: recovered against true acuity threshold for four methods, NetCal's points clustered near the diagonal below 100 MSH. Right: the same points against the observer's own era mean count.](figures/step-3/f31_acuity_recovery_light.png)
+
+**Figure f31** — Acuity recovery (Step 2's f23). This is criterion A16, and
+NetCal passes it: the Spearman correlation between recovered threshold and the
+*era's* mean activity falls to **+0.129** (NetCal-M +0.270) from **−0.621** for
+UEA21 and **−0.730** for GRP. The activity confound Step 2 diagnosed as "a
+missing covariate, not a per-observer error" is gone. **The ρ = −0.30 printed in
+the right panel is pooled over all four methods** and is not any method's own
+value — the builder is Step 2's and annotates a single pooled statistic; the
+per-method numbers above come from `case_study_observers.csv`. Fixing that
+annotation would change Step 2's committed f23, so it is left alone and flagged
+here.
+
+![Five panels for the hard case studies; NetCal recovers a threshold near truth for poor-instrument, leaf-node, copier and zero-omitter, where UEA21 and GRP pin at 200-300 MSH.](figures/step-3/f47_case_studies_hard_light.png)
+
+**Figure f47** — Case studies 6–10 (Step 2's f26), the hard ones. Step 2 called
+`poor-instrument` the hardest case in the benchmark, with three of seven methods
+more than 2× off and SvSc16 silent in all fifty replicates. **NetCal's scale
+factor sits on the truth line in four of the five hard cases**, where GRP pins
+at 200–300 MSH on `leaf-node` and `copier` and UEA21 pins at the 300 MSH grid
+ceiling on `poor-instrument`. Across all case studies NetCal is more than 2× off
+on **3.0%** of observers, against **40.7%** for UEA21 and **28.5%** for GRP.
+`blanket-statements` remains unestimated by every method including NetCal.
+
+![Five panels for the easy case studies; NetCal and NetCal-M sit near the truth line on all five, with wider ranges than HoSc98 on slow-drift.](figures/step-3/f46_case_studies_easy_light.png)
+
+**Figure f46** — Case studies 1–5 (Step 2's f25). NetCal is on the truth line
+for all five, including `sparse-maunder`, which only four methods answer at all.
+Its ranges are wider than the linear scalings' on `slow-drift` — the drift prior
+buys honesty about a career that moves, not precision.
+
+![Per-observer difference in implied log k between the two kernels, against era and against observer mean count.](figures/step-3/f38_kernel_disagreement_light.png)
+
+**Figure f38** — The two kernels against each other (criterion A19). Kernel A
+wins the point comparison in **43 of 51** worlds, and NetCal-M's advantage is
+confined to the eras where its low-count regime is the right one — it is better
+than NetCal in `pre-modern` (0.438 vs 0.592) and `pre-anchor` (0.295 vs 0.678)
+and worse everywhere else. The disagreement is reported rather than thresholded,
+as the plan specified.
+
+### What this settles, and what it does not
+
+| Criterion | Measured | Bar | |
+|---|---|---|---|
+| A15 Maunder level | **0.94×** | ≤ 3× | pass |
+| A16 activity confound | **ρ = +0.129** | ≤ 0.25 | pass |
+| A19 kernel disagreement | reported (f38) | reported | pass |
+| A14 reach | 1682; earliest era | ≤ 1660 | **miss by 22 yr** |
+| Point error (spec) | yearly cRMSE **0.446** | ≤ 0.301 | **fail** |
+| A18 concurrent beats chained | **15 of 51** | ≥ 34 of 51 | **fail pooled**, passes in the four sparse eras |
+| Coverage (spec) | 0.797 / 0.834 at 90 / 95; width 3.60 | ±0.10; ≤ 1.92 | **fail** |
+| A21 break-detection skill | absent from `scores.csv` | finite | **not wired** |
+
+A21 is a wiring omission, not a result: `scoring.break_detection_skill` is
+implemented and tested but never called from `scoring.score()`, so no `break_*`
+column exists. A18's split verdict is the honest one — the plan anticipated it
+("Separate calibration was more accurate when there were few common items …
+that is a publishable finding against the step's own thesis, reported per era
+rather than pooled"), and the per-era table above is that report.
+
+## 10. What is implemented
 
 | Module | What |
 |---|---|
@@ -488,7 +646,7 @@ each is a general lesson rather than a local tweak:
   row objective — and never returns. `hessian_by_chunks` is exact (identical to
   `jax.hessian` to 0.00e+00) with memory bounded by the batch.
 
-## 10. Reproducing this, and what the PI needs to launch
+## 11. Reproducing this, and what the PI needs to launch
 
 Quick, and all of it runs in a session:
 
@@ -531,7 +689,7 @@ smoke test and is not a result.
   would need a thirteenth registered method and another 51 cells. The decision is
   the PI's, and the uncorrected coverage is not claimed anywhere until it is run.
 
-## 11. What Step 4 inherits
+## 12. What Step 4 inherits
 
 Even unfinished, this step hands Step 4 things it would otherwise have to
 discover. Several are warnings.
@@ -552,7 +710,7 @@ discover. Several are warnings.
 | Emission module | `models.emissions` | The module `inference.forward_filter.count_emissions` promised Step 4; it is built and tested |
 | Cost shape | mode 344 s, correction 401 s, ~10 GB peak | Memory caps parallelism, not cores (§7) |
 
-## 12. What this step does not establish
+## 13. What this step does not establish
 
 Stated plainly, because a half-run step that reads as finished is worse than one
 that says where it stopped.

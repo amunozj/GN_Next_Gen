@@ -1,4 +1,4 @@
-"""Rebuild Step 3's figures, f29-f40, in both light and dark.
+"""Rebuild Step 3's figures, f29-f40 and f43-f47, in both light and dark.
 
 Like ``make_step2_figures.py``, this **skips a figure with a reason** rather than
 failing when its inputs are not on disk yet.  Most of Step 3's figures need either
@@ -19,6 +19,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from gn_next_gen.benchmark.observers import CASE_STUDY_KINDS  # noqa: E402
+from gn_next_gen.benchmark.scoring import summarise_case_studies  # noqa: E402
 from gn_next_gen.paths import DOCS, OUTPUTS  # noqa: E402
 from gn_next_gen.viz import network as viz  # noqa: E402
 from gn_next_gen.viz.style import save_both_modes  # noqa: E402
@@ -200,6 +202,74 @@ def main(argv: list[str] | None = None) -> int:
                 made.append("f31")
             else:
                 _skip("f31", "no case_study_observers.csv")
+
+            # --- f43-f47: the rest of Step 2's method comparison, redrawn ----
+            #
+            # Step 2's report compares the eleven on six method-generic figures.
+            # f32/f33/f31 above already redraw three of them with NetCal in.
+            # These are the other three (plus the two case-study panels), built
+            # from the same Step 2 builders so the only difference from the
+            # committed Step 2 version is that NetCal and NetCal-M are present.
+            save_both_modes(
+                lambda mode: bviz.amplitude_slope_figure(scores, mode),
+                out,
+                "f43_cycle_amplitude",
+            )
+            made.append("f43")
+
+            pooled_path = SCORES / "yearly_pooled.csv"
+            if pooled_path.is_file() and era is not None and not era.empty:
+                pooled = pd.read_csv(pooled_path)
+                save_both_modes(
+                    lambda mode: bviz.error_through_time_figure(pooled, mode),
+                    out,
+                    "f44_error_through_time",
+                )
+                made.append("f44")
+                save_both_modes(
+                    lambda mode: bviz.bias_and_era_coverage_figure(pooled, era, mode),
+                    out,
+                    "f45_bias_and_era_coverage",
+                )
+                made.append("f45")
+            else:
+                _skip("f44/f45", "no yearly_pooled.csv or era_scores.csv")
+
+            if cases_path.is_file():
+                summary = summarise_case_studies(pd.read_csv(cases_path))
+                save_both_modes(
+                    lambda mode: bviz.case_study_figure(
+                        summary, list(CASE_STUDY_KINDS[:5]), mode, title="Case studies 1-5"
+                    ),
+                    out,
+                    "f46_case_studies_easy",
+                )
+                made.append("f46")
+                save_both_modes(
+                    lambda mode: bviz.case_study_figure(
+                        summary, list(CASE_STUDY_KINDS[5:]), mode, title="Case studies 6-10"
+                    ),
+                    out,
+                    "f47_case_studies_hard",
+                )
+                made.append("f47")
+            else:
+                _skip("f46/f47", "no case_study_observers.csv")
+
+            # Step 2's f22 has no Step 3 twin on purpose: the structural
+            # ensemble re-runs a method over its own free graph choices, and
+            # that arm was never run for NetCal.  Say so rather than skip it
+            # silently -- it is an open PI decision, not a missing input.
+            structural_path = SCORES / "structural.csv"
+            if structural_path.is_file():
+                structural = pd.read_csv(structural_path)
+                have = structural["method"].isin(["NetCal", "NetCal-M"]).sum()
+                if not have:
+                    _skip(
+                        "f22 twin",
+                        "structural.csv has no NetCal rows; the structural arm was "
+                        "not run for the new methods (open PI decision)",
+                    )
 
     # f38: the two kernels, on a world that has both arms.  Worlds whose tables
     # carry `first_year` are preferred, because that is what the per-era panel is
